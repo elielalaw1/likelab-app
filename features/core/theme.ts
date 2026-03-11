@@ -1,0 +1,126 @@
+export const colors = {
+  background: 'hsl(0 0% 100%)',
+  foreground: 'hsl(220 20% 12%)',
+  primary: 'hsl(256 78% 38%)',
+  primaryForeground: 'hsl(0 0% 100%)',
+  secondary: 'hsl(220 10% 92%)',
+  secondaryForeground: 'hsl(220 20% 12%)',
+  muted: 'hsl(220 10% 95%)',
+  mutedForeground: 'hsl(220 10% 46%)',
+  accent: 'hsl(220 10% 95%)',
+  accentForeground: 'hsl(220 20% 12%)',
+  destructive: 'hsl(0 84% 60%)',
+  destructiveForeground: 'hsl(0 0% 100%)',
+  border: 'hsl(220 10% 92%)',
+  input: 'hsl(220 10% 92%)',
+  ring: 'hsl(256 78% 38%)',
+  card: 'hsl(0 0% 100%)',
+  cardForeground: 'hsl(220 20% 12%)',
+  likelabIndigo: 'hsl(256 78% 38%)',
+  likelabCyan: 'hsl(185 88% 55%)',
+  likelabMagenta: 'hsl(305 78% 62%)',
+  likelabYellow: 'hsl(42 92% 62%)',
+  likelabLavender: 'hsl(232 88% 89%)',
+}
+
+export const palette = {
+  bg: colors.background,
+  card: colors.card,
+  cardSoft: 'rgba(255,255,255,0.8)',
+  text: colors.foreground,
+  textMuted: colors.mutedForeground,
+  line: colors.border,
+  primary: colors.primary,
+  successBg: '#DCFCE7',
+  successText: '#15803D',
+  warningBg: '#FEF3C7',
+  warningText: '#B45309',
+  dangerBg: '#FEE2E2',
+  dangerText: '#B91C1C',
+  neutralBg: colors.muted,
+  neutralText: colors.mutedForeground,
+}
+
+export const radii = {
+  button: 14,
+  input: 12,
+  card: 20,
+  feature: 28,
+  navbar: 32,
+  sidebarNav: 14,
+  tabContainer: 20,
+  tabButton: 16,
+  full: 999,
+}
+
+export const spacing = {
+  xxs: 2,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  page: 16,
+  card: 20,
+  block: 20,
+}
+
+export const typography = {
+  fontFamily: 'Montserrat',
+  lineHeights: {
+    heading: 1.12,
+    body: 1.45,
+  },
+  sizes: {
+    pageTitle: 24,
+    subtitle: 14,
+    cardLabel: 11,
+    statValue: 24,
+    sidebarItem: 13,
+    bottomNavLabel: 10,
+    badge: 12,
+    formLabel: 11,
+    button: 14,
+    sectionHeader: 11,
+    body: 14,
+  },
+}
+
+export const shadows = {
+  card: {
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  navbar: {
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  hero: {
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  deliverable: {
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  floatingGate: {
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+}
