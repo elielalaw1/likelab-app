@@ -157,3 +157,5 @@ npm run reset-project  # Local project reset utility
 ## Ownership
 
 This README is intended to document the current operational baseline for the private Likelab mobile app repository. For architecture changes, auth flow updates, or release-process changes, update this document in the same change set.
+
+App foundation and initial implementation were created by Eli El-Alawi.
