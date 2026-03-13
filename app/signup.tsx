@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Alert, Pressable, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
@@ -12,8 +12,10 @@ import { fetchTikTokStats, signupCreator, stripAtPrefix } from '@/features/auth/
 import { authColors } from '@/features/auth/theme'
 
 type Step = 1 | 2 | 3
+const stripHandleInput = (value: string) => value.replace(/^@+/, '')
 
 export default function SignupPage() {
+  const statsRequestIdRef = useRef(0)
   const [step, setStep] = useState<Step>(1)
   const [displayName, setDisplayName] = useState('')
   const [tiktokHandle, setTiktokHandle] = useState('')
@@ -21,9 +23,11 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [statsLoading, setStatsLoading] = useState(false)
+  const [fetchingStats, setFetchingStats] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
-  const [statsVerified, setStatsVerified] = useState(false)
+  const [statsFetched, setStatsFetched] = useState(false)
+  const [statsManual, setStatsManual] = useState(false)
+  const [statsError, setStatsError] = useState<string | null>(null)
   const [followersFormatted, setFollowersFormatted] = useState<string | null>(null)
   const [likesFormatted, setLikesFormatted] = useState<string | null>(null)
 
@@ -45,27 +49,74 @@ export default function SignupPage() {
     [displayName, email, tiktokHandle, followersFormatted, likesFormatted]
   )
 
-  const goNextFromStep1 = async () => {
+  const canCreateAccount = statsFetched && !fetchingStats && !createLoading
+
+  const resetStatsState = () => {
+    statsRequestIdRef.current += 1
+    setFetchingStats(false)
+    setStatsFetched(false)
+    setStatsManual(false)
+    setStatsError(null)
+    setFollowersFormatted(null)
+    setLikesFormatted(null)
+  }
+
+  const handleTikTokHandleChange = (value: string) => {
+    const sanitizedValue = stripHandleInput(value)
+    if (stripAtPrefix(sanitizedValue) !== stripAtPrefix(tiktokHandle)) {
+      resetStatsState()
+    }
+    setTiktokHandle(sanitizedValue)
+  }
+
+  const beginTikTokStatsFetch = async (force = false) => {
+    if (!stripAtPrefix(tiktokHandle) || fetchingStats || (!force && (statsFetched || statsManual))) {
+      return
+    }
+
+    const requestId = statsRequestIdRef.current + 1
+    statsRequestIdRef.current = requestId
+
+    try {
+      setFetchingStats(true)
+      setStatsError(null)
+      const stats = await fetchTikTokStats(tiktokHandle)
+      if (statsRequestIdRef.current !== requestId) return
+      setFollowersFormatted(stats.followersFormatted)
+      setLikesFormatted(stats.likesFormatted)
+      setStatsFetched(Boolean(stats.followersFormatted || stats.likesFormatted))
+      setStatsManual(false)
+    } catch (error) {
+      if (statsRequestIdRef.current !== requestId) return
+      const message = error instanceof Error ? error.message : 'Could not verify TikTok stats'
+      console.error('TikTok stats fetch failed', { handle: tiktokHandle, message })
+      setStatsFetched(false)
+      setStatsManual(true)
+      setStatsError(message)
+      setFollowersFormatted(null)
+      setLikesFormatted(null)
+    } finally {
+      if (statsRequestIdRef.current !== requestId) return
+      setFetchingStats(false)
+    }
+  }
+
+  const goNextFromStep1 = () => {
     if (!stripAtPrefix(tiktokHandle)) {
       Alert.alert('TikTok required', 'Please enter your TikTok handle.')
       return
     }
 
-    try {
-      setStatsLoading(true)
-      const stats = await fetchTikTokStats(tiktokHandle)
-      setFollowersFormatted(stats.followersFormatted)
-      setLikesFormatted(stats.likesFormatted)
-      setStatsVerified(Boolean(stats.followersFormatted || stats.likesFormatted))
-    } catch {
-      setStatsVerified(false)
-      setFollowersFormatted(null)
-      setLikesFormatted(null)
-      Alert.alert('Could not verify TikTok stats', 'You can continue without verification.')
-    } finally {
-      setStatsLoading(false)
-      setStep(2)
+    if (!statsFetched && !statsManual) {
+      void beginTikTokStatsFetch()
     }
+
+    setStep(2)
+  }
+
+  const retryTikTokStatsFetch = () => {
+    resetStatsState()
+    void beginTikTokStatsFetch(true)
   }
 
   const goNextFromStep2 = () => {
@@ -88,6 +139,15 @@ export default function SignupPage() {
   }
 
   const handleCreateAccount = async () => {
+    if (fetchingStats) {
+      return
+    }
+
+    if (!statsFetched) {
+      Alert.alert('TikTok verification required', 'Your TikTok stats must be verified before you can create an account.')
+      return
+    }
+
     try {
       setCreateLoading(true)
       await signupCreator({
@@ -126,21 +186,24 @@ export default function SignupPage() {
           <AuthInput
             label="TIKTOK HANDLE *"
             value={tiktokHandle}
-            onChangeText={setTiktokHandle}
-            placeholder="@yourtiktok"
+            onChangeText={handleTikTokHandleChange}
+            placeholder="yourtiktok"
+            prefixText="@"
+            sanitizeText={stripHandleInput}
           />
 
           <AuthInput
             label="INSTAGRAM HANDLE"
             value={instagramHandle}
-            onChangeText={setInstagramHandle}
-            placeholder="@yourinstagram"
+            onChangeText={(value) => setInstagramHandle(stripHandleInput(value))}
+            placeholder="yourinstagram"
+            prefixText="@"
+            sanitizeText={stripHandleInput}
           />
 
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
             <Pressable
               onPress={goNextFromStep1}
-              disabled={statsLoading}
               style={{
                 height: 50,
                 minWidth: 112,
@@ -151,13 +214,12 @@ export default function SignupPage() {
                 borderWidth: 1.5,
                 borderColor: authColors.accentSoft,
                 backgroundColor: authColors.buttonBg,
-                opacity: statsLoading ? 0.7 : 1,
                 flexDirection: 'row',
                 gap: 8,
               }}
             >
-              <Text style={{ fontSize: 17, fontWeight: '700', color: authColors.text }}>{statsLoading ? '...' : 'Next'}</Text>
-              {!statsLoading ? <MaterialCommunityIcons name="arrow-right" size={18} color={authColors.text} /> : null}
+              <Text style={{ fontSize: 17, fontWeight: '700', color: authColors.text }}>Next</Text>
+              <MaterialCommunityIcons name="arrow-right" size={18} color={authColors.text} />
             </Pressable>
           </View>
         </AuthCard>
@@ -196,6 +258,49 @@ export default function SignupPage() {
             placeholder="Repeat password"
             secureTextEntry
           />
+
+          <View
+            style={{
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              backgroundColor: fetchingStats ? '#eef4ff' : statsError ? '#fff4f4' : '#f6f7f9',
+              borderWidth: 1,
+              borderColor: fetchingStats ? '#c7d8ff' : statsError ? '#f3c3c3' : authColors.border,
+            }}
+          >
+            <Text style={{ color: authColors.text, fontSize: 14, fontWeight: '600' }}>
+              {fetchingStats
+                ? 'Fetching TikTok stats...'
+                : statsFetched
+                  ? `TikTok stats loaded: ${followersFormatted || '—'} followers, ${likesFormatted || '—'} likes`
+                  : statsError
+                    ? 'TikTok stats fetch failed'
+                    : 'TikTok stats will be fetched after you enter your handle.'}
+            </Text>
+            {statsError ? (
+              <Text style={{ color: authColors.muted, fontSize: 13, lineHeight: 18, marginTop: 4 }}>
+                {statsError}
+              </Text>
+            ) : null}
+            {!fetchingStats && !statsFetched ? (
+              <Pressable
+                onPress={retryTikTokStatsFetch}
+                style={{
+                  marginTop: 10,
+                  alignSelf: 'flex-start',
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: authColors.accentSoft,
+                  backgroundColor: '#fff',
+                }}
+              >
+                <Text style={{ color: authColors.text, fontSize: 13, fontWeight: '700' }}>Retry TikTok fetch</Text>
+              </Pressable>
+            ) : null}
+          </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Pressable
@@ -248,8 +353,16 @@ export default function SignupPage() {
           <ReviewTable rows={reviewRows} />
 
           <Text style={{ color: authColors.accent, fontSize: 15, fontWeight: '600' }}>
-            {statsVerified ? '✓ TikTok stats verified' : 'TikTok stats not verified'}
+            {fetchingStats
+              ? 'Fetching stats...'
+              : statsFetched
+                ? '✓ TikTok stats verified'
+                : 'TikTok verification required before account creation'}
           </Text>
+
+          {statsError ? (
+            <Text style={{ color: authColors.muted, fontSize: 13, lineHeight: 18 }}>{statsError}</Text>
+          ) : null}
 
           <View style={{ backgroundColor: '#f1f3f7', borderRadius: 12, padding: 12 }}>
             <Text style={{ color: authColors.muted, fontSize: 14, lineHeight: 20 }}>
@@ -279,7 +392,7 @@ export default function SignupPage() {
 
             <Pressable
               onPress={handleCreateAccount}
-              disabled={createLoading}
+              disabled={!canCreateAccount}
               style={{
                 height: 50,
                 minWidth: 162,
@@ -289,11 +402,17 @@ export default function SignupPage() {
                 backgroundColor: authColors.buttonBg,
                 alignItems: 'center',
                 justifyContent: 'center',
-                opacity: createLoading ? 0.7 : 1,
+                opacity: canCreateAccount ? 1 : 0.7,
               }}
             >
               <Text style={{ fontSize: 17, color: authColors.text, fontWeight: '700' }}>
-                {createLoading ? 'Creating...' : 'Create account'}
+                {createLoading
+                  ? 'Creating account...'
+                  : fetchingStats
+                    ? 'Fetching stats...'
+                    : !statsFetched
+                      ? 'Verify TikTok first'
+                      : 'Create account'}
               </Text>
             </Pressable>
           </View>

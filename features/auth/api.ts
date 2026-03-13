@@ -3,24 +3,31 @@ const AUTH_REDIRECT_ORIGIN =
   process.env.EXPO_PUBLIC_AUTH_REDIRECT_ORIGIN || process.env.EXPO_PUBLIC_WEB_URL || 'https://likelab.se'
 
 type TikTokStatsResponse = {
-  followers?: number
-  likes?: number
+  followers?: number | string
+  likes?: number | string
+  fallback?: boolean
+  error?: string
 }
 
 export function stripAtPrefix(value: string) {
   return value.trim().replace(/^@+/, '')
 }
 
-export function formatCompactCount(value?: number | null) {
+export function formatCompactCount(value?: number | string | null) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed ? trimmed : null
+  }
   if (typeof value !== 'number' || Number.isNaN(value)) return null
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`
-  return String(Math.round(value))
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+  return value.toString()
 }
 
 export async function fetchTikTokStats(handle: string) {
-  const normalized = stripAtPrefix(handle)
-  const profileUrl = `https://www.tiktok.com/@${normalized}`
+  const trimmed = handle.trim()
+  const normalized = stripAtPrefix(trimmed)
+  const profileUrl = trimmed.startsWith('http') ? trimmed : `https://www.tiktok.com/@${normalized}`
 
   const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/functions/v1/fetch-tiktok-stats`, {
     method: 'POST',
@@ -30,14 +37,15 @@ export async function fetchTikTokStats(handle: string) {
     body: JSON.stringify({ profileUrl }),
   })
 
+  const payload = (await response.json().catch(() => ({}))) as TikTokStatsResponse
+
   if (!response.ok) {
-    throw new Error('Could not verify TikTok stats')
+    throw new Error(payload?.error || `Could not verify TikTok stats (${response.status})`)
   }
 
   // Edge function returns a simplified contract; mobile should not parse provider-specific raw payloads.
-  const payload = (await response.json()) as TikTokStatsResponse
-  const followers = typeof payload?.followers === 'number' ? payload.followers : null
-  const likes = typeof payload?.likes === 'number' ? payload.likes : null
+  const followers = typeof payload?.followers === 'number' || typeof payload?.followers === 'string' ? payload.followers : null
+  const likes = typeof payload?.likes === 'number' || typeof payload?.likes === 'string' ? payload.likes : null
 
   return {
     followersRaw: followers,

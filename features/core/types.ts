@@ -15,10 +15,12 @@ export type ApplicationStatus = 'applied' | 'accepted' | 'rejected' | 'withdrawn
 
 export type DeliverableStatus =
   | 'pending'
+  | 'submitted'
+  | 'flagged'
+  | 'revision_requested'
   | 'uploaded'
   | 'pending_review'
   | 'approved'
-  | 'revision_requested'
   | 'published'
 
 export type Campaign = {
@@ -109,5 +111,5 @@ export type Deliverable = {
   platform: string
   type?: string | null
   url?: string | null
-  notes?: string | null
+  flagReason?: string | null
 }

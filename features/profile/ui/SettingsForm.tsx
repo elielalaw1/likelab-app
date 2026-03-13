@@ -20,6 +20,7 @@ import { SelectPopover } from '@/features/profile/ui/SelectPopover'
 import { CATEGORY_OPTIONS, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES } from '@/features/profile/location-data'
 
 type SectionId = 'avatar' | 'account' | 'social' | 'personal' | 'location' | 'categories'
+const stripHandleInput = (value: string) => value.replace(/^@+/, '')
 
 function asForm(profile?: CreatorProfile | null) {
   const code = profile?.phoneCountryCode || '+46'
@@ -347,14 +348,18 @@ export function SettingsForm() {
           <ProfileField
             label="TikTok Handle"
             value={form.tiktokHandle}
-            placeholder="@yourtiktok"
-            onChangeText={(value) => setForm((prev) => ({ ...prev, tiktokHandle: value }))}
+            placeholder="yourtiktok"
+            prefixText="@"
+            sanitizeText={stripHandleInput}
+            onChangeText={(value) => setForm((prev) => ({ ...prev, tiktokHandle: stripHandleInput(value) }))}
           />
           <ProfileField
             label="Instagram Handle"
             value={form.instagramHandle}
-            placeholder="@yourinstagram"
-            onChangeText={(value) => setForm((prev) => ({ ...prev, instagramHandle: value }))}
+            placeholder="yourinstagram"
+            prefixText="@"
+            sanitizeText={stripHandleInput}
+            onChangeText={(value) => setForm((prev) => ({ ...prev, instagramHandle: stripHandleInput(value) }))}
           />
         </SectionCard>
       </View>

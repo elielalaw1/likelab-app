@@ -5,6 +5,7 @@ import { getCurrentUserId } from '@/features/core/supabase-utils'
 type NotificationRow = {
   id: string
   user_id: string
+  type?: string | null
   title?: string | null
   message?: string | null
   link?: string | null

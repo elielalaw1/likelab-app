@@ -8,6 +8,8 @@ type Props = {
   onChangeText?: (value: string) => void
   editable?: boolean
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad'
+  prefixText?: string
+  sanitizeText?: (text: string) => string
 }
 
 export function ProfileField({
@@ -17,7 +19,11 @@ export function ProfileField({
   onChangeText,
   editable = true,
   keyboardType = 'default',
+  prefixText,
+  sanitizeText,
 }: Props) {
+  const displayValue = sanitizeText ? sanitizeText(value) : value
+
   return (
     <View style={{ gap: 8 }}>
       <Text
@@ -32,13 +38,7 @@ export function ProfileField({
       >
         {label}
       </Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.mutedForeground}
-        editable={editable}
-        keyboardType={keyboardType}
+      <View
         style={{
           borderWidth: 1,
           borderColor: 'rgba(234,236,239,0.8)',
@@ -46,11 +46,30 @@ export function ProfileField({
           height: 40,
           backgroundColor: editable ? colors.background : 'rgba(241,242,244,0.5)',
           paddingHorizontal: 12,
-          fontSize: 14,
-          color: colors.foreground,
-          fontFamily: typography.fontFamily,
+          flexDirection: 'row',
+          alignItems: 'center',
         }}
-      />
+      >
+        {prefixText ? (
+          <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: typography.fontFamily, marginRight: 2 }}>{prefixText}</Text>
+        ) : null}
+        <TextInput
+          value={displayValue}
+          onChangeText={(text) => onChangeText?.(sanitizeText ? sanitizeText(text) : text)}
+          placeholder={placeholder}
+          placeholderTextColor={colors.mutedForeground}
+          editable={editable}
+          keyboardType={keyboardType}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={{
+            flex: 1,
+            fontSize: 14,
+            color: colors.foreground,
+            fontFamily: typography.fontFamily,
+          }}
+        />
+      </View>
     </View>
   )
 }

@@ -9,7 +9,7 @@ export async function getDeliverables() {
 
   const { data, error } = await supabase
     .from('deliverables')
-    .select('id, campaign_id, status, platform, type, url, notes, campaigns(name, brand_id)')
+    .select('id, campaign_id, status, platform, type, url, flag_reason, campaigns(name, brand_id)')
     .eq('creator_id', userId)
     .order('created_at', { ascending: false })
 
@@ -26,7 +26,7 @@ export async function getDeliverables() {
       platform: textValue(row, ['platform']) || 'tiktok',
       type: textValue(row, ['type']),
       url: textValue(row, ['url']),
-      notes: textValue(row, ['notes']),
+      flagReason: textValue(row, ['flag_reason']),
       campaignBrandName: null,
     }
   })
@@ -39,7 +39,7 @@ export async function submitDeliverableUrl(params: { deliverableId: string; url:
     .from('deliverables')
     .update({
       url: params.url,
-      status: 'uploaded',
+      status: 'submitted',
       platform: 'tiktok',
     })
     .eq('id', params.deliverableId)

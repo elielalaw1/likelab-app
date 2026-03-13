@@ -6,9 +6,10 @@ type Props = {
   onChangeText: (value: string) => void
   onSubmit: () => void
   loading?: boolean
+  submitLabel?: string
 }
 
-export function DeliverableInputRow({ value, onChangeText, onSubmit, loading = false }: Props) {
+export function DeliverableInputRow({ value, onChangeText, onSubmit, loading = false, submitLabel = 'Submit' }: Props) {
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
       <TextInput
@@ -44,7 +45,7 @@ export function DeliverableInputRow({ value, onChangeText, onSubmit, loading = f
         }}
       >
         <Text style={{ color: colors.primaryForeground, fontWeight: '600', fontSize: 14, fontFamily: typography.fontFamily }}>
-          {loading ? '...' : 'Submit'}
+          {loading ? '...' : submitLabel}
         </Text>
       </Pressable>
     </View>

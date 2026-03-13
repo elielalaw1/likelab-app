@@ -3,6 +3,20 @@ import { CreatorProfile } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
 
 type Row = Record<string, unknown>
+const stripHandle = (value?: string | null) => value?.replace(/^@+/, '') || value || null
+
+function mapProfileConstraintError(message: string) {
+  if (message.includes('unique_creator_phone')) {
+    return 'This phone number is already in use by another account'
+  }
+  if (message.includes('unique_tiktok_handle')) {
+    return 'This TikTok handle is already registered'
+  }
+  if (message.includes('unique_instagram_handle')) {
+    return 'This Instagram handle is already registered'
+  }
+  return message
+}
 
 function completionPercentage(row: Row) {
   const requiredKeys = ['avatar_url', 'age_range', 'primary_category', 'gender', 'country', 'phone']
@@ -69,8 +83,8 @@ export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
     user_id: userId,
     display_name: values.displayName,
     phone: values.phone,
-    tiktok_handle: values.tiktokHandle,
-    instagram_handle: values.instagramHandle,
+    tiktok_handle: stripHandle(values.tiktokHandle),
+    instagram_handle: stripHandle(values.instagramHandle),
     gender: values.gender,
     age_range: values.ageRange,
     country: values.country,
@@ -82,7 +96,7 @@ export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
   }
 
   const { error } = await supabase.from('creator_profiles').upsert(payload, { onConflict: 'user_id' })
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(mapProfileConstraintError(error.message))
 }
 
 export function isProfileComplete(profile: CreatorProfile) {

@@ -20,17 +20,25 @@ export function AppHeader() {
 
   const list = useMemo(() => notifications.slice(0, 20), [notifications])
 
-  const openLink = async (link?: string | null) => {
-    if (!link) return
+  const normalizeNotificationLink = (link?: string | null, type?: string | null) => {
+    if (type === 'revision_requested') return '/(tabs)/deliverables'
+    if (!link) return null
+    if (link === '/dashboard/deliverables') return '/(tabs)/deliverables'
+    return link
+  }
+
+  const openLink = async (link?: string | null, type?: string | null) => {
+    const resolvedLink = normalizeNotificationLink(link, type)
+    if (!resolvedLink) return
     setOpen(false)
 
-    if (link.startsWith('/')) {
-      router.push(link as never)
+    if (resolvedLink.startsWith('/')) {
+      router.push(resolvedLink as never)
       return
     }
 
-    const can = await Linking.canOpenURL(link)
-    if (can) await Linking.openURL(link)
+    const can = await Linking.canOpenURL(resolvedLink)
+    if (can) await Linking.openURL(resolvedLink)
   }
 
   return (
@@ -144,7 +152,7 @@ export function AppHeader() {
                 </View>
               }
               renderItem={({ item }) => (
-                <Pressable onPress={() => openLink(item.link)} style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
+                <Pressable onPress={() => openLink(item.link, item.type)} style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
                   <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600', color: colors.foreground }}>
                     {item.title || 'Notification'}
                   </Text>

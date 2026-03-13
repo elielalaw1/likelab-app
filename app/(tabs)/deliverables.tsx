@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Screen } from '@/features/shared/ui/Screen'
@@ -42,6 +42,18 @@ export default function DeliverablesPage() {
 
     return Array.from(byCampaign.values())
   }, [data])
+
+  const canSubmitUrl = (status: string) => status === 'pending' || status === 'revision_requested'
+
+  const openUrl = async (url?: string | null) => {
+    if (!url) return
+    const supported = await Linking.canOpenURL(url)
+    if (!supported) {
+      Alert.alert('Invalid URL', 'Could not open this deliverable URL.')
+      return
+    }
+    await Linking.openURL(url)
+  }
 
   const onSubmit = async (deliverableId: string) => {
     const value = (inputs[deliverableId] || '').trim()
@@ -124,12 +136,55 @@ export default function DeliverablesPage() {
 
                 {expandedRows[item.id] ? (
                   <View style={shadows.deliverable}>
-                    <DeliverableInputRow
-                      value={inputs[item.id] ?? item.url ?? ''}
-                      onChangeText={(text) => setInputs((prev) => ({ ...prev, [item.id]: text }))}
-                      onSubmit={() => onSubmit(item.id)}
-                      loading={submitMutation.isPending}
-                    />
+                    <View style={{ gap: 12 }}>
+                      {item.status === 'revision_requested' && item.flagReason ? (
+                        <View
+                          style={{
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: '#FDBA74',
+                            backgroundColor: '#FFF7ED',
+                            padding: 12,
+                            gap: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#C2410C', fontSize: 12, fontWeight: '800', letterSpacing: 0.8 }}>REVISION REQUESTED</Text>
+                          <Text style={{ color: '#9A3412', fontSize: 14, lineHeight: 20, fontFamily: typography.fontFamily }}>
+                            {item.flagReason}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {canSubmitUrl(item.status) ? (
+                        <DeliverableInputRow
+                          value={inputs[item.id] ?? item.url ?? ''}
+                          onChangeText={(text) => setInputs((prev) => ({ ...prev, [item.id]: text }))}
+                          onSubmit={() => onSubmit(item.id)}
+                          loading={submitMutation.isPending}
+                          submitLabel={item.status === 'revision_requested' ? 'Re-submit' : 'Submit'}
+                        />
+                      ) : item.url ? (
+                        <Pressable
+                          onPress={() => openUrl(item.url)}
+                          style={{
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: 'rgba(234,236,239,0.9)',
+                            backgroundColor: '#fff',
+                            paddingHorizontal: 12,
+                            paddingVertical: 10,
+                            gap: 4,
+                          }}
+                        >
+                          <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.7 }}>SUBMITTED URL</Text>
+                          <Text numberOfLines={2} style={{ color: colors.primary, fontSize: 14, fontFamily: typography.fontFamily }}>
+                            {item.url}
+                          </Text>
+                        </Pressable>
+                      ) : (
+                        <Text style={{ color: palette.textMuted, fontSize: 13 }}>No URL submitted yet.</Text>
+                      )}
+                    </View>
                   </View>
                 ) : null}
               </View>
