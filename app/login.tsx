@@ -34,13 +34,14 @@ export default function LoginPage() {
       })
 
       if (error) {
-        Alert.alert('Sign in failed', 'Check your credentials and try again.')
+        Alert.alert('Sign in failed', error.message)
         return
       }
 
       router.replace('/(tabs)/overview')
-    } catch {
-      Alert.alert('Error', 'Something went wrong during sign in.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Something went wrong during sign in.'
+      Alert.alert('Error', message)
     } finally {
       setLoading(false)
     }
