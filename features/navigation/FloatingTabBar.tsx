@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { colors } from '@/features/core/theme'
+import { LinearGradient } from 'expo-linear-gradient'
+import { colors, glass } from '@/features/core/theme'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
 
@@ -77,8 +78,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           height: FLOATING_TAB_BAR_HEIGHT,
           borderRadius: 30,
           borderWidth: 1,
-          borderColor: 'rgba(226,231,238,0.98)',
-          backgroundColor: 'rgba(255,255,255,0.975)',
+          borderColor: glass.border,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: BAR_HORIZONTAL_PADDING,
@@ -95,6 +95,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
       pointerEvents={visible ? 'auto' : 'none'}
       onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
     >
+      <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.94)' }} />
       <View
         pointerEvents="none"
         style={{
@@ -116,13 +117,18 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             width: bubbleWidth,
             height: 42,
             borderRadius: 999,
-            backgroundColor: 'rgba(74,18,160,0.14)',
-            borderWidth: 1,
-            borderColor: 'rgba(74,18,160,0.23)',
+            overflow: 'hidden',
           },
           bubbleStyle,
         ]}
-      />
+      >
+        <LinearGradient
+          colors={['rgba(53,27,169,0.86)', 'rgba(124,58,237,0.82)', 'rgba(233,85,215,0.68)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: 'absolute', inset: 0, borderRadius: 999 }}
+        />
+      </Animated.View>
       {routes.map((route) => {
         const focused = state.routes[state.index].key === route.key
         const descriptor = descriptors[route.key]

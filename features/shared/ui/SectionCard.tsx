@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Text, View } from 'react-native'
-import { colors, palette, radii, shadows, spacing, typography } from '@/features/core/theme'
+import { colors, glass, radii, shadows, spacing, typography } from '@/features/core/theme'
 
 type Props = {
   title?: string
@@ -11,10 +11,10 @@ export function SectionCard({ title, children }: Props) {
   return (
     <View
       style={{
-        backgroundColor: 'rgba(255,255,255,0.8)',
+        backgroundColor: glass.surface,
         borderRadius: radii.card,
         borderWidth: 1,
-        borderColor: 'rgba(234,236,239,0.5)',
+        borderColor: glass.borderSoft,
         padding: spacing.card,
         gap: spacing.md,
         ...shadows.card,

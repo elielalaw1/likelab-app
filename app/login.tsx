@@ -1,13 +1,22 @@
 import { useState } from 'react'
-import { Pressable, Text, View, Alert } from 'react-native'
+import {
+  Alert,
+  Image,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 import { Redirect, router } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
-import { AuthLayout } from '@/features/auth/components/AuthLayout'
-import { LogoMark } from '@/features/auth/components/LogoMark'
-import { AuthCard } from '@/features/auth/components/AuthCard'
-import { AuthInput } from '@/features/auth/components/AuthInput'
-import { authColors } from '@/features/auth/theme'
 
 export default function LoginPage() {
   const { session, loading: sessionLoading } = useAuthSession()
@@ -66,59 +75,127 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout>
-      <LogoMark />
+    <View style={{ flex: 1, backgroundColor: '#F7F6F2' }}>
+      <ImageBackground
+        source={require('../design/Design2/Screenshot 2026-03-18 at 21.40.46.png')}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+        resizeMode="cover"
+      />
+      <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
 
-      <Text style={{ textAlign: 'center', fontSize: 22, lineHeight: 30, fontWeight: '800', color: authColors.text }}>
-        Sign in to Likelab
-      </Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 22 }} keyboardShouldPersistTaps="handled">
+          <Pressable onPress={() => router.back()} style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#6B7C9D" />
+            <Text style={{ color: '#6B7C9D', fontSize: 18, fontFamily: 'Montserrat' }}>Back</Text>
+          </Pressable>
 
-      <AuthCard>
-        <AuthInput
-          label="EMAIL"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-        />
+          <View style={{ flex: 1, justifyContent: 'center', paddingTop: 52, paddingBottom: 40 }}>
+            <View style={{ alignItems: 'center', marginBottom: 28 }}>
+              <Image
+                source={require('../design/Design2/Screenshot_2026-03-18_at_21.49.51-removebg-preview.png')}
+                style={{ width: 360, height: 56 }}
+                resizeMode="contain"
+              />
+            </View>
 
-        <AuthInput
-          label="PASSWORD"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Your password"
-          secureTextEntry
-        />
+            <View
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                borderWidth: 1,
+                borderColor: '#D7DFEE',
+                borderRadius: 18,
+                paddingHorizontal: 20,
+                paddingVertical: 22,
+              }}
+            >
+              <View style={{ gap: 26 }}>
+                <View style={{ gap: 10 }}>
+                  <Text style={{ color: '#687C9E', fontSize: 12, fontWeight: '700', letterSpacing: 1, fontFamily: 'Montserrat' }}>EMAIL</Text>
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor="#6C7E9E"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#D7DFEE',
+                      borderRadius: 12,
+                      backgroundColor: 'rgba(255,255,255,0.95)',
+                      color: '#6C7E9E',
+                      fontSize: 18,
+                      paddingHorizontal: 18,
+                      paddingVertical: 16,
+                      fontFamily: 'Montserrat',
+                    }}
+                  />
+                </View>
 
-        <Pressable onPress={handleForgotPassword} style={{ alignSelf: 'flex-end' }}>
-          <Text style={{ color: authColors.muted, fontSize: 14, fontWeight: '500' }}>Forgot password?</Text>
-        </Pressable>
+                <View style={{ gap: 10 }}>
+                  <Text style={{ color: '#687C9E', fontSize: 12, fontWeight: '700', letterSpacing: 1, fontFamily: 'Montserrat' }}>PASSWORD</Text>
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Your password"
+                    placeholderTextColor="#6C7E9E"
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#D7DFEE',
+                      borderRadius: 12,
+                      backgroundColor: 'rgba(255,255,255,0.95)',
+                      color: '#6C7E9E',
+                      fontSize: 18,
+                      paddingHorizontal: 18,
+                      paddingVertical: 16,
+                    }}
+                  />
+                </View>
 
-        <Pressable
-          onPress={handleLogin}
-          disabled={loading}
-          style={{
-            backgroundColor: authColors.buttonBg,
-            borderRadius: 14,
-            borderWidth: 1.5,
-            borderColor: authColors.accentSoft,
-            height: 50,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: loading ? 0.7 : 1,
-            marginTop: 10,
-          }}
-        >
-          <Text style={{ fontSize: 17, fontWeight: '700', color: authColors.text }}>{loading ? 'Signing in...' : 'Sign in'}</Text>
-        </Pressable>
-      </AuthCard>
+                <Pressable onPress={handleForgotPassword} style={{ alignSelf: 'flex-end', marginTop: 2 }}>
+                  <Text style={{ color: '#6C7E9E', fontSize: 15, fontFamily: 'Montserrat' }}>Forgot password?</Text>
+                </Pressable>
 
-      <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-        <Text style={{ color: authColors.muted, fontSize: 16 }}>{"Don't have an account?"}</Text>
-        <Pressable onPress={() => router.push('/signup')}>
-          <Text style={{ color: authColors.text, fontSize: 16, fontWeight: '700' }}>Sign up</Text>
-        </Pressable>
-      </View>
-    </AuthLayout>
+                <Pressable
+                  onPress={handleLogin}
+                  disabled={loading}
+                  style={{
+                    borderRadius: 20,
+                    borderWidth: 1.5,
+                    borderColor: '#C9D2FF',
+                    overflow: 'hidden',
+                    opacity: loading ? 0.72 : 1,
+                    marginTop: 2,
+                  }}
+                >
+                  <LinearGradient
+                    colors={['rgba(240,236,255,0.92)', 'rgba(236,243,255,0.92)']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 18 }}
+                  >
+                    <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>{loading ? 'Signing in...' : 'Sign in'}</Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={{ marginTop: 40, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: '#6C7E9E', fontSize: 17, fontFamily: 'Montserrat' }}>Don&apos;t have an account?</Text>
+              <Pressable onPress={() => router.push('/signup')}>
+                <Text style={{ color: '#101525', fontSize: 17, fontWeight: '700', fontFamily: 'Montserrat' }}>Sign up</Text>
+              </Pressable>
+            </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   )
 }

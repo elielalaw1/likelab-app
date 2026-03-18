@@ -1,18 +1,73 @@
 import { useMemo, useRef, useState } from 'react'
-import { Alert, Pressable, Text, View } from 'react-native'
+import { Alert, Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { AuthLayout } from '@/features/auth/components/AuthLayout'
-import { AuthCard } from '@/features/auth/components/AuthCard'
+import { LinearGradient } from 'expo-linear-gradient'
 import { AuthInput } from '@/features/auth/components/AuthInput'
-import { LogoMark } from '@/features/auth/components/LogoMark'
 import { ReviewTable } from '@/features/auth/components/ReviewTable'
-import { StepIndicator } from '@/features/auth/components/StepIndicator'
 import { fetchTikTokStats, signupCreator, stripAtPrefix } from '@/features/auth/api'
 import { authColors } from '@/features/auth/theme'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 type Step = 1 | 2 | 3
 const stripHandleInput = (value: string) => value.replace(/^@+/, '')
+
+function SimpleStepIndicator({ currentStep }: { currentStep: Step }) {
+  const renderStep = (step: Step) => {
+    const completed = step < currentStep
+    const active = step === currentStep
+
+    return (
+      <View
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: completed || active ? '#11192F' : 'rgba(248,250,255,0.98)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {completed ? (
+          <MaterialCommunityIcons name="check" size={22} color="#fff" />
+        ) : (
+          <Text
+            style={{
+              color: active ? '#fff' : '#64748B',
+              fontSize: 16,
+              fontWeight: '700',
+              fontFamily: 'Montserrat',
+            }}
+          >
+            {step}
+          </Text>
+        )}
+      </View>
+    )
+  }
+
+  const renderLine = (filled: boolean) => (
+    <View
+      style={{
+        width: 44,
+        height: 2,
+        borderRadius: 999,
+        backgroundColor: filled ? '#11192F' : 'rgba(255,255,255,0.92)',
+        marginHorizontal: 10,
+      }}
+    />
+  )
+
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: 232, height: 48 }}>
+      {renderStep(1)}
+      {renderLine(currentStep > 1)}
+      {renderStep(2)}
+      {renderLine(currentStep > 2)}
+      {renderStep(3)}
+    </View>
+  )
+}
 
 export default function SignupPage() {
   const statsRequestIdRef = useRef(0)
@@ -31,13 +86,6 @@ export default function SignupPage() {
   const [followersFormatted, setFollowersFormatted] = useState<string | null>(null)
   const [likesFormatted, setLikesFormatted] = useState<string | null>(null)
 
-  const subtitle =
-    step === 1
-      ? 'Enter your TikTok handle'
-      : step === 2
-        ? 'Account basics'
-        : 'Review your info'
-
   const reviewRows = useMemo(
     () => [
       { label: 'NAME', value: displayName || '—' },
@@ -50,6 +98,7 @@ export default function SignupPage() {
   )
 
   const canCreateAccount = statsFetched && !fetchingStats && !createLoading
+  const compactLayout = true
 
   const resetStatsState = () => {
     statsRequestIdRef.current += 1
@@ -114,11 +163,6 @@ export default function SignupPage() {
     setStep(2)
   }
 
-  const retryTikTokStatsFetch = () => {
-    resetStatsState()
-    void beginTikTokStatsFetch(true)
-  }
-
   const goNextFromStep2 = () => {
     if (!displayName.trim() || !email.trim() || !password || !confirmPassword) {
       Alert.alert('Missing fields', 'Fill in all required fields.')
@@ -171,138 +215,162 @@ export default function SignupPage() {
   }
 
   return (
-    <AuthLayout>
-      <LogoMark />
+    <View style={{ flex: 1, backgroundColor: '#F7F6F2' }}>
+      <ImageBackground
+        source={require('../design/Design2/Screenshot 2026-03-18 at 21.40.46.png')}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+        resizeMode="cover"
+      />
+      <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
 
-      <Text style={{ textAlign: 'center', fontSize: 22, lineHeight: 30, fontWeight: '800', color: authColors.text }}>
-        Create your creator account
-      </Text>
-
-      <StepIndicator currentStep={step} />
-      <Text style={{ textAlign: 'center', color: authColors.muted, fontSize: 16 }}>{subtitle}</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0} style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingHorizontal: 18, paddingTop: 8, paddingBottom: 18 }}>
+            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 14, paddingBottom: 14 }}>
+              <View style={{ alignItems: 'center', marginBottom: compactLayout ? 14 : 30 }}>
+                <Image
+                  source={require('../design/Design2/Screenshot_2026-03-16_at_13.02.09-removebg-preview.png')}
+                  style={{ width: compactLayout ? 156 : 210, height: compactLayout ? 44 : 60, marginBottom: compactLayout ? 8 : 18 }}
+                  resizeMode="contain"
+                />
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: compactLayout ? 22 : 30,
+                    lineHeight: compactLayout ? 26 : 34,
+                    fontWeight: '800',
+                    color: '#060B1F',
+                    fontFamily: 'Montserrat',
+                    letterSpacing: -0.6,
+                    marginBottom: compactLayout ? 10 : 24,
+                  }}
+                >
+                  Create your creator account
+                </Text>
+                <SimpleStepIndicator currentStep={step} />
+              </View>
 
       {step === 1 ? (
-        <AuthCard>
-          <AuthInput
-            label="TIKTOK HANDLE *"
-            value={tiktokHandle}
-            onChangeText={handleTikTokHandleChange}
-            placeholder="yourtiktok"
-            prefixText="@"
-            sanitizeText={stripHandleInput}
-          />
+        <View
+          style={{
+            backgroundColor: '#fff',
+            borderWidth: 1,
+            borderColor: '#D7DFEE',
+            borderRadius: 18,
+            paddingHorizontal: 18,
+            paddingVertical: 18,
+          }}
+        >
+          <View style={{ gap: 20 }}>
+            <AuthInput
+              label="TIKTOK HANDLE *"
+              value={tiktokHandle}
+              onChangeText={handleTikTokHandleChange}
+              placeholder="yourtiktok"
+              prefixText="@"
+              sanitizeText={stripHandleInput}
+            />
 
-          <AuthInput
-            label="INSTAGRAM HANDLE"
-            value={instagramHandle}
-            onChangeText={(value) => setInstagramHandle(stripHandleInput(value))}
-            placeholder="yourinstagram"
-            prefixText="@"
-            sanitizeText={stripHandleInput}
-          />
+            <AuthInput
+              label="INSTAGRAM HANDLE"
+              value={instagramHandle}
+              onChangeText={(value) => setInstagramHandle(stripHandleInput(value))}
+              placeholder="yourinstagram"
+              prefixText="@"
+              sanitizeText={stripHandleInput}
+            />
 
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-            <Pressable
-              onPress={goNextFromStep1}
-              style={{
-                height: 50,
-                minWidth: 112,
-                paddingHorizontal: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: authColors.accentSoft,
-                backgroundColor: authColors.buttonBg,
-                flexDirection: 'row',
-                gap: 8,
-              }}
-            >
-              <Text style={{ fontSize: 17, fontWeight: '700', color: authColors.text }}>Next</Text>
-              <MaterialCommunityIcons name="arrow-right" size={18} color={authColors.text} />
-            </Pressable>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+              <Pressable
+                onPress={() => router.back()}
+                style={{
+                  height: 50,
+                  minWidth: 96,
+                  paddingHorizontal: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: authColors.border,
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  flexDirection: 'row',
+                  gap: 6,
+                }}
+              >
+                <MaterialCommunityIcons name="arrow-left" size={18} color={authColors.muted} />
+                <Text style={{ fontSize: 15, color: authColors.muted, fontWeight: '600', fontFamily: authColors.typography.fontFamily }}>Back</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={goNextFromStep1}
+                style={{
+                  height: 50,
+                  minWidth: 112,
+                  paddingHorizontal: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  borderColor: '#C9D2FF',
+                  flexDirection: 'row',
+                  gap: 8,
+                  overflow: 'hidden',
+                }}
+              >
+                <LinearGradient colors={['rgba(247,244,255,0.95)', 'rgba(236,244,255,0.95)']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: 'absolute', inset: 0 }} />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#101525', fontFamily: authColors.typography.fontFamily }}>Next</Text>
+                <MaterialCommunityIcons name="arrow-right" size={18} color="#101525" />
+              </Pressable>
+            </View>
           </View>
-        </AuthCard>
+        </View>
       ) : null}
 
       {step === 2 ? (
-        <AuthCard>
-          <AuthInput
-            label="NAME *"
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="Your name"
-            autoCapitalize="words"
-          />
+        <View
+          style={{
+            backgroundColor: '#fff',
+            borderWidth: 1,
+            borderColor: '#D7DFEE',
+            borderRadius: 18,
+            paddingHorizontal: 18,
+            paddingVertical: 16,
+          }}
+        >
+          <View style={{ gap: 14 }}>
+            <AuthInput
+              label="NAME *"
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="Your name"
+              autoCapitalize="words"
+            />
 
-          <AuthInput
-            label="EMAIL *"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            keyboardType="email-address"
-          />
+            <AuthInput
+              label="EMAIL *"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+            />
 
-          <AuthInput
-            label="PASSWORD *"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Min 8 characters"
-            secureTextEntry
-          />
+            <AuthInput
+              label="PASSWORD *"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Min 8 characters"
+              secureTextEntry
+            />
 
-          <AuthInput
-            label="CONFIRM PASSWORD *"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Repeat password"
-            secureTextEntry
-          />
+            <AuthInput
+              label="CONFIRM PASSWORD *"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Repeat password"
+              secureTextEntry
+            />
 
-          <View
-            style={{
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              backgroundColor: fetchingStats ? '#eef4ff' : statsError ? '#fff4f4' : '#f6f7f9',
-              borderWidth: 1,
-              borderColor: fetchingStats ? '#c7d8ff' : statsError ? '#f3c3c3' : authColors.border,
-            }}
-          >
-            <Text style={{ color: authColors.text, fontSize: 14, fontWeight: '600' }}>
-              {fetchingStats
-                ? 'Fetching TikTok stats...'
-                : statsFetched
-                  ? `TikTok stats loaded: ${followersFormatted || '—'} followers, ${likesFormatted || '—'} likes`
-                  : statsError
-                    ? 'TikTok stats fetch failed'
-                    : 'TikTok stats will be fetched after you enter your handle.'}
-            </Text>
-            {statsError ? (
-              <Text style={{ color: authColors.muted, fontSize: 13, lineHeight: 18, marginTop: 4 }}>
-                {statsError}
-              </Text>
-            ) : null}
-            {!fetchingStats && !statsFetched ? (
-              <Pressable
-                onPress={retryTikTokStatsFetch}
-                style={{
-                  marginTop: 10,
-                  alignSelf: 'flex-start',
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: authColors.accentSoft,
-                  backgroundColor: '#fff',
-                }}
-              >
-                <Text style={{ color: authColors.text, fontSize: 13, fontWeight: '700' }}>Retry TikTok fetch</Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
             <Pressable
               onPress={() => setStep(1)}
               style={{
@@ -315,11 +383,11 @@ export default function SignupPage() {
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 6,
-                backgroundColor: '#fff',
+                backgroundColor: 'rgba(255,255,255,0.9)',
               }}
             >
               <MaterialCommunityIcons name="arrow-left" size={16} color={authColors.muted} />
-              <Text style={{ fontSize: 15, color: authColors.muted, fontWeight: '600' }}>Back</Text>
+              <Text style={{ fontSize: 15, color: authColors.muted, fontWeight: '600', fontFamily: authColors.typography.fontFamily }}>Back</Text>
             </Pressable>
 
             <Pressable
@@ -327,45 +395,76 @@ export default function SignupPage() {
               style={{
                 height: 50,
                 minWidth: 112,
-                borderRadius: 14,
+                borderRadius: 20,
                 borderWidth: 1.5,
-                borderColor: authColors.accentSoft,
-                backgroundColor: authColors.buttonBg,
+                borderColor: '#C9D2FF',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 8,
+                overflow: 'hidden',
               }}
             >
-              <Text style={{ fontSize: 17, color: authColors.text, fontWeight: '700' }}>Next</Text>
-              <MaterialCommunityIcons name="arrow-right" size={18} color={authColors.text} />
+              <LinearGradient colors={['rgba(247,244,255,0.95)', 'rgba(236,244,255,0.95)']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: 'absolute', inset: 0 }} />
+              <Text style={{ fontSize: 15, color: '#101525', fontWeight: '700', fontFamily: authColors.typography.fontFamily }}>Next</Text>
+              <MaterialCommunityIcons name="arrow-right" size={18} color="#101525" />
             </Pressable>
           </View>
-        </AuthCard>
+          </View>
+        </View>
       ) : null}
 
       {step === 3 ? (
-        <AuthCard>
-          <Text style={{ color: authColors.muted, fontSize: 17, lineHeight: 24 }}>
+        <View
+          style={{
+            backgroundColor: '#fff',
+            borderWidth: 1,
+            borderColor: '#D7DFEE',
+            borderRadius: 18,
+            paddingHorizontal: 18,
+            paddingVertical: 18,
+          }}
+        >
+          <Text
+            style={{
+              color: authColors.muted,
+              fontSize: 16,
+              lineHeight: 22,
+              fontFamily: authColors.typography.fontFamily,
+              marginBottom: 14,
+            }}
+          >
             Review your info. You can complete your profile after signing up.
           </Text>
 
           <ReviewTable rows={reviewRows} />
 
-          <Text style={{ color: authColors.accent, fontSize: 15, fontWeight: '600' }}>
-            {fetchingStats
-              ? 'Fetching stats...'
-              : statsFetched
-                ? '✓ TikTok stats verified'
-                : 'TikTok verification required before account creation'}
-          </Text>
+          <View style={{ marginTop: 16, marginBottom: 12 }}>
+            <Text style={{ color: '#060B1F', fontSize: 14, fontWeight: '500', fontFamily: authColors.typography.fontFamily }}>
+              {fetchingStats
+                ? 'Fetching TikTok stats...'
+                : statsFetched
+                  ? '✓ TikTok stats verified'
+                  : 'TikTok verification required'}
+            </Text>
+          </View>
 
           {statsError ? (
-            <Text style={{ color: authColors.muted, fontSize: 13, lineHeight: 18 }}>{statsError}</Text>
+            <Text style={{ color: authColors.muted, fontSize: 12, lineHeight: 17, fontFamily: authColors.typography.fontFamily, marginBottom: 10 }}>{statsError}</Text>
           ) : null}
 
-          <View style={{ backgroundColor: '#f1f3f7', borderRadius: 12, padding: 12 }}>
-            <Text style={{ color: authColors.muted, fontSize: 14, lineHeight: 20 }}>
+          <View
+            style={{
+              backgroundColor: 'rgba(248,250,255,0.92)',
+              borderRadius: 16,
+              paddingHorizontal: 16,
+              paddingVertical: 14,
+              borderWidth: 1,
+              borderColor: 'rgba(234,239,248,0.95)',
+              marginBottom: 18,
+            }}
+          >
+            <Text style={{ color: authColors.muted, fontSize: 13, lineHeight: 18, fontFamily: authColors.typography.fontFamily }}>
               💡 After signing up, complete your profile (photo, age, category) to unlock campaign applications and appear in brand searches.
             </Text>
           </View>
@@ -383,11 +482,11 @@ export default function SignupPage() {
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 6,
-                backgroundColor: '#fff',
+                backgroundColor: 'rgba(255,255,255,0.9)',
               }}
             >
               <MaterialCommunityIcons name="arrow-left" size={16} color={authColors.muted} />
-              <Text style={{ fontSize: 15, color: authColors.muted, fontWeight: '600' }}>Back</Text>
+              <Text style={{ fontSize: 15, color: authColors.muted, fontWeight: '600', fontFamily: authColors.typography.fontFamily }}>Back</Text>
             </Pressable>
 
             <Pressable
@@ -395,17 +494,20 @@ export default function SignupPage() {
               disabled={!canCreateAccount}
               style={{
                 height: 50,
-                minWidth: 162,
-                borderRadius: 14,
-                borderWidth: 2,
-                borderColor: '#3d5fda',
-                backgroundColor: authColors.buttonBg,
+                minWidth: 170,
+                paddingHorizontal: 22,
+                borderRadius: 20,
+                borderWidth: 1.5,
+                borderColor: '#C9D2FF',
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: canCreateAccount ? 1 : 0.7,
+                overflow: 'hidden',
+                flexDirection: 'row',
               }}
             >
-              <Text style={{ fontSize: 17, color: authColors.text, fontWeight: '700' }}>
+              <LinearGradient colors={['rgba(247,244,255,0.95)', 'rgba(236,244,255,0.95)']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: 'absolute', inset: 0 }} />
+              <Text style={{ fontSize: 15, color: '#101525', fontWeight: '700', fontFamily: authColors.typography.fontFamily }}>
                 {createLoading
                   ? 'Creating account...'
                   : fetchingStats
@@ -416,15 +518,12 @@ export default function SignupPage() {
               </Text>
             </Pressable>
           </View>
-        </AuthCard>
+        </View>
       ) : null}
-
-      <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-        <Text style={{ color: authColors.muted, fontSize: 16 }}>Already have an account?</Text>
-        <Pressable onPress={() => router.replace('/login')}>
-          <Text style={{ color: authColors.text, fontSize: 16, fontWeight: '700' }}>Sign in</Text>
-        </Pressable>
-      </View>
-    </AuthLayout>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   )
 }

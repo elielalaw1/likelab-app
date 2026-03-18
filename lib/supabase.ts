@@ -5,6 +5,8 @@ import * as SecureStore from 'expo-secure-store'
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 const SECURE_STORE_CHUNK_SIZE = 1800
+const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
+export const supabaseStorageKey = `sb-${projectRef}-auth-token`
 
 function getChunkMetaKey(key: string) {
   return `${key}__chunk_count`
@@ -104,8 +106,13 @@ const storage = Platform.OS === 'web' ? WebStorageAdapter : ExpoSecureStoreAdapt
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage,
+    storageKey: supabaseStorageKey,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
   },
 })
+
+export async function clearPersistedSupabaseSession() {
+  await storage.removeItem(supabaseStorageKey)
+}

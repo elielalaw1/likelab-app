@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { clearPersistedSupabaseSession, supabase } from '@/lib/supabase'
 
 type AuthSessionValue = {
   session: Session | null
@@ -24,6 +24,13 @@ function setAuthState(next: AuthSessionValue) {
   emit()
 }
 
+function isInvalidRefreshTokenError(error: unknown) {
+  if (!(error instanceof Error)) return false
+
+  const message = error.message.toLowerCase()
+  return message.includes('invalid refresh token') || message.includes('refresh token not found')
+}
+
 function initializeAuthSessionStore() {
   if (initialized) return
   initialized = true
@@ -39,7 +46,11 @@ function initializeAuthSessionStore() {
       const { data, error } = await supabase.auth.getSession()
       if (error) throw error
       setAuthState({ session: data.session, loading: false })
-    } catch {
+    } catch (error) {
+      if (isInvalidRefreshTokenError(error)) {
+        await clearPersistedSupabaseSession()
+      }
+
       setAuthState({ session: null, loading: false })
     } finally {
       clearTimeout(timeoutId)

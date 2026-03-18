@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { FlatList, Image, Linking, Modal, Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { colors, radii, spacing, typography } from '@/features/core/theme'
+import { LinearGradient } from 'expo-linear-gradient'
+import { colors, glass, radii, spacing, typography } from '@/features/core/theme'
 import { useNotifications } from '@/features/notifications/hooks'
 import { useCreatorProfile } from '@/features/profile/hooks'
 
@@ -51,9 +52,10 @@ export function AppHeader() {
             borderRadius: radii.sidebarNav,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: colors.likelabLavender,
+            overflow: 'hidden',
           }}
         >
+          <LinearGradient colors={['#351BA9', '#2EE3F1', '#E955D7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
           <MaterialCommunityIcons name="star-four-points" size={16} color={colors.likelabIndigo} />
         </View>
         <Text
@@ -127,41 +129,42 @@ export function AppHeader() {
               marginTop: 80,
               marginHorizontal: 16,
               borderRadius: 16,
-              backgroundColor: '#fff',
               borderWidth: 1,
-              borderColor: 'rgba(234,236,239,0.7)',
+              borderColor: glass.borderSoft,
               maxHeight: 360,
               overflow: 'hidden',
             }}
           >
-            <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(234,236,239,0.8)' }}>
-              <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600', color: colors.foreground }}>
-                Notifications
-              </Text>
-            </View>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.94)' }}>
+              <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(3,7,18,0.05)' }}>
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600', color: colors.foreground }}>
+                  Notifications
+                </Text>
+              </View>
 
-            <FlatList
-              data={list}
-              keyExtractor={(item) => item.id}
-              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: 'rgba(234,236,239,0.8)' }} />}
-              ListEmptyComponent={
-                <View style={{ padding: 14 }}>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: colors.mutedForeground }}>
-                    No notifications yet.
-                  </Text>
-                </View>
-              }
-              renderItem={({ item }) => (
-                <Pressable onPress={() => openLink(item.link, item.type)} style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600', color: colors.foreground }}>
-                    {item.title || 'Notification'}
-                  </Text>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: colors.mutedForeground }} numberOfLines={2}>
-                    {item.message || ''}
-                  </Text>
-                </Pressable>
-              )}
-            />
+              <FlatList
+                data={list}
+                keyExtractor={(item) => item.id}
+                ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: 'rgba(3,7,18,0.05)' }} />}
+                ListEmptyComponent={
+                  <View style={{ padding: 14 }}>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: colors.mutedForeground }}>
+                      No notifications yet.
+                    </Text>
+                  </View>
+                }
+                renderItem={({ item }) => (
+                  <Pressable onPress={() => openLink(item.link, item.type)} style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600', color: colors.foreground }}>
+                      {item.title || 'Notification'}
+                    </Text>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: colors.mutedForeground }} numberOfLines={2}>
+                      {item.message || ''}
+                    </Text>
+                  </Pressable>
+                )}
+              />
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
