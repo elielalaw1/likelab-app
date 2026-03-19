@@ -4,8 +4,7 @@ import { useRouter } from 'expo-router'
 import { Campaign } from '@/features/core/types'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
-import { formatCurrencySek } from '@/features/core/format'
-import { palette, radii, typography } from '@/features/core/theme'
+import { palette, shadows, typography } from '@/features/core/theme'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 
 type Props = {
@@ -30,32 +29,30 @@ export function ProfileCollaborations({ items }: Props) {
           key={item.id}
           onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: item.id } } as never)}
           style={{
-            borderRadius: radii.input,
+            borderRadius: 24,
             borderWidth: 1,
             borderColor: 'rgba(234,236,239,0.75)',
             overflow: 'hidden',
             backgroundColor: '#fff',
+            ...shadows.card,
           }}
         >
           {item.coverImageUrl ? (
-            <Image source={{ uri: item.coverImageUrl }} style={{ width: '100%', height: 112 }} contentFit="cover" />
+            <Image source={{ uri: item.coverImageUrl }} style={{ width: '100%', height: 148 }} contentFit="cover" />
           ) : (
-            <View style={{ height: 112, backgroundColor: 'rgba(74,18,160,0.08)' }} />
+            <View style={{ height: 148, backgroundColor: 'rgba(74,18,160,0.08)' }} />
           )}
 
-          <View style={{ padding: 12, gap: 8 }}>
+          <View style={{ padding: 16, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <Text style={{ flex: 1, fontFamily: typography.fontFamily, color: palette.text, fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
+              <Text style={{ flex: 1, fontFamily: typography.fontFamily, color: palette.text, fontSize: 17, fontWeight: '700' }} numberOfLines={1}>
                 {item.title}
               </Text>
               <StatusBadge status={item.creatorApplicationStatus || 'accepted'} />
             </View>
-            <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 12 }} numberOfLines={1}>
+            <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 14 }} numberOfLines={1}>
               {item.brandName || 'Brand'}
             </Text>
-            {item.rewardAmount ? (
-              <Text style={{ fontFamily: typography.fontFamily, color: palette.text, fontSize: 13, fontWeight: '600' }}>{formatCurrencySek(item.rewardAmount)}</Text>
-            ) : null}
           </View>
         </Pressable>
       ))}

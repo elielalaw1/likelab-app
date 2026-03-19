@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, w
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import { colors, glass } from '@/features/core/theme'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
@@ -78,15 +79,15 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           height: FLOATING_TAB_BAR_HEIGHT,
           borderRadius: 30,
           borderWidth: 1,
-          borderColor: glass.border,
+          borderColor: 'rgba(15,23,42,0.08)',
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: BAR_HORIZONTAL_PADDING,
-          shadowColor: '#0D1626',
-          shadowOpacity: 0.11,
+          shadowColor: '#0F172A',
+          shadowOpacity: 0.08,
           shadowRadius: 18,
-          shadowOffset: { width: 0, height: 10 },
-          elevation: 10,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 8,
           zIndex: 80,
           overflow: 'hidden',
         },
@@ -95,35 +96,74 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
       pointerEvents={visible ? 'auto' : 'none'}
       onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
     >
-      <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.94)' }} />
-      <View
-        pointerEvents="none"
+      <BlurView
+        tint="light"
+        intensity={72}
         style={{
           position: 'absolute',
-          left: 12,
-          right: 12,
-          top: 5,
-          height: 20,
-          borderRadius: 16,
-          backgroundColor: 'rgba(255,255,255,0.62)',
+          inset: 0,
         }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(248,250,252,0.68)', 'rgba(255,255,255,0.52)']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{ position: 'absolute', inset: 0 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0.34)', 'rgba(255,255,255,0.02)']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.6 }}
+        style={{ position: 'absolute', left: 1, right: 1, top: 1, height: 12, borderTopLeftRadius: 30, borderTopRightRadius: 30 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(15,23,42,0)', 'rgba(15,23,42,0.06)']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 18, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}
       />
       <Animated.View
         pointerEvents="none"
         style={[
           {
             position: 'absolute',
-            top: 13,
+            top: 12,
             width: bubbleWidth,
             height: 42,
             borderRadius: 999,
             overflow: 'hidden',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.86)',
+            shadowColor: 'rgba(109,40,217,1)',
+            shadowOpacity: 0.18,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 4 },
           },
           bubbleStyle,
         ]}
       >
+        <BlurView
+          tint="light"
+          intensity={48}
+          style={{ position: 'absolute', inset: 0 }}
+        />
         <LinearGradient
-          colors={['rgba(53,27,169,0.86)', 'rgba(124,58,237,0.82)', 'rgba(233,85,215,0.68)']}
+          colors={['rgba(255,255,255,0.72)', 'rgba(239,233,255,0.52)', 'rgba(228,246,255,0.32)']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{ position: 'absolute', inset: 0, borderRadius: 999 }}
+        />
+        <LinearGradient
+          colors={['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']}
+          start={{ x: 0.08, y: 0.02 }}
+          end={{ x: 0.88, y: 0.72 }}
+          style={{ position: 'absolute', inset: 0, borderRadius: 999 }}
+        />
+        <LinearGradient
+          colors={['rgba(139,92,246,0.16)', 'rgba(56,189,248,0.1)', 'rgba(255,255,255,0.02)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ position: 'absolute', inset: 0, borderRadius: 999 }}
@@ -188,7 +228,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             }}
           >
             <View style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name={iconName} size={focused ? 23 : 22} color={focused ? colors.primaryForeground : colors.mutedForeground} />
+              <MaterialCommunityIcons name={iconName} size={focused ? 23 : 22} color={focused ? colors.foreground : colors.mutedForeground} />
             </View>
           </Pressable>
         )

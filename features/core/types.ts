@@ -42,6 +42,14 @@ export type Campaign = {
   briefGuidelines?: string | null
   instructions?: string | null
   brandVoice?: string | null
+  brandTone?: string | null
+  targetAudience?: string | null
+  platforms?: string[] | null
+  exampleLinks?: string[] | null
+  creationDays?: number | null
+  reviewDays?: number | null
+  contentRightsDays?: number | null
+  creatorLimit?: number | null
   requiredDisclosure?: string | null
   thingsToAvoid?: string | null
   requiredHashtags?: string[] | null
@@ -111,5 +119,6 @@ export type Deliverable = {
   platform: string
   type?: string | null
   url?: string | null
+  notes?: string | null
   flagReason?: string | null
 }

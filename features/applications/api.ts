@@ -5,6 +5,13 @@ import { enrichCampaigns } from '@/features/campaigns/api'
 
 type Row = Record<string, unknown>
 
+const statusPriority: Record<string, number> = {
+  accepted: 4,
+  applied: 3,
+  rejected: 2,
+  withdrawn: 1,
+}
+
 function mapCampaignFromJoin(campaign: Row) {
   return {
     id: String(campaign.id || ''),
@@ -53,7 +60,7 @@ export async function getApplications(): Promise<{ applications: CreatorApplicat
   const enrichedCampaigns = await enrichCampaigns([...appCampaigns, ...inviteCampaigns].map(mapCampaignFromJoin))
   const campaignMap = new Map(enrichedCampaigns.map((campaign) => [campaign.id, campaign]))
 
-  const applications: CreatorApplication[] = (applicationsRes.data || []).map((row) => {
+  const mappedApplications: CreatorApplication[] = (applicationsRes.data || []).map((row) => {
     const campaign = campaignMap.get(String(row.campaign_id || ''))
 
     return {
@@ -70,6 +77,24 @@ export async function getApplications(): Promise<{ applications: CreatorApplicat
       createdAt: String(row.created_at || ''),
     }
   })
+
+  const dedupedApplications = new Map<string, CreatorApplication>()
+  for (const application of mappedApplications) {
+    const existing = dedupedApplications.get(application.campaignId)
+    if (!existing) {
+      dedupedApplications.set(application.campaignId, application)
+      continue
+    }
+
+    const currentPriority = statusPriority[application.status] || 0
+    const existingPriority = statusPriority[existing.status] || 0
+    const currentCreatedAt = new Date(application.createdAt || 0).getTime()
+    const existingCreatedAt = new Date(existing.createdAt || 0).getTime()
+
+    if (currentPriority > existingPriority || (currentPriority === existingPriority && currentCreatedAt > existingCreatedAt)) {
+      dedupedApplications.set(application.campaignId, application)
+    }
+  }
 
   const invitations: CreatorInvitation[] = (invitationsRes.data || []).map((row) => {
     const campaign = campaignMap.get(String(row.campaign_id || ''))
@@ -89,7 +114,10 @@ export async function getApplications(): Promise<{ applications: CreatorApplicat
     }
   })
 
-  return { applications, invitations }
+  return {
+    applications: Array.from(dedupedApplications.values()).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()),
+    invitations,
+  }
 }
 
 export async function getRecentApplications(limit = 3): Promise<CreatorApplication[]> {

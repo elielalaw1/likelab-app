@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { ProfileField } from '@/features/shared/ui/ProfileField'
 import { colors, palette, radii, spacing, typography } from '@/features/core/theme'
 import { useCreatorProfile, useUpdateCreatorProfile } from '@/features/profile/hooks'
@@ -484,22 +485,14 @@ export function SettingsForm() {
         </SectionCard>
       </View>
 
-      <Pressable
+      <LiquidButton
+        label={updateMutation.isPending ? 'Saving...' : 'Save Changes'}
         onPress={handleSave}
         disabled={updateMutation.isPending}
-        style={{
-          backgroundColor: colors.primary,
-          borderRadius: radii.button,
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 44,
-          marginTop: spacing.xs,
-        }}
-      >
-        <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: typography.fontFamily }}>
-          {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-        </Text>
-      </Pressable>
+        minHeight={44}
+        borderRadius={radii.button}
+        style={{ marginTop: spacing.xs }}
+      />
 
       <SectionCard>
         <Text style={{ color: colors.destructive, fontWeight: '700', fontSize: 20, fontFamily: typography.fontFamily }}>Danger Zone</Text>
@@ -507,30 +500,22 @@ export function SettingsForm() {
           Permanently delete your account and all associated data. This action cannot be undone.
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressable
+          <LiquidButton
+            label="Delete Account"
             onPress={() => setDeleteModalOpen(true)}
-            style={{
-              borderWidth: 1,
-              borderColor: 'rgba(239,68,68,0.3)',
-              borderRadius: radii.input,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-            }}
-          >
-            <Text style={{ color: colors.destructive, fontWeight: '600', fontSize: 14, fontFamily: typography.fontFamily }}>Delete Account</Text>
-          </Pressable>
-          <Pressable
+            tone="danger"
+            minHeight={44}
+            borderRadius={radii.input}
+            style={{ flex: 1 }}
+          />
+          <LiquidButton
+            label="Log Out"
             onPress={handleSignOut}
-            style={{
-              borderWidth: 1,
-              borderColor: 'rgba(234,236,239,0.8)',
-              borderRadius: radii.input,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-            }}
-          >
-            <Text style={{ color: palette.text, fontWeight: '600', fontSize: 14, fontFamily: typography.fontFamily }}>Log Out</Text>
-          </Pressable>
+            tone="neutral"
+            minHeight={44}
+            borderRadius={radii.input}
+            style={{ flex: 1 }}
+          />
         </View>
       </SectionCard>
 

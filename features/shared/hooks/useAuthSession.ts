@@ -49,6 +49,7 @@ function initializeAuthSessionStore() {
     } catch (error) {
       if (isInvalidRefreshTokenError(error)) {
         await clearPersistedSupabaseSession()
+        await supabase.auth.signOut({ scope: 'local' })
       }
 
       setAuthState({ session: null, loading: false })

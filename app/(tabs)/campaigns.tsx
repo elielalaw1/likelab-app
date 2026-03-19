@@ -11,6 +11,7 @@ import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGa
 
 export default function CampaignsPage() {
   const { data, isLoading, error } = useCampaigns()
+  const visibleCampaigns = (data || []).filter((item) => item.creatorApplicationStatus !== 'accepted')
 
   return (
     <Screen overlay={<CreatorOnboardingGate />} overlayPadding={136}>
@@ -29,11 +30,11 @@ export default function CampaignsPage() {
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load campaigns right now.</Text> : null}
 
       <FlatList
-        data={data || []}
+        data={visibleCampaigns}
         keyExtractor={(item) => item.id}
         scrollEnabled={false}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No Campaigns" subtitle="No campaigns available right now." icon="bullhorn-outline" /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title="No Campaigns" subtitle="No new campaigns available right now." icon="bullhorn-outline" /> : null}
         renderItem={({ item }) => (
           <CampaignCard
             campaign={item}

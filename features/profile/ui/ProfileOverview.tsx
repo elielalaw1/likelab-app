@@ -3,21 +3,25 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useQueryClient } from '@tanstack/react-query'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { Screen } from '@/features/shared/ui/Screen'
 import { colors, palette, radii, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { useApplications } from '@/features/applications/hooks'
 import { useDeliverables } from '@/features/deliverables/hooks'
+import { supabase } from '@/lib/supabase'
 import { ProfileHero } from '@/features/profile/ui/ProfileHero'
 import { ProfileStats } from '@/features/profile/ui/ProfileStats'
 import { ProfileCollaborations } from '@/features/profile/ui/ProfileCollaborations'
 import { AvatarPreviewModal } from '@/features/profile/ui/AvatarPreviewModal'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 export function ProfileOverview() {
   const { data: profile, isLoading: profileLoading, error: profileError } = useCreatorProfile()
   const { data: applicationsData } = useApplications()
   const { data: deliverables } = useDeliverables()
+  const queryClient = useQueryClient()
   const [avatarOpen, setAvatarOpen] = useState(false)
 
   const acceptedCampaigns = useMemo(() => {
@@ -48,16 +52,22 @@ export function ProfileOverview() {
     }
   }, [applicationsData?.applications, deliverables])
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    queryClient.clear()
+    router.replace('/login')
+  }
+
   return (
     <Screen>
       <AppHeader />
 
-      <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 2 }}>
-        <Text style={{ fontSize: typography.sizes.pageTitle, fontWeight: '700', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -0.32 }}>
+      <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 8 }}>
+        <Text style={{ fontSize: 38, lineHeight: 42, fontWeight: '800', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -1 }}>
           Creator Profile
         </Text>
-        <Text style={{ color: palette.textMuted, fontSize: typography.sizes.subtitle, fontFamily: typography.fontFamily }}>
-          Your public creator overview
+        <Text style={{ color: palette.textMuted, fontSize: 16, fontFamily: typography.fontFamily }}>
+          Shape how brands see you across campaigns, applications and live collabs.
         </Text>
       </Animated.View>
 
@@ -74,21 +84,21 @@ export function ProfileOverview() {
           />
           <ProfileCollaborations items={acceptedCampaigns} />
 
-          <Pressable
+          <LiquidButton
+            label="Edit Profile"
             onPress={() => router.push('/settings')}
-            style={{
-              minHeight: 44,
-              borderRadius: radii.button,
-              backgroundColor: colors.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'row',
-              gap: 6,
-            }}
-          >
-            <MaterialCommunityIcons name="account-edit-outline" size={18} color="#fff" />
-            <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700' }}>Edit Profile</Text>
-          </Pressable>
+            minHeight={56}
+            borderRadius={22}
+            icon={<MaterialCommunityIcons name="account-edit-outline" size={19} color="#fff" />}
+          />
+
+          <LiquidButton
+            label="Log Out"
+            onPress={handleSignOut}
+            minHeight={50}
+            tone="neutral"
+            icon={<MaterialCommunityIcons name="logout-variant" size={18} color={palette.textMuted} />}
+          />
 
           <AvatarPreviewModal visible={avatarOpen} uri={profile.avatarUrl || undefined} onClose={() => setAvatarOpen(false)} />
         </>

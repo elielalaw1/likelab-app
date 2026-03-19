@@ -35,15 +35,27 @@ export function StatusBadge({ status }: Props) {
   const label = mapped?.label || raw.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN'
 
   return (
-    <View style={{ backgroundColor: mapped?.bg || 'hsl(220 10% 95%)', borderRadius: radii.full, paddingHorizontal: 12, paddingVertical: 4 }}>
+    <View
+      style={{
+        backgroundColor: mapped?.bg || 'hsl(220 10% 95%)',
+        borderRadius: radii.full,
+        paddingHorizontal: 12,
+        minHeight: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       <Text
         style={{
           color: mapped?.text || colors.mutedForeground,
           fontFamily: typography.fontFamily,
           fontSize: typography.sizes.badge,
           fontWeight: '600',
+          lineHeight: 14,
           letterSpacing: 0.4,
           textTransform: 'uppercase',
+          textAlign: 'center',
+          includeFontPadding: false,
         }}
       >
         {label}

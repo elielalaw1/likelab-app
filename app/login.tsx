@@ -14,7 +14,6 @@ import {
 import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 
@@ -86,11 +85,6 @@ export default function LoginPage() {
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
         <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 22 }} keyboardShouldPersistTaps="handled">
-          <Pressable onPress={() => router.back()} style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#6B7C9D" />
-            <Text style={{ color: '#6B7C9D', fontSize: 18, fontFamily: 'Montserrat' }}>Back</Text>
-          </Pressable>
-
           <View style={{ flex: 1, justifyContent: 'center', paddingTop: 52, paddingBottom: 40 }}>
             <View style={{ alignItems: 'center', marginBottom: 28 }}>
               <Image

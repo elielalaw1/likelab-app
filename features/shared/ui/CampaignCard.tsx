@@ -1,9 +1,8 @@
 import { Image, Pressable, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Campaign } from '@/features/core/types'
-import { formatDateRange } from '@/features/core/format'
+import { formatCampaignGoal, formatDateRange } from '@/features/core/format'
 import { colors, radii, shadows, spacing, typography } from '@/features/core/theme'
-import { RewardBadge } from '@/features/shared/ui/RewardBadge'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 
 type Props = {
@@ -12,6 +11,7 @@ type Props = {
 }
 
 function creatorStatus(campaign: Campaign) {
+  if (campaign.creatorApplicationStatus === 'accepted') return 'accepted'
   return campaign.creatorApplicationStatus || campaign.invitationStatus || campaign.status
 }
 
@@ -35,9 +35,6 @@ export function CampaignCard({ campaign, onPress }: Props) {
             <MaterialCommunityIcons name="bullhorn-outline" size={36} color={colors.mutedForeground} />
           </View>
         )}
-        <View style={{ position: 'absolute', left: 10, bottom: 10 }}>
-          <RewardBadge amount={campaign.rewardAmount} fallbackText={campaign.rewardValue || campaign.rewardDescription} />
-        </View>
         <View style={{ position: 'absolute', right: 10, top: 10 }}>
           <StatusBadge status={creatorStatus(campaign) || undefined} />
         </View>
@@ -63,6 +60,11 @@ export function CampaignCard({ campaign, onPress }: Props) {
             {campaign.brandName || 'Brand'}
           </Text>
         </View>
+        {campaign.campaignGoal ? (
+          <Text style={{ color: colors.foreground, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600' }} numberOfLines={2}>
+            {formatCampaignGoal(campaign.campaignGoal)}
+          </Text>
+        ) : null}
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
             <MaterialCommunityIcons name="wallet-giftcard" size={14} color={colors.mutedForeground} />

@@ -1,5 +1,6 @@
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { colors, radii, typography } from '@/features/core/theme'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 type Props = {
   value: string
@@ -31,22 +32,7 @@ export function DeliverableInput({ value, onChangeText, onSubmit, loading = fals
           fontFamily: typography.fontFamily,
         }}
       />
-      <Pressable
-        onPress={onSubmit}
-        disabled={loading}
-        style={{
-          backgroundColor: colors.primary,
-          minWidth: 92,
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: radii.button,
-          opacity: loading ? 0.5 : 1,
-        }}
-      >
-        <Text style={{ color: colors.primaryForeground, fontWeight: '600', fontSize: 14, fontFamily: typography.fontFamily }}>
-          {loading ? '...' : 'Submit'}
-        </Text>
-      </Pressable>
+      <LiquidButton label={loading ? '...' : 'Submit'} onPress={onSubmit} disabled={loading} minHeight={44} borderRadius={radii.button} style={{ minWidth: 92 }} />
     </View>
   )
 }

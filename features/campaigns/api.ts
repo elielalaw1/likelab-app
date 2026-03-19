@@ -28,6 +28,36 @@ function toPrizeDistribution(value: unknown): number[] | null {
   return null
 }
 
+function toStringArray(value: unknown): string[] | null {
+  if (!value) return null
+
+  if (Array.isArray(value)) {
+    const list = value.map((item) => String(item).trim()).filter(Boolean)
+    return list.length ? list : null
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+
+    try {
+      const parsed = JSON.parse(trimmed) as unknown
+      if (Array.isArray(parsed)) {
+        const list = parsed.map((item) => String(item).trim()).filter(Boolean)
+        return list.length ? list : null
+      }
+    } catch {}
+
+    const list = trimmed
+      .split(/[\n,]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+    return list.length ? list : [trimmed]
+  }
+
+  return null
+}
+
 function mapCampaign(row: Row): Campaign {
   return {
     id: String(row.id || ''),
@@ -47,10 +77,18 @@ function mapCampaign(row: Row): Campaign {
     briefGuidelines: textValue(row, ['brief_guidelines']),
     instructions: textValue(row, ['creator_instructions']),
     brandVoice: textValue(row, ['brand_voice']),
+    brandTone: textValue(row, ['brand_tone']),
+    targetAudience: textValue(row, ['target_audience']),
+    platforms: toStringArray(row.platforms),
+    exampleLinks: toStringArray(row.example_links),
+    creationDays: numberValue(row, ['creation_days']),
+    reviewDays: numberValue(row, ['review_days']),
+    contentRightsDays: numberValue(row, ['content_rights_days']),
+    creatorLimit: numberValue(row, ['creator_limit']),
     requiredDisclosure: textValue(row, ['required_disclosure']) || '#annons',
     thingsToAvoid: textValue(row, ['forbidden']),
-    requiredHashtags: Array.isArray(row.required_hashtags) ? (row.required_hashtags as string[]) : null,
-    keyMessages: Array.isArray(row.key_messages) ? (row.key_messages as string[]) : null,
+    requiredHashtags: toStringArray(row.required_hashtags),
+    keyMessages: toStringArray(row.key_messages),
     prizeDistribution: toPrizeDistribution(row.prize_distribution),
     level: textValue(row, ['campaign_level']),
   }
