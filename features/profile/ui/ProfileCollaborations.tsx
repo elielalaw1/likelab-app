@@ -6,6 +6,7 @@ import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { palette, shadows, typography } from '@/features/core/theme'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
+import { campaignRouteParams } from '@/features/campaigns/navigation'
 
 type Props = {
   items: Campaign[]
@@ -27,7 +28,7 @@ export function ProfileCollaborations({ items }: Props) {
       {items.slice(0, 3).map((item) => (
         <Pressable
           key={item.id}
-          onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: item.id } } as never)}
+          onPress={() => router.push(campaignRouteParams(item) as never)}
           style={{
             borderRadius: 24,
             borderWidth: 1,

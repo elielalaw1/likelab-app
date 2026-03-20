@@ -17,7 +17,7 @@ const statusMap: Record<string, { bg: string; text: string; label: string }> = {
   reviewing: { bg: palette.successBg, text: palette.successText, label: 'ACTIVE' },
   uploaded: { bg: palette.successBg, text: palette.successText, label: 'SUBMITTED' },
   applied: { bg: '#FEF3C7', text: '#B45309', label: 'APPLIED' },
-  pending: { bg: '#F3F4F6', text: '#6B7280', label: 'AWAITING SUBMISSION' },
+  pending: { bg: '#F3F4F6', text: '#6B7280', label: 'INVITED' },
   submitted: { bg: palette.successBg, text: palette.successText, label: 'SUBMITTED' },
   flagged: { bg: '#FEE2E2', text: '#B91C1C', label: 'FLAGGED' },
   pending_review: { bg: '#FEF3C7', text: '#B45309', label: 'UNDER REVIEW' },

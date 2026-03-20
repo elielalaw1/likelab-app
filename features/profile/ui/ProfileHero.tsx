@@ -21,11 +21,6 @@ function summaryLocation(profile: CreatorProfile) {
 
 export function ProfileHero({ profile, onAvatarPress }: Props) {
   const location = summaryLocation(profile)
-  const identityItems = [
-    profile.tiktokHandle ? `TikTok @${profile.tiktokHandle.replace(/^@+/, '')}` : null,
-    profile.primaryCategory ? `${profile.primaryCategory}` : null,
-    location || null,
-  ].filter(Boolean)
 
   return (
     <SectionCard>
@@ -88,16 +83,6 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
             <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <MaterialCommunityIcons name="map-marker-outline" size={15} color={palette.textMuted} />
               <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 13 }}>{location}</Text>
-            </View>
-          ) : null}
-
-          {identityItems.length ? (
-            <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
-              {identityItems.map((item) => (
-                <View key={item} style={{ borderRadius: radii.full, backgroundColor: 'rgba(15,23,42,0.04)', paddingHorizontal: 12, paddingVertical: 7 }}>
-                  <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600' }}>{item}</Text>
-                </View>
-              ))}
             </View>
           ) : null}
 

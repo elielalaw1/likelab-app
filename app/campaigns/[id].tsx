@@ -14,10 +14,9 @@ import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/feat
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { DeliverableInputRow } from '@/features/shared/ui/DeliverableInputRow'
-import { useSubmitDeliverable } from '@/features/deliverables/hooks'
+import { useDeliverables, useSubmissionStatus, useSubmitLink, useUploadVideo } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
-import { useDeliverables } from '@/features/deliverables/hooks'
 
 function formatPlatform(platform?: string | null) {
   if (!platform) return '-'
@@ -126,13 +125,16 @@ export default function CampaignDetailPage() {
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId)
   const { data: profile } = useCreatorProfile()
-  const { data: campaignDeliverables, isLoading: loadingDeliverables } = useCampaignDeliverables(campaignId)
-  const { data: allDeliverables, isLoading: loadingAllDeliverables } = useDeliverables()
+  const { data: campaignDeliverables, isLoading: loadingDeliverables, refetch: refetchCampaignDeliverables } = useCampaignDeliverables(campaignId)
+  const { data: allDeliverables, isLoading: loadingAllDeliverables, refetch: refetchAllDeliverables } = useDeliverables()
   const applyMutation = useApplyToCampaign()
-  const submitMutation = useSubmitDeliverable()
+  const submitLinkMutation = useSubmitLink()
+  const videoUpload = useUploadVideo()
   const [activeTab, setActiveTab] = useState<'brief' | 'videos'>(initialTab === 'videos' ? 'videos' : 'brief')
   const [deliverableInputs, setDeliverableInputs] = useState<Record<string, string>>({})
   const [applySuccess, setApplySuccess] = useState(false)
+  const [activeUploadDeliverableId, setActiveUploadDeliverableId] = useState<string | null>(null)
+  const [activeSubmissionId, setActiveSubmissionId] = useState<string | null>(null)
   const [tabMetrics, setTabMetrics] = useState<Record<'brief' | 'videos', { x: number; width: number }>>({
     brief: { x: 0, width: 0 },
     videos: { x: 0, width: 0 },
@@ -140,6 +142,7 @@ export default function CampaignDetailPage() {
   const bubbleX = useSharedValue(0)
   const bubbleWidth = useSharedValue(0)
   const bubbleScale = useSharedValue(1)
+  const { data: submissionStatus } = useSubmissionStatus(activeSubmissionId || undefined)
 
   const profileComplete = profile ? isProfileComplete(profile) : false
   const canApply = Boolean(profile?.reviewStatus === 'approved' && profileComplete)
@@ -178,11 +181,34 @@ export default function CampaignDetailPage() {
     }
 
     try {
-      await submitMutation.mutateAsync({ deliverableId, url: value })
+      await submitLinkMutation.mutateAsync({ deliverableId, url: value })
       Alert.alert('Success', 'Deliverable submitted.')
       setDeliverableInputs((prev) => ({ ...prev, [deliverableId]: '' }))
     } catch (submitError) {
       Alert.alert('Submission failed', submitError instanceof Error ? submitError.message : 'Could not submit deliverable')
+    }
+  }
+
+  const submitCampaignVideo = async (deliverableId: string) => {
+    try {
+      const { pickVideoFromLibrary } = await import('@/lib/video-picker')
+      const picked = await pickVideoFromLibrary()
+      if (!picked) return
+
+      videoUpload.reset()
+      setActiveUploadDeliverableId(deliverableId)
+      const submission = await videoUpload.upload({
+        deliverableId,
+        videoUri: picked.uri,
+        fileName: picked.fileName,
+        fileSize: picked.fileSize,
+        mimeType: picked.mimeType,
+        compressionOptions: { quality: 'medium' },
+      })
+      setActiveSubmissionId(submission.id)
+    } catch (uploadError) {
+      setActiveUploadDeliverableId(deliverableId)
+      Alert.alert('Upload failed', uploadError instanceof Error ? uploadError.message : 'Could not upload video')
     }
   }
 
@@ -315,6 +341,23 @@ export default function CampaignDetailPage() {
     })
     bubbleScale.value = withSequence(withTiming(1.04, { duration: 120 }), withTiming(1, { duration: 180 }))
   }, [activeTab, bubbleScale, bubbleWidth, bubbleX, tabMetrics])
+
+  useEffect(() => {
+    if (!submissionStatus) return
+
+    if (submissionStatus.status === 'submitted') {
+      videoUpload.markDone()
+      refetchCampaignDeliverables()
+      refetchAllDeliverables()
+      setActiveSubmissionId(null)
+      setActiveUploadDeliverableId(null)
+    }
+
+    if (submissionStatus.status === 'failed') {
+      videoUpload.markFailed(submissionStatus.errorMessage || 'Video processing failed')
+      setActiveSubmissionId(null)
+    }
+  }, [refetchAllDeliverables, refetchCampaignDeliverables, submissionStatus, videoUpload])
 
   const tabBubbleStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: bubbleX.value }, { scale: bubbleScale.value }],
@@ -657,11 +700,16 @@ export default function CampaignDetailPage() {
                     ) : null}
                     {canSubmitDeliverable(item.status) ? (
                       <DeliverableInputRow
+                        mode="dual"
                         value={deliverableInputs[item.id] ?? item.url ?? ''}
                         onChangeText={(text) => setDeliverableInputs((prev) => ({ ...prev, [item.id]: text }))}
                         onSubmit={() => submitCampaignDeliverable(item.id)}
-                        loading={submitMutation.isPending}
+                        onPickVideo={() => submitCampaignVideo(item.id)}
+                        loading={submitLinkMutation.isPending}
                         submitLabel={item.status === 'revision_requested' ? 'Re-submit' : 'Submit'}
+                        videoStage={activeUploadDeliverableId === item.id ? videoUpload.stage : 'idle'}
+                        compressionProgress={activeUploadDeliverableId === item.id ? videoUpload.compressionProgress : 0}
+                        videoError={activeUploadDeliverableId === item.id ? videoUpload.error : null}
                       />
                     ) : item.url ? (
                       <Pressable

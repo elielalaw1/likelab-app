@@ -8,6 +8,7 @@ import { useCampaigns } from '@/features/campaigns/hooks'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
+import { campaignRouteParams } from '@/features/campaigns/navigation'
 
 export default function CampaignsPage() {
   const { data, isLoading, error } = useCampaigns()
@@ -38,7 +39,7 @@ export default function CampaignsPage() {
         renderItem={({ item }) => (
           <CampaignCard
             campaign={item}
-            onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: item.id } } as never)}
+            onPress={() => router.push(campaignRouteParams(item) as never)}
           />
         )}
       />

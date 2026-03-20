@@ -67,7 +67,7 @@ export function ProfileOverview() {
           Creator Profile
         </Text>
         <Text style={{ color: palette.textMuted, fontSize: 16, fontFamily: typography.fontFamily }}>
-          Shape how brands see you across campaigns, applications and live collabs.
+          Your public creator overview.
         </Text>
       </Animated.View>
 
@@ -81,6 +81,9 @@ export function ProfileOverview() {
             activeCampaignsCount={stats.activeCampaignsCount}
             applicationsCount={stats.applicationsCount}
             deliverablesCount={stats.deliverablesCount}
+            onPressActive={() => router.push({ pathname: '/(tabs)/applications', params: { filter: 'accepted' } })}
+            onPressApplications={() => router.push('/(tabs)/applications')}
+            onPressDeliverables={() => router.push('/(tabs)/deliverables')}
           />
           <ProfileCollaborations items={acceptedCampaigns} />
 

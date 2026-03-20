@@ -126,10 +126,24 @@ export async function getRecentApplications(limit = 3): Promise<CreatorApplicati
 }
 
 export async function getAcceptedApplicationCampaigns(limit = 3) {
+  const userId = await getCurrentUserId()
   const result = await getApplications()
-  const accepted = result.applications.filter((item) => item.status === 'accepted').slice(0, limit)
+  const accepted = result.applications.filter((item) => item.status === 'accepted')
 
-  return accepted.map((item) => ({
+  const { data: deliverableRows, error: deliverableError } = await supabase
+    .from('deliverables')
+    .select('campaign_id')
+    .eq('creator_id', userId)
+
+  if (deliverableError) throw new Error(deliverableError.message)
+
+  const deliverableCampaignIds = new Set(
+    (deliverableRows || []).map((row) => String(row.campaign_id || '')).filter(Boolean)
+  )
+
+  const actionableAccepted = accepted.filter((item) => deliverableCampaignIds.has(item.campaignId)).slice(0, limit)
+
+  return actionableAccepted.map((item) => ({
     id: item.campaignId,
     title: item.campaignTitle,
     brandName: item.campaignBrandName,

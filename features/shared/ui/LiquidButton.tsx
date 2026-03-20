@@ -137,7 +137,10 @@ export function LiquidButton({
         }}
       >
         {icon}
-        <Text style={{ color: toneText[tone], fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700' }}>
+        <Text
+          numberOfLines={1}
+          style={{ color: toneText[tone], fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700', textAlign: 'center' }}
+        >
           {label}
         </Text>
       </View>

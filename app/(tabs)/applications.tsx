@@ -1,5 +1,5 @@
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from 'react-native'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import { useEffect, useMemo, useState } from 'react'
 import { Screen } from '@/features/shared/ui/Screen'
@@ -8,11 +8,13 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { colors, palette, radii, shadows, typography } from '@/features/core/theme'
 import { useAcceptInvitation, useApplications, useDeclineInvitation } from '@/features/applications/hooks'
+import { useDeliverables } from '@/features/deliverables/hooks'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { CreatorInvitation } from '@/features/core/types'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { campaignRouteParams } from '@/features/campaigns/navigation'
 
 type FilterKey = 'all' | 'accepted' | 'pending' | 'closed'
 
@@ -75,17 +77,22 @@ function InvitationActions({
 
   return (
     <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-      <LiquidButton label="Accept invitation" onPress={() => onAccept(invitation.id)} disabled={loading} minHeight={44} borderRadius={18} style={{ flex: 1 }} />
+      <LiquidButton label="Accept" onPress={() => onAccept(invitation.id)} disabled={loading} minHeight={44} borderRadius={18} style={{ flex: 1 }} />
       <LiquidButton label="Decline" onPress={() => onDecline(invitation.id)} disabled={loading} tone="danger" minHeight={44} borderRadius={18} style={{ flex: 1 }} />
     </View>
   )
 }
 
 export default function ApplicationsPage() {
+  const params = useLocalSearchParams<{ filter?: string }>()
+  const initialFilter = Array.isArray(params.filter) ? params.filter[0] : params.filter
   const { data, isLoading, error } = useApplications()
+  const { data: deliverables } = useDeliverables()
   const acceptInvitation = useAcceptInvitation()
   const declineInvitation = useDeclineInvitation()
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
+  const [activeFilter, setActiveFilter] = useState<FilterKey>(
+    initialFilter === 'accepted' || initialFilter === 'pending' || initialFilter === 'closed' ? initialFilter : 'all'
+  )
   const [tabMetrics, setTabMetrics] = useState<Record<FilterKey, { x: number; width: number }>>({
     all: { x: 0, width: 0 },
     accepted: { x: 0, width: 0 },
@@ -96,9 +103,10 @@ export default function ApplicationsPage() {
   const bubbleWidth = useSharedValue(0)
   const bubbleScale = useSharedValue(1)
 
+  const deliverableCampaignIds = useMemo(() => new Set((deliverables || []).map((item) => item.campaignId)), [deliverables])
   const pendingInvitations = (data?.invitations || []).filter((item) => item.status === 'pending')
   const declinedInvitations = (data?.invitations || []).filter((item) => item.status === 'declined')
-  const acceptedApplications = (data?.applications || []).filter((item) => item.status === 'accepted')
+  const acceptedApplications = (data?.applications || []).filter((item) => item.status === 'accepted' && deliverableCampaignIds.has(item.campaignId))
   const closedApplications = (data?.applications || [])
     .filter((item) => item.status === 'rejected' || item.status === 'withdrawn')
     .sort((a, b) => {
@@ -236,6 +244,12 @@ export default function ApplicationsPage() {
       Alert.alert('Error', e instanceof Error ? e.message : 'Could not decline invitation')
     }
   }
+
+  useEffect(() => {
+    if (initialFilter === 'accepted' || initialFilter === 'pending' || initialFilter === 'closed' || initialFilter === 'all') {
+      setActiveFilter(initialFilter)
+    }
+  }, [initialFilter])
 
   useEffect(() => {
     const metric = tabMetrics[activeFilter]
@@ -441,7 +455,7 @@ export default function ApplicationsPage() {
               <Text style={{ fontSize: 11, fontWeight: '700', color: colors.mutedForeground, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
                 {item.title}
               </Text>
-              <CampaignCard campaign={item.campaign} onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: item.campaign.id } } as never)} />
+              <CampaignCard campaign={item.campaign} onPress={() => router.push(campaignRouteParams(item.campaign) as never)} />
             </View>
           )
         }

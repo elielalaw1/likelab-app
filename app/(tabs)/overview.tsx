@@ -17,6 +17,7 @@ import { colors, palette, shadows, typography } from '@/features/core/theme'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
 import { CreatorApprovalNotice } from '@/features/onboarding/CreatorApprovalNotice'
+import { campaignRouteParams } from '@/features/campaigns/navigation'
 
 export default function OverviewPage() {
   const { data, isLoading, error } = useDashboardData()
@@ -133,7 +134,7 @@ export default function OverviewPage() {
       </View>
 
       {featuredCampaign ? (
-        <CampaignCard campaign={featuredCampaign} onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: featuredCampaign.id } } as never)} />
+        <CampaignCard campaign={featuredCampaign} onPress={() => router.push(campaignRouteParams(featuredCampaign) as never)} />
       ) : !isLoading ? (
         <EmptyState title="No Active Campaigns" subtitle="Accepted campaigns will show here." icon="bullhorn-outline" />
       ) : null}
@@ -146,7 +147,7 @@ export default function OverviewPage() {
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           renderItem={({ item }) => (
             <SectionCard>
-              <Pressable onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: item.id } } as never)} style={{ gap: 10 }}>
+              <Pressable onPress={() => router.push(campaignRouteParams(item) as never)} style={{ gap: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <Text style={{ flex: 1, fontSize: 18, fontWeight: '700', color: palette.text, fontFamily: typography.fontFamily }} numberOfLines={1}>
                     {item.title}

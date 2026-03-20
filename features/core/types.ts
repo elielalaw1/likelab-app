@@ -122,3 +122,47 @@ export type Deliverable = {
   notes?: string | null
   flagReason?: string | null
 }
+
+export type SubmissionType = 'link' | 'video'
+
+export type SubmissionStatus = 'uploading' | 'processing' | 'submitted' | 'failed'
+
+export type DeliverableSubmission = {
+  id: string
+  deliverableId: string
+  creatorId: string
+  submissionType: SubmissionType
+  status: SubmissionStatus
+  linkUrl: string | null
+  videoStoragePath: string | null
+  videoFilename: string | null
+  videoSizeBytes: number | null
+  videoMimeType: string | null
+  externalAssetUrl: string | null
+  externalAssetProvider: string | null
+  errorMessage: string | null
+  metadata: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
+export function mapSubmissionRow(row: Record<string, unknown>): DeliverableSubmission {
+  return {
+    id: String(row.id ?? ''),
+    deliverableId: String(row.deliverable_id ?? ''),
+    creatorId: String(row.creator_id ?? ''),
+    submissionType: (row.submission_type as SubmissionType) ?? 'link',
+    status: (row.status as SubmissionStatus) ?? 'uploading',
+    linkUrl: (row.link_url as string) ?? null,
+    videoStoragePath: (row.video_storage_path as string) ?? null,
+    videoFilename: (row.video_filename as string) ?? null,
+    videoSizeBytes: (row.video_size_bytes as number) ?? null,
+    videoMimeType: (row.video_mime_type as string) ?? null,
+    externalAssetUrl: (row.external_asset_url as string) ?? null,
+    externalAssetProvider: (row.external_asset_provider as string) ?? null,
+    errorMessage: (row.error_message as string) ?? null,
+    metadata: (row.metadata as Record<string, unknown>) ?? {},
+    createdAt: String(row.created_at ?? ''),
+    updatedAt: String(row.updated_at ?? ''),
+  }
+}
