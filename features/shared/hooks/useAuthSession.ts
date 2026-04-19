@@ -58,7 +58,10 @@ function initializeAuthSessionStore() {
     }
   })()
 
-  supabase.auth.onAuthStateChange((_event, currentSession) => {
+  supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    if (event === 'TOKEN_REFRESHED' && !currentSession) {
+      await clearPersistedSupabaseSession()
+    }
     setAuthState({ session: currentSession, loading: false })
   })
 }

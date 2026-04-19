@@ -1,8 +1,9 @@
-import { Pressable, Text, View } from 'react-native'
+import { Linking, Pressable, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { CreatorProfile } from '@/features/core/types'
 import { countryFlag } from '@/features/core/format'
+import { formatCountyLabel } from '@/features/profile/location-data'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { colors, palette, radii, typography } from '@/features/core/theme'
@@ -14,7 +15,7 @@ type Props = {
 
 function summaryLocation(profile: CreatorProfile) {
   const flag = countryFlag(profile.country)
-  const chunks = [profile.city, profile.county, profile.country].filter((v) => typeof v === 'string' && v.trim())
+  const chunks = [profile.city, formatCountyLabel(profile.county), profile.country].filter((v) => typeof v === 'string' && v.trim())
   if (!chunks.length) return null
   return [flag, chunks.join(', ')].filter(Boolean).join(' ')
 }
@@ -58,12 +59,16 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
           </Text>
 
           {profile.tiktokHandle ? (
-            <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 14 }}>@{profile.tiktokHandle.replace(/^@+/, '')}</Text>
+            <Pressable onPress={() => Linking.openURL(`https://tiktok.com/@${profile.tiktokHandle!.replace(/^@+/, '')}`).catch(() => {})}>
+              <Text style={{ fontFamily: typography.fontFamily, color: colors.primary, fontSize: 14 }}>@{profile.tiktokHandle.replace(/^@+/, '')}</Text>
+            </Pressable>
           ) : null}
           {profile.instagramHandle ? (
-            <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 14 }}>
-              Instagram: @{profile.instagramHandle.replace(/^@+/, '')}
-            </Text>
+            <Pressable onPress={() => Linking.openURL(`https://instagram.com/${profile.instagramHandle!.replace(/^@+/, '')}`).catch(() => {})}>
+              <Text style={{ fontFamily: typography.fontFamily, color: '#E1306C', fontSize: 14 }}>
+                @{profile.instagramHandle.replace(/^@+/, '')}
+              </Text>
+            </Pressable>
           ) : null}
 
           {profile.primaryCategory ? (

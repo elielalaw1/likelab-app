@@ -1,21 +1,21 @@
-import { useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
-import { router } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { useQueryClient } from '@tanstack/react-query'
-import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { Screen } from '@/features/shared/ui/Screen'
-import { colors, palette, radii, typography } from '@/features/core/theme'
-import { useCreatorProfile } from '@/features/profile/hooks'
 import { useApplications } from '@/features/applications/hooks'
+import { colors, palette, typography } from '@/features/core/theme'
 import { useDeliverables } from '@/features/deliverables/hooks'
-import { supabase } from '@/lib/supabase'
+import { useCreatorProfile } from '@/features/profile/hooks'
+import { AvatarPreviewModal } from '@/features/profile/ui/AvatarPreviewModal'
+import { ProfileCollaborations } from '@/features/profile/ui/ProfileCollaborations'
 import { ProfileHero } from '@/features/profile/ui/ProfileHero'
 import { ProfileStats } from '@/features/profile/ui/ProfileStats'
-import { ProfileCollaborations } from '@/features/profile/ui/ProfileCollaborations'
-import { AvatarPreviewModal } from '@/features/profile/ui/AvatarPreviewModal'
+import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { Screen } from '@/features/shared/ui/Screen'
+import { supabase } from '@/lib/supabase'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useQueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
+import { useMemo, useState } from 'react'
+import { ActivityIndicator, Text } from 'react-native'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 
 export function ProfileOverview() {
   const { data: profile, isLoading: profileLoading, error: profileError } = useCreatorProfile()
@@ -86,6 +86,14 @@ export function ProfileOverview() {
             onPressDeliverables={() => router.push('/(tabs)/deliverables')}
           />
           <ProfileCollaborations items={acceptedCampaigns} />
+
+          <LiquidButton
+            label="My Applications"
+            onPress={() => router.push('/(tabs)/applications')}
+            minHeight={56}
+            borderRadius={22}
+            icon={<MaterialCommunityIcons name="send-outline" size={19} color="#fff" />}
+          />
 
           <LiquidButton
             label="Edit Profile"

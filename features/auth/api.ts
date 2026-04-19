@@ -1,6 +1,4 @@
-const SUPABASE_FUNCTIONS_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://xaugfjhocfchhixkfguq.supabase.co'
-const AUTH_REDIRECT_ORIGIN =
-  process.env.EXPO_PUBLIC_AUTH_REDIRECT_ORIGIN || process.env.EXPO_PUBLIC_WEB_URL || 'https://likelab.se'
+const SUPABASE_FUNCTIONS_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL!
 
 type TikTokStatsResponse = {
   followers?: number | string
@@ -77,8 +75,6 @@ export async function signupCreator(payload: {
       instagram_handle: payload.instagramHandle ? stripAtPrefix(payload.instagramHandle) : null,
       followers: payload.followers ?? null,
       likes: payload.likes ?? null,
-      // TODO(auth): switch this to a mobile deep-link redirect when email verification flow is implemented end-to-end.
-      origin: AUTH_REDIRECT_ORIGIN,
     }),
   })
 
@@ -90,3 +86,4 @@ export async function signupCreator(payload: {
 
   return data
 }
+

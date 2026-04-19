@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors, radii, typography } from '@/features/core/theme'
 
 type Item = {
-  id: 'avatar' | 'personal' | 'categories' | 'location' | 'account'
+  id: 'avatar' | 'personal' | 'categories' | 'location' | 'account' | 'shipping'
   label: string
   done: boolean
 }
@@ -26,9 +26,16 @@ export function ProfileCompletionCard({ percentage, items, onPressItem }: Props)
         gap: 12,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ color: colors.foreground, fontFamily: typography.fontFamily, fontSize: 28, fontWeight: '700' }}>Complete Your Profile</Text>
-        <Text style={{ color: colors.primary, fontFamily: typography.fontFamily, fontSize: 24, fontWeight: '700' }}>{percentage}%</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <Text
+          style={{ flex: 1, color: colors.foreground, fontFamily: typography.fontFamily, fontSize: 15, lineHeight: 20, fontWeight: '700' }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          Complete Your Profile
+        </Text>
+        <Text style={{ color: colors.primary, fontFamily: typography.fontFamily, fontSize: 18, lineHeight: 20, fontWeight: '700' }}>{percentage}%</Text>
       </View>
 
       <View style={{ height: 8, borderRadius: radii.full, backgroundColor: 'rgba(23,31,42,0.12)', overflow: 'hidden' }}>

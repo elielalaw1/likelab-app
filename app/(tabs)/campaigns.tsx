@@ -7,7 +7,6 @@ import { colors, palette, typography } from '@/features/core/theme'
 import { useCampaigns } from '@/features/campaigns/hooks'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
-import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
 
 export default function CampaignsPage() {
@@ -15,7 +14,7 @@ export default function CampaignsPage() {
   const visibleCampaigns = (data || []).filter((item) => item.creatorApplicationStatus !== 'accepted')
 
   return (
-    <Screen overlay={<CreatorOnboardingGate />} overlayPadding={136}>
+    <Screen>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>

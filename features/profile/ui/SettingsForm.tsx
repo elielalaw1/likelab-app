@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Image, LayoutChangeEvent, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Alert, Image, LayoutChangeEvent, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { router } from 'expo-router'
@@ -18,13 +18,16 @@ import { CountrySelect } from '@/features/profile/ui/CountrySelect'
 import { PhoneInput } from '@/features/profile/ui/PhoneInput'
 import { ProfileCompletionCard } from '@/features/profile/ui/ProfileCompletionCard'
 import { SelectPopover } from '@/features/profile/ui/SelectPopover'
-import { CATEGORY_OPTIONS, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES } from '@/features/profile/location-data'
+import { CATEGORY_OPTIONS, COUNTRY_TO_PHONE_CODE, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES, findCountryByValue, formatCountyLabel } from '@/features/profile/location-data'
+import { ProfileCompletionSection, getProfileCompletion } from '@/features/profile/completion'
 
-type SectionId = 'avatar' | 'account' | 'social' | 'personal' | 'location' | 'categories'
+type SectionId = 'avatar' | 'account' | 'social' | 'personal' | 'location' | 'categories' | 'shipping'
 const stripHandleInput = (value: string) => value.replace(/^@+/, '')
 
 function asForm(profile?: CreatorProfile | null) {
-  const code = profile?.phoneCountryCode || '+46'
+  const resolvedCountry = profile?.country || ''
+  const resolvedCountryCode = findCountryByValue(resolvedCountry)?.code || ''
+  const code = profile?.phoneCountryCode || ''
   const rawPhone = profile?.phone || ''
   const digits = rawPhone.startsWith(code) ? rawPhone.slice(code.length).replace(/[^\d]/g, '') : rawPhone.replace(/[^\d]/g, '')
 
@@ -36,34 +39,24 @@ function asForm(profile?: CreatorProfile | null) {
     instagramHandle: profile?.instagramHandle || '',
     gender: profile?.gender || '',
     ageRange: profile?.ageRange || '',
-    country: profile?.country || '',
-    countryCode: profile?.country?.toLowerCase() === 'sweden' ? 'SE' : '',
+    country: resolvedCountry,
+    countryCode: resolvedCountryCode,
     county: profile?.county || '',
     city: profile?.city || '',
+    address: profile?.address || '',
+    postalCode: profile?.postalCode || '',
     primaryCategory: profile?.primaryCategory || '',
     secondaryCategory: profile?.secondaryCategory || '',
     avatarUrl: profile?.avatarUrl || '',
   }
 }
 
-function calcCompletion(form: ReturnType<typeof asForm>) {
-  const checks = [
-    { id: 'avatar', label: 'Upload profile photo', done: Boolean(form.avatarUrl.trim()) },
-    { id: 'personal', label: 'Add your age', done: Boolean(form.ageRange.trim()) },
-    { id: 'categories', label: 'Choose a primary category', done: Boolean(form.primaryCategory.trim()) },
-    { id: 'personal', label: 'Select your gender', done: Boolean(form.gender.trim()) },
-    { id: 'location', label: 'Add your country', done: Boolean(form.country.trim()) },
-    { id: 'account', label: 'Add phone number', done: Boolean(form.phoneDigits.trim()) },
-  ] as const
-
-  const completed = checks.filter((item) => item.done).length
-  return {
-    percentage: Math.round((completed / checks.length) * 100),
-    items: checks,
-  }
+type Props = {
+  focusSection?: string
+  onboarding?: string
 }
 
-export function SettingsForm() {
+export function SettingsForm({ focusSection, onboarding }: Props) {
   const { data, isLoading, error } = useCreatorProfile()
   const updateMutation = useUpdateCreatorProfile()
   const queryClient = useQueryClient()
@@ -73,6 +66,8 @@ export function SettingsForm() {
   const [deleting, setDeleting] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [showToast, setShowToast] = useState('')
+  const hasLoadedRef = useRef(false)
+  const hasFocusedRef = useRef(false)
   const scrollRef = useRef<ScrollView>(null)
   const sectionYRef = useRef<Record<SectionId, number>>({
     avatar: 0,
@@ -81,15 +76,44 @@ export function SettingsForm() {
     personal: 0,
     location: 0,
     categories: 0,
+    shipping: 0,
   })
 
   useEffect(() => {
-    if (data) setForm(asForm(data))
+    if (data && !hasLoadedRef.current) {
+      setForm(asForm(data))
+      hasLoadedRef.current = true
+    }
   }, [data])
 
-  const completion = useMemo(() => calcCompletion(form), [form])
+  const completion = useMemo(
+    () =>
+      getProfileCompletion({
+        id: data?.id || '',
+        completionPercentage: 0,
+        approved: false,
+        email: data?.email,
+        displayName: form.displayName,
+        phoneCountryCode: form.phoneCountryCode,
+        phone: form.phoneDigits.trim() ? `${form.phoneCountryCode}${form.phoneDigits}` : '',
+        tiktokHandle: form.tiktokHandle,
+        instagramHandle: form.instagramHandle,
+        gender: form.gender,
+        ageRange: form.ageRange,
+        country: form.country,
+        county: form.county,
+        city: form.city,
+        address: form.address,
+        postalCode: form.postalCode,
+        primaryCategory: form.primaryCategory,
+        secondaryCategory: form.secondaryCategory,
+        avatarUrl: form.avatarUrl,
+        reviewStatus: data?.reviewStatus,
+      }),
+    [data?.email, data?.id, data?.reviewStatus, form]
+  )
   const isSweden = form.countryCode === 'SE' || form.country.trim().toLowerCase() === 'sweden'
-  const countyOptions = useMemo(() => SWEDISH_COUNTIES.map((county) => ({ label: county, value: county })), [])
+  const countyOptions = useMemo(() => SWEDISH_COUNTIES.map((county) => ({ label: formatCountyLabel(county), value: county })), [])
   const cityOptions = useMemo(
     () => (isSweden && form.county ? (SWEDISH_MUNICIPALITIES[form.county] || []).map((city) => ({ label: city, value: city })) : []),
     [isSweden, form.county]
@@ -107,6 +131,20 @@ export function SettingsForm() {
     const y = Math.max(0, (sectionYRef.current[id] || 0) - 8)
     scrollRef.current?.scrollTo({ y, animated: true })
   }
+
+  useEffect(() => {
+    if (hasFocusedRef.current || !focusSection) return
+    const section = focusSection as ProfileCompletionSection
+    const validSections: SectionId[] = ['avatar', 'account', 'social', 'personal', 'location', 'categories', 'shipping']
+    if (!validSections.includes(section)) return
+
+    const timer = setTimeout(() => {
+      scrollToSection(section)
+      hasFocusedRef.current = true
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [focusSection])
 
   const handlePickAvatar = async () => {
     if (!data?.id) {
@@ -182,6 +220,8 @@ export function SettingsForm() {
         primaryCategory: form.primaryCategory,
         secondaryCategory: form.secondaryCategory || null,
         avatarUrl: form.avatarUrl,
+        address: form.address || null,
+        postalCode: form.postalCode || null,
       })
       setShowToast('Profile updated')
       queryClient.invalidateQueries({ queryKey: ['creator-profile'] })
@@ -292,10 +332,21 @@ export function SettingsForm() {
       {isLoading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load your profile right now.</Text> : null}
 
+      {onboarding === '1' ? (
+        <SectionCard>
+          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '700' }}>
+            Complete Your Profile
+          </Text>
+          <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 14, lineHeight: 20 }}>
+            This is now the main onboarding flow. Fill in the missing sections below and save your changes to unlock the app.
+          </Text>
+        </SectionCard>
+      ) : null}
+
       {!isLoading && data && completion.percentage < 100 ? (
         <ProfileCompletionCard
           percentage={completion.percentage}
-          items={completion.items}
+          items={completion.checklist.map((item) => ({ id: item.section, label: item.label, done: item.done }))}
           onPressItem={(id) => scrollToSection(id)}
         />
       ) : null}
@@ -337,7 +388,6 @@ export function SettingsForm() {
           <PhoneInput
             code={form.phoneCountryCode}
             digits={form.phoneDigits}
-            savedPhone={data?.phone}
             onChangeCode={(value) => setForm((prev) => ({ ...prev, phoneCountryCode: value }))}
             onChangeDigits={(value) => setForm((prev) => ({ ...prev, phoneDigits: value }))}
           />
@@ -424,6 +474,7 @@ export function SettingsForm() {
                   ...prev,
                   country: countryName,
                   countryCode,
+                  phoneCountryCode: prev.phoneCountryCode || COUNTRY_TO_PHONE_CODE[countryCode] || '',
                   county: countryChanged ? '' : prev.county,
                   city: countryChanged ? '' : prev.city,
                 }
@@ -433,7 +484,7 @@ export function SettingsForm() {
 
           {isSweden ? (
             <SelectPopover
-              label="County (Län)"
+              label="County"
               value={form.county}
               placeholder="Select county"
               options={countyOptions}
@@ -441,11 +492,11 @@ export function SettingsForm() {
             />
           ) : null}
 
-          {isSweden && form.county ? (
+          {isSweden ? (
             <SelectPopover
               label="City"
               value={form.city}
-              placeholder="Select city"
+              placeholder={form.county ? 'Select city' : 'Select county first'}
               searchable
               options={cityOptions}
               onSelect={(city) => setForm((prev) => ({ ...prev, city }))}
@@ -485,6 +536,24 @@ export function SettingsForm() {
         </SectionCard>
       </View>
 
+      <View onLayout={markSectionY('shipping')}>
+        <SectionCard title="Shipping Address">
+          <ProfileField
+            label="Street Address"
+            value={form.address}
+            placeholder="Street address"
+            onChangeText={(value) => setForm((prev) => ({ ...prev, address: value }))}
+          />
+          <ProfileField
+            label="Postal Code"
+            value={form.postalCode}
+            placeholder="e.g. 11234"
+            keyboardType="numeric"
+            onChangeText={(value) => setForm((prev) => ({ ...prev, postalCode: value.replace(/[^\d]/g, '') }))}
+          />
+        </SectionCard>
+      </View>
+
       <LiquidButton
         label={updateMutation.isPending ? 'Saving...' : 'Save Changes'}
         onPress={handleSave}
@@ -517,6 +586,23 @@ export function SettingsForm() {
             style={{ flex: 1 }}
           />
         </View>
+      </SectionCard>
+
+      <SectionCard title="Legal">
+        <Pressable
+          onPress={() => Linking.openURL('https://likelab.io/privacy-policy')}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}
+        >
+          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14 }}>Privacy Policy</Text>
+          <MaterialCommunityIcons name="open-in-new" size={16} color={palette.textMuted} />
+        </Pressable>
+        <Pressable
+          onPress={() => Linking.openURL('https://likelab.io/terms-of-service')}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}
+        >
+          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14 }}>Terms of Service</Text>
+          <MaterialCommunityIcons name="open-in-new" size={16} color={palette.textMuted} />
+        </Pressable>
       </SectionCard>
 
       <Modal visible={deleteModalOpen} transparent animationType="fade" onRequestClose={() => setDeleteModalOpen(false)}>

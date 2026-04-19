@@ -2,6 +2,7 @@ import { Image, Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { colors, radii, spacing, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
+import { designLogo } from '@/design/assets'
 
 export function AppHeader() {
   const { data: profile } = useCreatorProfile()
@@ -9,9 +10,11 @@ export function AppHeader() {
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.xs }}>
-      <View style={{ width: 50, height: 50, borderRadius: radii.sidebarNav, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <Image source={require('../../../design/Design2/LOGGAN.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-      </View>
+      <Pressable onPress={() => router.push('/(tabs)/overview')} hitSlop={8}>
+        <View style={{ width: 50, height: 50, borderRadius: radii.sidebarNav, overflow: 'hidden' }}>
+          <Image source={designLogo} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        </View>
+      </Pressable>
 
       <Pressable onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
         {profile?.avatarUrl ? (

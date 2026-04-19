@@ -1,6 +1,7 @@
-import { Stack } from 'expo-router'
+import { Stack, router } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { View } from 'react-native'
 import { useFonts } from 'expo-font'
 import {
   Montserrat_400Regular,
@@ -9,8 +10,50 @@ import {
   Montserrat_700Bold,
   Montserrat_800ExtraBold,
 } from '@expo-google-fonts/montserrat'
+import * as Notifications from 'expo-notifications'
 import { NotificationsProvider } from '@/features/notifications/hooks'
-import { AppLoadingScreen } from '@/features/shared/components/AppLoadingScreen'
+import { ToastContainer } from '@/features/shared/ui/Toast'
+import { registerForPushNotificationsAsync, savePushToken } from '@/features/notifications/push'
+import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+})
+
+function PushNotificationSetup() {
+  const { session } = useAuthSession()
+  const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null)
+  const userId = session?.user?.id ?? null
+
+  useEffect(() => {
+    if (!userId) return
+
+    registerForPushNotificationsAsync().then((token) => {
+      if (token) savePushToken(token, userId)
+    })
+
+    notificationResponseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, unknown>
+      const link = data?.link
+      if (typeof link === 'string' && link) {
+        router.push(link as never)
+      }
+    })
+
+    return () => {
+      notificationResponseListener.current?.remove()
+      notificationResponseListener.current = null
+    }
+  }, [userId])
+
+  return null
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -40,17 +83,25 @@ export default function RootLayout() {
   )
 
   if (!fontsLoaded) {
-    return <AppLoadingScreen />
+    return null
   }
 
   return (
     <QueryClientProvider client={queryClient}>
       <NotificationsProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="campaigns/[id]" />
-          <Stack.Screen name="settings" />
-        </Stack>
+        <PushNotificationSetup />
+        <View style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="campaigns/[id]" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="reset-password" />
+            <Stack.Screen name="forgot-password" />
+            <Stack.Screen name="verify-otp" />
+            <Stack.Screen name="push-test" />
+          </Stack>
+          <ToastContainer />
+        </View>
       </NotificationsProvider>
     </QueryClientProvider>
   )

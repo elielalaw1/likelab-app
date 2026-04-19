@@ -172,6 +172,28 @@ export function getCountryOptions(): CountryOption[] {
   return sweden ? [sweden, ...rest] : rest
 }
 
+function normalizeCountryValue(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z]/g, '')
+    .toLowerCase()
+}
+
+export function findCountryByValue(value?: string | null): CountryOption | null {
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+
+  const normalized = normalizeCountryValue(trimmed)
+  const directCode = getCountryOptions().find((item) => item.code.toLowerCase() === trimmed.toLowerCase())
+  if (directCode) return directCode
+
+  const directLabel = getCountryOptions().find((item) => normalizeCountryValue(item.label) === normalized)
+  if (directLabel) return directLabel
+
+  return null
+}
+
 export const PHONE_CODE_OPTIONS: Option[] = [
   { label: '🇸🇪 (+46)', value: '+46' },
   { label: '🇳🇴 (+47)', value: '+47' },
@@ -219,3 +241,56 @@ export const PHONE_CODE_OPTIONS: Option[] = [
   { label: '🇮🇱 (+972)', value: '+972' },
   { label: '🇿🇦 (+27)', value: '+27' },
 ]
+
+export function formatCountyLabel(value?: string | null) {
+  if (!value) return ''
+  return value.replace(/ län$/i, ' County')
+}
+
+export const COUNTRY_TO_PHONE_CODE: Record<string, string> = {
+  SE: '+46',
+  NO: '+47',
+  DK: '+45',
+  FI: '+358',
+  IS: '+354',
+  GB: '+44',
+  IE: '+353',
+  DE: '+49',
+  FR: '+33',
+  ES: '+34',
+  IT: '+39',
+  NL: '+31',
+  BE: '+32',
+  PT: '+351',
+  CH: '+41',
+  AT: '+43',
+  PL: '+48',
+  CZ: '+420',
+  SK: '+421',
+  HU: '+36',
+  RO: '+40',
+  HR: '+385',
+  SI: '+386',
+  US: '+1',
+  CA: '+1',
+  MX: '+52',
+  BR: '+55',
+  AR: '+54',
+  AU: '+61',
+  NZ: '+64',
+  JP: '+81',
+  KR: '+82',
+  CN: '+86',
+  IN: '+91',
+  SG: '+65',
+  TH: '+66',
+  MY: '+60',
+  ID: '+62',
+  PH: '+63',
+  VN: '+84',
+  AE: '+971',
+  SA: '+966',
+  TR: '+90',
+  IL: '+972',
+  ZA: '+27',
+}

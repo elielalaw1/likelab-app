@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { SelectPopover } from '@/features/profile/ui/SelectPopover'
-import { getCountryOptions } from '@/features/profile/location-data'
+import { findCountryByValue, getCountryOptions } from '@/features/profile/location-data'
 
 type Props = {
   value: string
@@ -18,9 +18,7 @@ export function CountrySelect({ value, onSelect }: Props) {
   )
 
   const currentCode = useMemo(() => {
-    const trimmed = value.trim().toLowerCase()
-    const byLabel = options.find((item) => item.label.toLowerCase().includes(` ${trimmed}`))
-    return byLabel?.value || ''
+    return findCountryByValue(value)?.code || ''
   }, [options, value])
 
   return (

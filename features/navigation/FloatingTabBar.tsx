@@ -1,15 +1,47 @@
-import { Pressable, View } from 'react-native'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
-import { useEffect, useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { LinearGradient } from 'expo-linear-gradient'
-import { BlurView } from 'expo-blur'
-import { colors, glass } from '@/features/core/theme'
+import { colors } from '@/features/core/theme'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { useQueryClient } from '@tanstack/react-query'
+import { BlurView } from 'expo-blur'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Pressable, StyleSheet } from 'react-native'
+import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+function TabIcon({ focused, name }: { focused: boolean; name: string }) {
+  const progress = useSharedValue(focused ? 1 : 0)
+
+  useEffect(() => {
+    progress.value = focused
+      ? withSpring(1, { damping: 13, stiffness: 300, mass: 0.65 })
+      : withTiming(0, { duration: 170 })
+  }, [focused, progress])
+
+  const entry = iconMap[name as keyof typeof iconMap]
+
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: interpolate(progress.value, [0, 1], [0.82, 1]) },
+      { translateY: interpolate(progress.value, [0, 1], [2, -1]) },
+    ],
+  }))
+  const activeStyle = useAnimatedStyle(() => ({ opacity: progress.value }))
+  const inactiveStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }))
+
+  return (
+    <Animated.View style={[{ width: 24, height: 24 }, containerStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, activeStyle]}>
+        <MaterialCommunityIcons name={entry?.active || 'circle'} size={23} color={colors.foreground} />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, inactiveStyle]}>
+        <MaterialCommunityIcons name={entry?.inactive || 'circle-outline'} size={22} color={colors.mutedForeground} />
+      </Animated.View>
+    </Animated.View>
+  )
+}
 
 const iconMap = {
   overview: { active: 'view-dashboard', inactive: 'view-dashboard-outline' },
@@ -18,7 +50,7 @@ const iconMap = {
   deliverables: { active: 'package-variant', inactive: 'package-variant-closed' },
   profile: { active: 'account-circle', inactive: 'account-circle-outline' },
 } as const
-const visibleTabNames = new Set(['overview', 'campaigns', 'applications', 'deliverables', 'profile'])
+const visibleTabNames = new Set(['overview', 'deliverables', 'profile'])
 const BAR_HORIZONTAL_PADDING = 8
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -26,8 +58,9 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const { visible } = useFloatingTabBarVisibility()
   const queryClient = useQueryClient()
   const hiddenProgress = useSharedValue(0)
-  const bubbleX = useSharedValue(0)
+  const bubbleLeft = useSharedValue(-100)
   const bubbleScale = useSharedValue(1)
+  const bubbleInitialized = useRef(false)
   const [barWidth, setBarWidth] = useState(0)
   const [tabCenters, setTabCenters] = useState<Record<string, number>>({})
   const bottomOffset = getFloatingTabBarBottomOffset(insets.bottom)
@@ -50,22 +83,30 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const slotWidth = barWidth > 0 ? (barWidth - BAR_HORIZONTAL_PADDING * 2) / Math.max(routes.length, 1) : 0
   const bubbleWidth = Math.min(56, Math.max(48, slotWidth - 16))
 
+  // Snap to correct position as soon as tab centers are measured
   useEffect(() => {
-    const centerFromLayout = activeKey ? tabCenters[activeKey] : undefined
-    const fallback = BAR_HORIZONTAL_PADDING + activeVisibleIndex * slotWidth + slotWidth / 2
-    const center = typeof centerFromLayout === 'number' ? centerFromLayout : fallback
-    if (!center) return
+    const center = activeKey ? tabCenters[activeKey] : undefined
+    if (typeof center !== 'number') return
     const target = center - bubbleWidth / 2
-    bubbleX.value = withSpring(target, {
-      damping: 18,
-      stiffness: 210,
-      mass: 0.7,
-    })
-    bubbleScale.value = withSequence(withTiming(1.08, { duration: 120 }), withTiming(1, { duration: 180 }))
-  }, [activeKey, activeVisibleIndex, bubbleScale, bubbleWidth, bubbleX, slotWidth, tabCenters])
+    if (!bubbleInitialized.current) {
+      bubbleLeft.value = target
+      bubbleInitialized.current = true
+    }
+  }, [activeKey, tabCenters, bubbleWidth, bubbleLeft])
+
+  // Spring animation only on deliberate tab switch
+  useEffect(() => {
+    const center = activeKey ? tabCenters[activeKey] : undefined
+    if (typeof center !== 'number' || !bubbleInitialized.current) return
+    const target = center - bubbleWidth / 2
+    bubbleLeft.value = withSpring(target, { damping: 20, stiffness: 160, mass: 0.8 })
+    bubbleScale.value = withSequence(withTiming(1.1, { duration: 100 }), withTiming(1, { duration: 200 }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey])
 
   const bubbleStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: bubbleX.value }, { scale: bubbleScale.value }],
+    left: bubbleLeft.value,
+    transform: [{ scale: bubbleScale.value }],
   }))
 
   return (
@@ -173,8 +214,6 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         const focused = state.routes[state.index].key === route.key
         const descriptor = descriptors[route.key]
         const name = route.name
-        const iconEntry = iconMap[name as keyof typeof iconMap]
-        const iconName = focused ? iconEntry?.active || 'circle' : iconEntry?.inactive || 'circle-outline'
 
         const onPress = () => {
           const event = navigation.emit({
@@ -227,9 +266,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               backgroundColor: 'transparent',
             }}
           >
-            <View style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name={iconName} size={focused ? 23 : 22} color={focused ? colors.foreground : colors.mutedForeground} />
-            </View>
+            <TabIcon focused={focused} name={name} />
           </Pressable>
         )
       })}

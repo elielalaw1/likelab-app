@@ -57,8 +57,10 @@ export type Campaign = {
   prizeDistribution?: number[] | null
   level?: string | null
   coverImageUrl?: string | null
+  brandLogoUrl?: string | null
   creatorApplicationStatus?: ApplicationStatus | null
   invitationStatus?: string | null
+  preferredCreators?: string | null
 }
 
 export type CreatorProfile = {
@@ -74,6 +76,8 @@ export type CreatorProfile = {
   country?: string | null
   county?: string | null
   city?: string | null
+  address?: string | null
+  postalCode?: string | null
   primaryCategory?: string | null
   secondaryCategory?: string | null
   avatarUrl?: string | null

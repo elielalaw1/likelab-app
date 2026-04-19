@@ -1,22 +1,28 @@
-import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
-import { useEffect, useMemo, useState } from 'react'
-import { Screen } from '@/features/shared/ui/Screen'
-import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { LinearGradient } from 'expo-linear-gradient'
-import { BlurView } from 'expo-blur'
-import { colors, palette, radii, shadows, typography } from '@/features/core/theme'
 import { useAcceptInvitation, useApplications, useDeclineInvitation } from '@/features/applications/hooks'
+import { campaignRouteParams } from '@/features/campaigns/navigation'
+import { colors, palette, shadows, typography } from '@/features/core/theme'
+import { CreatorInvitation } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
+import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
-import { CreatorInvitation } from '@/features/core/types'
-import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
-import { campaignRouteParams } from '@/features/campaigns/navigation'
+import { Screen } from '@/features/shared/ui/Screen'
+import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
+import { toast } from '@/features/shared/ui/Toast'
+import { useQueryClient } from '@tanstack/react-query'
+import { BlurView } from 'expo-blur'
+import { LinearGradient } from 'expo-linear-gradient'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native'
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 
 type FilterKey = 'all' | 'accepted' | 'pending' | 'closed'
+
+export const options = {
+  tabBarButton: () => null,
+}
 
 function FilterTab({
   label,
@@ -84,10 +90,16 @@ function InvitationActions({
 }
 
 export default function ApplicationsPage() {
+  const queryClient = useQueryClient()
   const params = useLocalSearchParams<{ filter?: string }>()
   const initialFilter = Array.isArray(params.filter) ? params.filter[0] : params.filter
-  const { data, isLoading, error } = useApplications()
+  const { data, isLoading, error, refetch } = useApplications()
   const { data: deliverables } = useDeliverables()
+
+  const onRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['applications'] })
+    await refetch()
+  }, [queryClient, refetch])
   const acceptInvitation = useAcceptInvitation()
   const declineInvitation = useDeclineInvitation()
   const [activeFilter, setActiveFilter] = useState<FilterKey>(
@@ -106,7 +118,7 @@ export default function ApplicationsPage() {
   const deliverableCampaignIds = useMemo(() => new Set((deliverables || []).map((item) => item.campaignId)), [deliverables])
   const pendingInvitations = (data?.invitations || []).filter((item) => item.status === 'pending')
   const declinedInvitations = (data?.invitations || []).filter((item) => item.status === 'declined')
-  const acceptedApplications = (data?.applications || []).filter((item) => item.status === 'accepted' && deliverableCampaignIds.has(item.campaignId))
+  const acceptedApplications = (data?.applications || []).filter((item) => item.status === 'accepted')
   const closedApplications = (data?.applications || [])
     .filter((item) => item.status === 'rejected' || item.status === 'withdrawn')
     .sort((a, b) => {
@@ -136,11 +148,29 @@ export default function ApplicationsPage() {
     }
 
     if (activeFilter === 'pending') {
-      return pendingInvitations.map((item) => ({
-        key: item.id,
-        type: 'invitation' as const,
-        invitation: item,
-      }))
+      return [
+        ...pendingInvitations.map((item) => ({
+          key: item.id,
+          type: 'invitation' as const,
+          invitation: item,
+        })),
+        ...appliedApplications.map((item) => ({
+          key: item.id,
+          type: 'campaign' as const,
+          title: 'Pending application',
+          campaign: {
+            id: item.campaignId,
+            title: item.campaignTitle,
+            coverImageUrl: item.campaignImageUrl,
+            brandName: item.campaignBrandName,
+            rewardAmount: item.rewardAmount,
+            rewardType: item.rewardType,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            creatorApplicationStatus: item.status,
+          },
+        })),
+      ]
     }
 
     if (activeFilter === 'closed') {
@@ -230,18 +260,18 @@ export default function ApplicationsPage() {
   const onAccept = async (invitationId: string) => {
     try {
       await acceptInvitation.mutateAsync(invitationId)
-      Alert.alert('Accepted', 'Invitation accepted and moved into active campaigns.')
+      toast.success('Invitation accepted!')
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Could not accept invitation')
+      toast.error(e instanceof Error ? e.message : 'Could not accept invitation')
     }
   }
 
   const onDecline = async (invitationId: string) => {
     try {
       await declineInvitation.mutateAsync(invitationId)
-      Alert.alert('Declined', 'Invitation declined.')
+      toast.info('Invitation declined.')
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Could not decline invitation')
+      toast.error(e instanceof Error ? e.message : 'Could not decline invitation')
     }
   }
 
@@ -278,8 +308,9 @@ export default function ApplicationsPage() {
     width: bubbleWidth.value,
   }))
 
+
   return (
-    <Screen overlay={<CreatorOnboardingGate />} overlayPadding={136}>
+    <Screen onRefresh={onRefresh}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 8 }}>
@@ -291,7 +322,6 @@ export default function ApplicationsPage() {
         </Text>
       </Animated.View>
 
-      {isLoading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load applications right now.</Text> : null}
 
       <View
@@ -379,6 +409,14 @@ export default function ApplicationsPage() {
           <FilterTab label="Closed" active={activeFilter === 'closed'} onPress={() => setActiveFilter('closed')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, closed: { x, width } }))} />
         </ScrollView>
       </View>
+
+      {isLoading ? (
+        <>
+          <SkeletonCampaignCard />
+          <SkeletonCampaignCard />
+          <SkeletonCampaignCard />
+        </>
+      ) : null}
 
       <FlatList
         data={filteredBlocks}

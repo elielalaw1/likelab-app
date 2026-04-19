@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "likelab-app",
-    "slug": "likelab-app",
+    "name": "LikeLab",
+    "slug": "likelab",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,9 +9,18 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "io.likelab.app",
+      "buildNumber": "2",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "LikeLab needs access to your photo library to let you select a profile photo.",
+        "NSPhotoLibraryAddUsageDescription": "LikeLab needs access to save media to your photo library.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
+      "package": "io.likelab.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -39,11 +48,26 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4c59e78f-1120-4697-91af-9f203d64132d"
+      }
+    },
+    "owner": "avenyr"
   }
 }

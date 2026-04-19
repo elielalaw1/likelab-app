@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import { CreatorProfile } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
+import { PHONE_CODE_OPTIONS } from '@/features/profile/location-data'
+import { getProfileCompletion } from '@/features/profile/completion'
 
 type Row = Record<string, unknown>
 const stripHandle = (value?: string | null) => value?.replace(/^@+/, '') || value || null
@@ -18,8 +20,20 @@ function mapProfileConstraintError(message: string) {
   return message
 }
 
+function inferPhoneCountryCode(phone?: string | null) {
+  const normalized = typeof phone === 'string' ? phone.trim() : ''
+  if (!normalized) return null
+
+  const matches = PHONE_CODE_OPTIONS
+    .map((option) => option.value)
+    .filter((code) => normalized.startsWith(code))
+    .sort((a, b) => b.length - a.length)
+
+  return matches[0] || null
+}
+
 function completionPercentage(row: Row) {
-  const requiredKeys = ['avatar_url', 'age_range', 'primary_category', 'gender', 'country', 'phone']
+  const requiredKeys = ['avatar_url', 'age_range', 'primary_category', 'gender', 'country', 'phone', 'address', 'postal_code']
   const filled = requiredKeys.reduce((acc, key) => {
     const value = row[key]
     return typeof value === 'string' && value.trim() ? acc + 1 : acc
@@ -36,7 +50,7 @@ function mapProfile(creator: Row, profile: Row, userId: string): CreatorProfile 
     id: userId,
     email: textValue(profile, ['email']),
     displayName,
-    phoneCountryCode: textValue(creator, ['phone_country_code']),
+    phoneCountryCode: inferPhoneCountryCode(textValue(creator, ['phone'])),
     phone: textValue(creator, ['phone']),
     tiktokHandle: textValue(creator, ['tiktok_handle']),
     instagramHandle: textValue(creator, ['instagram_handle']),
@@ -45,6 +59,8 @@ function mapProfile(creator: Row, profile: Row, userId: string): CreatorProfile 
     country: textValue(creator, ['country']),
     county: textValue(creator, ['county']),
     city: textValue(creator, ['city']),
+    address: textValue(creator, ['address']),
+    postalCode: textValue(creator, ['postal_code']),
     primaryCategory: textValue(creator, ['primary_category']),
     secondaryCategory: textValue(creator, ['secondary_category']),
     avatarUrl: textValue(creator, ['avatar_url']),
@@ -90,6 +106,8 @@ export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
     country: values.country,
     county: values.county,
     city: values.city,
+    address: values.address,
+    postal_code: values.postalCode,
     primary_category: values.primaryCategory,
     secondary_category: values.secondaryCategory,
     avatar_url: values.avatarUrl,
@@ -100,5 +118,5 @@ export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
 }
 
 export function isProfileComplete(profile: CreatorProfile) {
-  return profile.completionPercentage === 100
+  return getProfileCompletion(profile).isComplete
 }

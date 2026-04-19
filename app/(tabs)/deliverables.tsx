@@ -1,19 +1,25 @@
-import { useMemo } from 'react'
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
-import Animated, { FadeInDown } from 'react-native-reanimated'
-import { router } from 'expo-router'
-import { Screen } from '@/features/shared/ui/Screen'
-import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { SectionCard } from '@/features/shared/ui/SectionCard'
-import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { colors, palette, shadows, typography } from '@/features/core/theme'
 import { useDeliverables } from '@/features/deliverables/hooks'
+import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
-import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
+import { Screen } from '@/features/shared/ui/Screen'
+import { SkeletonDeliverableCard } from '@/features/shared/ui/SkeletonCard'
+import { StatusBadge } from '@/features/shared/ui/StatusBadge'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useQueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
+import { useCallback, useMemo } from 'react'
+import { FlatList, Pressable, Text, View } from 'react-native'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 
 export default function DeliverablesPage() {
-  const { data, isLoading, error } = useDeliverables()
+  const queryClient = useQueryClient()
+  const { data, isLoading, error, refetch } = useDeliverables()
+
+  const onRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['deliverables'] })
+    await refetch()
+  }, [queryClient, refetch])
 
   const needsAction = useMemo(() => {
     const actionable = (data || []).filter((item) => item.status === 'revision_requested' || item.status === 'pending')
@@ -63,20 +69,27 @@ export default function DeliverablesPage() {
     })
 
   return (
-    <Screen overlay={<CreatorOnboardingGate />} overlayPadding={136}>
+    <Screen onRefresh={onRefresh}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
         <Text style={{ fontSize: typography.sizes.pageTitle, fontWeight: '700', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -0.32 }}>
-          My Deliverables
+          My Projects
         </Text>
         <Text style={{ color: palette.textMuted, fontSize: typography.sizes.subtitle, fontFamily: typography.fontFamily }}>
           Submit and track your content deliverables
         </Text>
       </Animated.View>
 
-      {isLoading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load deliverables right now.</Text> : null}
+
+      {isLoading ? (
+        <>
+          <SkeletonDeliverableCard />
+          <SkeletonDeliverableCard />
+          <SkeletonDeliverableCard />
+        </>
+      ) : null}
 
       <FlatList
         data={needsAction}

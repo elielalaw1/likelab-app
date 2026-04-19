@@ -4,10 +4,12 @@ import { Campaign } from '@/features/core/types'
 import { formatCampaignGoal, formatDateRange } from '@/features/core/format'
 import { colors, radii, shadows, spacing, typography } from '@/features/core/theme'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
+import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 
 type Props = {
   campaign: Campaign
   onPress?: () => void
+  badge?: number
 }
 
 function creatorStatus(campaign: Campaign) {
@@ -15,7 +17,7 @@ function creatorStatus(campaign: Campaign) {
   return campaign.creatorApplicationStatus || campaign.invitationStatus || campaign.status
 }
 
-export function CampaignCard({ campaign, onPress }: Props) {
+export function CampaignCard({ campaign, onPress, badge }: Props) {
   const content = (
     <View
       style={{
@@ -35,7 +37,12 @@ export function CampaignCard({ campaign, onPress }: Props) {
             <MaterialCommunityIcons name="bullhorn-outline" size={36} color={colors.mutedForeground} />
           </View>
         )}
-        <View style={{ position: 'absolute', right: 10, top: 10 }}>
+        <View style={{ position: 'absolute', right: 10, top: 10, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+          {badge ? (
+            <View style={{ minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 }}>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: 'System' }}>{badge}</Text>
+            </View>
+          ) : null}
           <StatusBadge status={creatorStatus(campaign) || undefined} />
         </View>
       </View>
@@ -55,7 +62,7 @@ export function CampaignCard({ campaign, onPress }: Props) {
           {campaign.title}
         </Text>
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <MaterialCommunityIcons name="storefront-outline" size={14} color={colors.mutedForeground} />
+          <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={22} />
           <Text style={{ color: colors.mutedForeground, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500' }} numberOfLines={1}>
             {campaign.brandName || 'Brand'}
           </Text>

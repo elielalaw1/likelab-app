@@ -94,6 +94,27 @@ function mapCampaign(row: Row): Campaign {
   }
 }
 
+const SUPABASE_STORAGE_PUBLIC_PREFIX = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
+const CAMPAIGN_ASSETS_BUCKET = 'campaign-assets'
+
+/** Extracts the object path within the campaign-assets bucket from whatever is stored in the DB.
+ *  Handles three formats:
+ *  1. Raw path:           "campaigns/uuid/cover.jpg"
+ *  2. With bucket prefix: "campaign-assets/campaigns/uuid/cover.jpg"
+ *  3. Full public URL:    "https://xxx.supabase.co/storage/v1/object/public/campaign-assets/..."
+ *  Returns null for external URLs that aren't Supabase storage paths. */
+function extractStoragePath(raw: string): string | null {
+  if (raw.startsWith(SUPABASE_STORAGE_PUBLIC_PREFIX)) {
+    const afterPrefix = raw.slice(SUPABASE_STORAGE_PUBLIC_PREFIX.length)
+    const bucketEnd = afterPrefix.indexOf('/')
+    if (bucketEnd === -1) return null
+    return afterPrefix.slice(bucketEnd + 1)
+  }
+  if (raw.startsWith('http')) return null
+  const bucketPrefix = `${CAMPAIGN_ASSETS_BUCKET}/`
+  return raw.startsWith(bucketPrefix) ? raw.slice(bucketPrefix.length) : raw
+}
+
 async function getCampaignAssets(campaignIds: string[]) {
   if (!campaignIds.length) return new Map<string, string>()
 
@@ -106,49 +127,73 @@ async function getCampaignAssets(campaignIds: string[]) {
   if (error) throw new Error(error.message)
 
   const imageMap = new Map<string, string>()
+  const toSign: Array<{ campaignId: string; path: string }> = []
 
   for (const row of data || []) {
     const record = row as Row
     const campaignId = textValue(record, ['campaign_id'])
     if (!campaignId || imageMap.has(campaignId)) continue
 
-    const url = textValue(record, ['url', 'asset_url', 'file_url', 'image_url', 'thumbnail_url'])
-    if (url) imageMap.set(campaignId, url)
+    const raw = textValue(record, ['url', 'asset_url', 'file_url', 'image_url', 'thumbnail_url'])
+    if (!raw) continue
+
+    const storagePath = extractStoragePath(raw)
+    if (storagePath) {
+      toSign.push({ campaignId, path: storagePath })
+    } else if (raw.startsWith('http')) {
+      // External URL (not Supabase storage) — use as-is
+      imageMap.set(campaignId, raw)
+    }
+  }
+
+  if (toSign.length) {
+    const { data: signed } = await supabase.storage
+      .from(CAMPAIGN_ASSETS_BUCKET)
+      .createSignedUrls(toSign.map((e) => e.path), 3600)
+
+    for (let i = 0; i < toSign.length; i++) {
+      const signedUrl = signed?.[i]?.signedUrl
+      if (signedUrl) imageMap.set(toSign[i].campaignId, signedUrl)
+    }
   }
 
   return imageMap
 }
 
-async function getBrandNames(brandIds: string[]) {
-  if (!brandIds.length) return new Map<string, string>()
+async function getBrandProfiles(brandIds: string[]) {
+  if (!brandIds.length) return new Map<string, { name: string; logoUrl: string | null }>()
 
   const { data, error } = await supabase
-    .from('brand_profiles')
-    .select('user_id, company_name')
+    .from('brand_profiles_public')
+    .select('user_id, company_name, logo_url')
     .in('user_id', brandIds)
 
   if (error) throw new Error(error.message)
 
-  const names = new Map<string, string>()
+  const map = new Map<string, { name: string; logoUrl: string | null }>()
   for (const row of data || []) {
-    if (row.user_id && row.company_name) {
-      names.set(row.user_id, row.company_name)
+    if (row.user_id) {
+      map.set(row.user_id, { name: row.company_name || '', logoUrl: (row.logo_url as string | null) ?? null })
     }
   }
-  return names
+  return map
 }
 
 export async function enrichCampaigns(campaigns: Campaign[]) {
   const campaignIds = campaigns.map((c) => c.id)
   const brandIds = campaigns.map((c) => c.brandId).filter((v): v is string => Boolean(v))
 
-  const [assetMap, brandMap] = await Promise.all([getCampaignAssets(campaignIds), getBrandNames(brandIds)])
+  const [assetMap, brandMap] = await Promise.all([getCampaignAssets(campaignIds), getBrandProfiles(brandIds)])
 
-  return campaigns.map((campaign) => ({
-    ...campaign,
-    coverImageUrl: assetMap.get(campaign.id) || campaign.coverImageUrl || null,
-    brandName: (campaign.brandId && brandMap.get(campaign.brandId)) || null,
-  }))
+  return campaigns.map((campaign) => {
+    const brand = campaign.brandId ? brandMap.get(campaign.brandId) : undefined
+    return {
+      ...campaign,
+      coverImageUrl: assetMap.get(campaign.id) || campaign.coverImageUrl || null,
+      brandName: brand?.name || null,
+      brandLogoUrl: brand?.logoUrl || null,
+    }
+  })
 }
 
 export async function getCampaigns() {
