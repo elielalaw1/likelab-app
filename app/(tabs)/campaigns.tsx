@@ -19,10 +19,10 @@ export default function CampaignsPage() {
 
       <Animated.View entering={FadeInDown.duration(250)}>
         <Text style={{ fontSize: typography.sizes.pageTitle, fontWeight: '700', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -0.32 }}>
-          Browse Campaigns
+          Discover
         </Text>
         <Text style={{ color: palette.textMuted, fontSize: typography.sizes.subtitle, fontFamily: typography.fontFamily }}>
-          Discover and apply to brand campaigns
+          Apply to brand campaigns
         </Text>
       </Animated.View>
 

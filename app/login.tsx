@@ -12,6 +12,7 @@ import {
 import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import { designBackground, designWordmark } from '@/design/assets'
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const { session, loading: sessionLoading } = useAuthSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   if (!sessionLoading && session) {
@@ -61,14 +63,16 @@ export default function LoginPage() {
         style={{ position: 'absolute', inset: 0 }}
       />
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'center', paddingHorizontal: 20 }}>
-        <View style={{ alignItems: 'center', marginBottom: 32 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 32 }}>
           <Image
             source={designWordmark}
             style={{ width: 320, height: 48 }}
             resizeMode="contain"
           />
         </View>
+
+          <View style={{ paddingHorizontal: 20 }}>
 
         <View
           style={{
@@ -106,25 +110,39 @@ export default function LoginPage() {
             }}
           />
 
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor="#9BABC7"
-            secureTextEntry
-            autoComplete="password"
+          <View
             style={{
               borderWidth: 1,
               borderColor: '#D7DFEE',
               borderRadius: 12,
               paddingHorizontal: 14,
-              paddingVertical: 13,
-              fontSize: 15,
-              fontFamily: 'Montserrat',
-              color: '#101525',
               backgroundColor: '#FAFBFF',
+              flexDirection: 'row',
+              alignItems: 'center',
             }}
-          />
+          >
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor="#9BABC7"
+              secureTextEntry={!showPassword}
+              autoComplete="password"
+              style={{
+                flex: 1,
+                paddingVertical: 13,
+                fontSize: 15,
+                color: '#101525',
+              }}
+            />
+            <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+              <MaterialCommunityIcons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#9BABC7"
+              />
+            </Pressable>
+          </View>
 
           <Pressable onPress={() => router.push('/forgot-password')}>
             <Text style={{ color: '#687C9E', fontSize: 12, fontFamily: 'Montserrat', textAlign: 'right' }}>
@@ -170,6 +188,7 @@ export default function LoginPage() {
             <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>Sign up</Text>
           </Pressable>
         </View>
+          </View>
       </SafeAreaView>
     </View>
   )

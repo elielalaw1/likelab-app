@@ -10,11 +10,14 @@ import {
   Montserrat_700Bold,
   Montserrat_800ExtraBold,
 } from '@expo-google-fonts/montserrat'
+import * as SplashScreen from 'expo-splash-screen'
 import * as Notifications from 'expo-notifications'
 import { NotificationsProvider } from '@/features/notifications/hooks'
 import { ToastContainer } from '@/features/shared/ui/Toast'
 import { registerForPushNotificationsAsync, savePushToken } from '@/features/notifications/push'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
+
+SplashScreen.preventAutoHideAsync()
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -81,6 +84,12 @@ export default function RootLayout() {
         },
       })
   )
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync()
+    }
+  }, [fontsLoaded])
 
   if (!fontsLoaded) {
     return null

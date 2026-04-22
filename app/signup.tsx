@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { Alert, Image, ImageBackground, KeyboardAvoidingView, Linking, Platform, Pressable, Text, View } from 'react-native'
+import { Alert, Image, ImageBackground, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -232,31 +232,31 @@ export default function SignupPage() {
       <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
 
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0} style={{ flex: 1 }}>
-          <View style={{ flex: 1, paddingHorizontal: 18, paddingTop: 8, paddingBottom: 18 }}>
-            <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 14, paddingBottom: 14 }}>
-              <View style={{ alignItems: 'center', marginBottom: compactLayout ? 14 : 30 }}>
-                <Image
-                  source={designSignupWordmark}
-                  style={{ width: compactLayout ? 156 : 210, height: compactLayout ? 44 : 60, marginBottom: compactLayout ? 8 : 18 }}
-                  resizeMode="contain"
-                />
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: compactLayout ? 22 : 30,
-                    lineHeight: compactLayout ? 26 : 34,
-                    fontWeight: '800',
-                    color: '#060B1F',
-                    fontFamily: 'Montserrat',
-                    letterSpacing: -0.6,
-                    marginBottom: compactLayout ? 10 : 24,
-                  }}
-                >
-                  Create your creator account
-                </Text>
-                <SimpleStepIndicator currentStep={displayStep} totalSteps={totalSteps} />
-              </View>
+        <View style={{ alignItems: 'center', paddingTop: 14, paddingBottom: 10, paddingHorizontal: 18 }}>
+          <Image
+            source={designSignupWordmark}
+            style={{ width: 156, height: 44, marginBottom: 8 }}
+            resizeMode="contain"
+          />
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: 22,
+              lineHeight: 26,
+              fontWeight: '800',
+              color: '#060B1F',
+              fontFamily: 'Montserrat',
+              letterSpacing: -0.6,
+              marginBottom: 10,
+            }}
+          >
+            Create your creator account
+          </Text>
+          <SimpleStepIndicator currentStep={displayStep} totalSteps={totalSteps} />
+        </View>
+
+          <ScrollView automaticallyAdjustKeyboardInsets style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <View style={{ justifyContent: 'flex-start', paddingBottom: 14 }}>
 
               {step === 1 ? (
                 <View
@@ -376,6 +376,7 @@ export default function SignupPage() {
                       onChangeText={setPassword}
                       placeholder="Min 8 characters"
                       secureTextEntry
+                      showToggle
                     />
 
                     <AuthInput
@@ -384,6 +385,7 @@ export default function SignupPage() {
                       onChangeText={setConfirmPassword}
                       placeholder="Repeat password"
                       secureTextEntry
+                      showToggle
                     />
 
                     <Text style={{ color: '#687C9E', fontSize: 11, fontFamily: 'Montserrat', textAlign: 'center', lineHeight: 17, marginTop: 4 }}>
@@ -563,8 +565,7 @@ export default function SignupPage() {
                 </View>
               ) : null}
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          </ScrollView>
       </SafeAreaView>
     </View>
   )

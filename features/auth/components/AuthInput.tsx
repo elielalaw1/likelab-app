@@ -1,4 +1,6 @@
-import { Text, TextInput, View } from 'react-native'
+import { useState } from 'react'
+import { Pressable, Text, TextInput, View } from 'react-native'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { authColors } from '@/features/auth/theme'
 
 type Props = {
@@ -9,6 +11,7 @@ type Props = {
   onBlur?: () => void
   placeholder: string
   secureTextEntry?: boolean
+  showToggle?: boolean
   keyboardType?: 'default' | 'email-address'
   autoCapitalize?: 'none' | 'words' | 'sentences' | 'characters'
   prefixText?: string
@@ -23,12 +26,15 @@ export function AuthInput({
   onBlur,
   placeholder,
   secureTextEntry = false,
+  showToggle = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
   prefixText,
   sanitizeText,
 }: Props) {
+  const [visible, setVisible] = useState(false)
   const displayValue = sanitizeText ? sanitizeText(value) : value
+  const isSecure = secureTextEntry && !visible
 
   return (
     <View style={{ gap: 6 }}>
@@ -66,7 +72,7 @@ export function AuthInput({
           onBlur={onBlur}
           placeholder={placeholder}
           placeholderTextColor="#94A3B8"
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={isSecure}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
@@ -74,9 +80,18 @@ export function AuthInput({
             flex: 1,
             fontSize: 16,
             color: authColors.text,
-            ...(secureTextEntry ? null : { fontFamily: authColors.typography.fontFamily }),
+            ...(isSecure ? null : { fontFamily: authColors.typography.fontFamily }),
           }}
         />
+        {showToggle && secureTextEntry ? (
+          <Pressable onPress={() => setVisible((v) => !v)} hitSlop={8}>
+            <MaterialCommunityIcons
+              name={visible ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={authColors.muted}
+            />
+          </Pressable>
+        ) : null}
       </View>
     </View>
   )
