@@ -2,7 +2,7 @@
   "expo": {
     "name": "LikeLab",
     "slug": "likelab",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon-light.png",
     "iosIcon": {
@@ -43,7 +43,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logo.png",
+          "image": "./assets/images/icon-light.png",
           "imageWidth": 160,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
