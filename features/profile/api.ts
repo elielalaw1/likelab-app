@@ -5,7 +5,17 @@ import { PHONE_CODE_OPTIONS } from '@/features/profile/location-data'
 import { getProfileCompletion } from '@/features/profile/completion'
 
 type Row = Record<string, unknown>
-const stripHandle = (value?: string | null) => value?.replace(/^@+/, '') || value || null
+const stripHandle = (value?: string | null) => {
+  const normalized = value?.trim().replace(/^@+/, '')
+  return normalized ? normalized : null
+}
+const hasOwn = (obj: object, key: string) => Object.prototype.hasOwnProperty.call(obj, key)
+
+function toStatString(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  const s = String(value).trim()
+  return s.length > 0 ? s : null
+}
 
 function mapProfileConstraintError(message: string) {
   if (message.includes('unique_creator_phone')) {
@@ -67,6 +77,9 @@ function mapProfile(creator: Row, profile: Row, userId: string): CreatorProfile 
     reviewStatus,
     completionPercentage: completionPercentage(creator),
     approved: reviewStatus === 'approved',
+    tiktokFollowers: toStatString(creator['followers']),
+    tiktokLikes: toStatString(creator['likes']),
+    tiktokViews: toStatString(creator['views']),
   }
 }
 
@@ -95,23 +108,25 @@ export async function getCreatorProfile() {
 export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
   const userId = await getCurrentUserId()
 
-  const payload = {
-    user_id: userId,
-    display_name: values.displayName,
-    phone: values.phone,
-    tiktok_handle: stripHandle(values.tiktokHandle),
-    instagram_handle: stripHandle(values.instagramHandle),
-    gender: values.gender,
-    age_range: values.ageRange,
-    country: values.country,
-    county: values.county,
-    city: values.city,
-    address: values.address,
-    postal_code: values.postalCode,
-    primary_category: values.primaryCategory,
-    secondary_category: values.secondaryCategory,
-    avatar_url: values.avatarUrl,
-  }
+  const payload: Record<string, unknown> = { user_id: userId }
+
+  if (hasOwn(values, 'displayName')) payload.display_name = values.displayName ?? null
+  if (hasOwn(values, 'phone')) payload.phone = values.phone ?? null
+  if (hasOwn(values, 'tiktokHandle')) payload.tiktok_handle = stripHandle(values.tiktokHandle)
+  if (hasOwn(values, 'instagramHandle')) payload.instagram_handle = stripHandle(values.instagramHandle)
+  if (hasOwn(values, 'gender')) payload.gender = values.gender ?? null
+  if (hasOwn(values, 'ageRange')) payload.age_range = values.ageRange ?? null
+  if (hasOwn(values, 'country')) payload.country = values.country ?? null
+  if (hasOwn(values, 'county')) payload.county = values.county ?? null
+  if (hasOwn(values, 'city')) payload.city = values.city ?? null
+  if (hasOwn(values, 'address')) payload.address = values.address ?? null
+  if (hasOwn(values, 'postalCode')) payload.postal_code = values.postalCode ?? null
+  if (hasOwn(values, 'primaryCategory')) payload.primary_category = values.primaryCategory ?? null
+  if (hasOwn(values, 'secondaryCategory')) payload.secondary_category = values.secondaryCategory ?? null
+  if (hasOwn(values, 'avatarUrl')) payload.avatar_url = values.avatarUrl ?? null
+
+  // Avoid no-op upserts that can create/alter rows unintentionally.
+  if (Object.keys(payload).length === 1) return
 
   const { error } = await supabase.from('creator_profiles').upsert(payload, { onConflict: 'user_id' })
   if (error) throw new Error(mapProfileConstraintError(error.message))

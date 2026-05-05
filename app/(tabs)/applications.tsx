@@ -1,6 +1,7 @@
 import { useAcceptInvitation, useApplications, useDeclineInvitation } from '@/features/applications/hooks'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
-import { colors, palette, shadows, typography } from '@/features/core/theme'
+import { shadows, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { CreatorInvitation } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
@@ -35,6 +36,7 @@ function FilterTab({
   onPress: () => void
   onLayout: (x: number, width: number) => void
 }) {
+  const { colors, palette } = useTheme()
   const isClosed = label === 'Closed'
 
   return (
@@ -90,6 +92,7 @@ function InvitationActions({
 }
 
 export default function ApplicationsPage() {
+  const { colors, palette } = useTheme()
   const queryClient = useQueryClient()
   const params = useLocalSearchParams<{ filter?: string }>()
   const initialFilter = Array.isArray(params.filter) ? params.filter[0] : params.filter
@@ -445,9 +448,9 @@ export default function ApplicationsPage() {
             <View
               style={{
                 borderRadius: 24,
-                backgroundColor: '#fff',
+                backgroundColor: palette.cardBg,
                 borderWidth: 1,
-                borderColor: 'rgba(234,236,239,0.75)',
+                borderColor: palette.borderColor,
                 padding: 14,
                 ...shadows.card,
               }}
@@ -470,7 +473,7 @@ export default function ApplicationsPage() {
             </View>
           ) : item.type === 'invitation_closed' ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.mutedForeground, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
                 Closed invitation
               </Text>
               <CampaignCard
@@ -490,7 +493,7 @@ export default function ApplicationsPage() {
             </View>
           ) : (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.mutedForeground, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
                 {item.title}
               </Text>
               <CampaignCard campaign={item.campaign} onPress={() => router.push(campaignRouteParams(item.campaign) as never)} />

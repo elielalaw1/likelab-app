@@ -1,10 +1,12 @@
 import { Image, Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { colors, radii, spacing, typography } from '@/features/core/theme'
+import { radii, spacing, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { designLogo } from '@/design/assets'
 
 export function AppHeader() {
+  const { colors, palette } = useTheme()
   const { data: profile } = useCreatorProfile()
   const router = useRouter()
 
@@ -29,10 +31,10 @@ export function AppHeader() {
               justifyContent: 'center',
               backgroundColor: 'rgba(23,31,42,0.06)',
               borderWidth: 1,
-              borderColor: 'rgba(234,236,239,0.9)',
+              borderColor: palette.borderColor,
             }}
           >
-            <Text style={{ color: colors.mutedForeground, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>
+            <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>
               {profile?.displayName?.trim()?.[0]?.toUpperCase() || 'U'}
             </Text>
           </View>

@@ -84,6 +84,9 @@ export type CreatorProfile = {
   reviewStatus?: string | null
   completionPercentage: number
   approved: boolean
+  tiktokFollowers?: string | null
+  tiktokLikes?: string | null
+  tiktokViews?: string | null
 }
 
 export type CreatorApplication = {

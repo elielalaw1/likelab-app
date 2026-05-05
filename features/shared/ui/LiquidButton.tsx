@@ -2,7 +2,8 @@ import { ReactNode } from 'react'
 import { Pressable, StyleProp, Text, View, ViewStyle } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
-import { colors, palette, typography } from '@/features/core/theme'
+import { typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 type Tone = 'primary' | 'neutral' | 'success' | 'danger'
 
@@ -17,48 +18,6 @@ type Props = {
   style?: StyleProp<ViewStyle>
 }
 
-const toneText: Record<Tone, string> = {
-  primary: '#FFFFFF',
-  neutral: palette.textMuted,
-  success: '#0F9F6E',
-  danger: colors.destructive,
-}
-
-const toneBorder: Record<Tone, string> = {
-  primary: 'transparent',
-  neutral: 'rgba(255,255,255,0.38)',
-  success: 'rgba(167,243,208,0.9)',
-  danger: 'rgba(254,202,202,0.9)',
-}
-
-const toneFillTop: Record<Tone, string> = {
-  primary: colors.foreground,
-  neutral: 'rgba(255,255,255,0.24)',
-  success: 'rgba(236,253,245,0.72)',
-  danger: 'rgba(254,242,242,0.72)',
-}
-
-const toneFillBottom: Record<Tone, string> = {
-  primary: colors.foreground,
-  neutral: 'rgba(255,255,255,0.12)',
-  success: 'rgba(220,252,231,0.42)',
-  danger: 'rgba(254,226,226,0.42)',
-}
-
-const toneBottomShadow: Record<Tone, string> = {
-  primary: 'rgba(15,23,42,0)',
-  neutral: 'rgba(15,23,42,0.05)',
-  success: 'rgba(15,159,110,0.08)',
-  danger: 'rgba(239,68,68,0.08)',
-}
-
-const toneShadow: Record<Tone, string> = {
-  primary: '#0F172A',
-  neutral: '#0F172A',
-  success: '#0F172A',
-  danger: '#0F172A',
-}
-
 export function LiquidButton({
   label,
   onPress,
@@ -69,6 +28,50 @@ export function LiquidButton({
   borderRadius = 20,
   style,
 }: Props) {
+  const { colors, palette } = useTheme()
+
+  const toneText: Record<Tone, string> = {
+    primary: '#FFFFFF',
+    neutral: palette.textMuted,
+    success: '#0F9F6E',
+    danger: colors.destructive,
+  }
+
+  const toneBorder: Record<Tone, string> = {
+    primary: 'transparent',
+    neutral: 'rgba(255,255,255,0.38)',
+    success: 'rgba(167,243,208,0.9)',
+    danger: 'rgba(254,202,202,0.9)',
+  }
+
+  const toneFillTop: Record<Tone, string> = {
+    primary: colors.foreground,
+    neutral: 'rgba(255,255,255,0.24)',
+    success: 'rgba(236,253,245,0.72)',
+    danger: 'rgba(254,242,242,0.72)',
+  }
+
+  const toneFillBottom: Record<Tone, string> = {
+    primary: colors.foreground,
+    neutral: 'rgba(255,255,255,0.12)',
+    success: 'rgba(220,252,231,0.42)',
+    danger: 'rgba(254,226,226,0.42)',
+  }
+
+  const toneBottomShadow: Record<Tone, string> = {
+    primary: 'rgba(15,23,42,0)',
+    neutral: 'rgba(15,23,42,0.05)',
+    success: 'rgba(15,159,110,0.08)',
+    danger: 'rgba(239,68,68,0.08)',
+  }
+
+  const toneShadow: Record<Tone, string> = {
+    primary: '#0F172A',
+    neutral: '#0F172A',
+    success: '#0F172A',
+    danger: '#0F172A',
+  }
+
   const effectiveRadius = tone === 'primary' ? 999 : borderRadius
 
   return (

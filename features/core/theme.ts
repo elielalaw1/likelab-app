@@ -1,3 +1,4 @@
+// ─── Light colours ────────────────────────────────────────────────────────────
 export const colors = {
   background: 'hsl(0 0% 100%)',
   foreground: 'hsl(222.2 84% 4.9%)',
@@ -42,8 +43,21 @@ export const palette = {
   dangerText: 'hsl(0 84.2% 60.2%)',
   neutralBg: colors.muted,
   neutralText: colors.mutedForeground,
+  // structural tokens used by components
+  cardBg: 'rgba(255,255,255,0.8)',
+  inputBg: '#ffffff',
+  borderColor: 'rgba(234,236,239,0.9)',
+  borderSoft: 'rgba(234,236,239,0.5)',
+  sectionBg: 'rgba(255,255,255,0.92)',
+  tabBarBg: 'rgba(248,250,252,0.56)',
+  tabBarBorder: 'rgba(15,23,42,0.08)',
+  overlayBg: 'rgba(10,15,30,0.3)',
 }
 
+export type AppColors = typeof colors
+export type AppPalette = typeof palette
+
+// ─── Static tokens (scheme-independent) ──────────────────────────────────────
 export const radii = {
   button: 14,
   input: 12,

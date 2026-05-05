@@ -1,7 +1,8 @@
 import { Modal, Pressable, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { colors, typography } from '@/features/core/theme'
+import { typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 type Props = {
   visible: boolean
@@ -10,6 +11,7 @@ type Props = {
 }
 
 export function AvatarPreviewModal({ visible, uri, onClose }: Props) {
+  const { palette } = useTheme()
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(8,12,24,0.92)' }}>
@@ -28,7 +30,7 @@ export function AvatarPreviewModal({ visible, uri, onClose }: Props) {
             <Image
               source={{ uri }}
               contentFit="contain"
-              style={{ width: '100%', height: '78%', borderRadius: 18, backgroundColor: colors.foreground }}
+              style={{ width: '100%', height: '78%', borderRadius: 18, backgroundColor: palette.text }}
             />
           ) : (
             <View style={{ width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' }}>

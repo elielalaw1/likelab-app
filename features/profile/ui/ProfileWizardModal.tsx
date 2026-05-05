@@ -9,7 +9,8 @@ import { SelectPopover } from '@/features/profile/ui/SelectPopover'
 import { CountrySelect } from '@/features/profile/ui/CountrySelect'
 import { PhoneInput } from '@/features/profile/ui/PhoneInput'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
-import { colors, palette, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import {
   CATEGORY_OPTIONS,
   GENDER_OPTIONS,
@@ -18,9 +19,19 @@ import {
   findCountryByValue,
   formatCountyLabel,
 } from '@/features/profile/location-data'
+import { ProfileCompletionSection, getProfileCompletion } from '@/features/profile/completion'
 
 const STEP_TITLES = ['Profile Photo', 'Personal Info', 'Content Category', 'Location', 'Contact', 'Shipping']
 const STEP_COUNT = STEP_TITLES.length
+
+const SECTION_TO_STEP: Record<ProfileCompletionSection, number> = {
+  avatar: 0,
+  personal: 1,
+  categories: 2,
+  location: 3,
+  account: 4,
+  shipping: 5,
+}
 
 type Props = {
   visible: boolean
@@ -29,6 +40,7 @@ type Props = {
 }
 
 export function ProfileWizardModal({ visible, onClose, userId }: Props) {
+  const { colors, palette } = useTheme()
   const { data: profile } = useCreatorProfile()
   const updateMutation = useUpdateCreatorProfile()
   const [step, setStep] = useState(0)
@@ -50,8 +62,10 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
   const [postalCode, setPostalCode] = useState('')
 
   useEffect(() => {
-    if (visible) setStep(0)
-  }, [visible])
+    if (!visible) return
+    const next = getProfileCompletion(profile).nextIncompleteSection
+    setStep(next !== null ? SECTION_TO_STEP[next] : 0)
+  }, [visible, profile])
 
   useEffect(() => {
     if (!profile) return
@@ -96,14 +110,17 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
       quality: 0.85,
     })
     if (result.canceled || !result.assets[0]?.uri) return
-    const uri = result.assets[0].uri
+    const asset = result.assets[0]
+    const uri = asset.uri
+    setAvatarUploading(true)
     try {
-      setAvatarUploading(true)
-      const ext = uri.split('.').pop()?.toLowerCase() || 'jpg'
+      const extFromMime = asset.mimeType?.split('/')[1]
+      const ext = (extFromMime || uri.split('.').pop() || 'jpg').split('?')[0].toLowerCase()
+      const contentType = asset.mimeType || `image/${ext}`
       const path = `${userId}/avatar.${ext}`
       const response = await fetch(uri)
-      const blob = await response.blob()
-      const { error } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType: `image/${ext}` })
+      const arrayBuffer = await response.arrayBuffer()
+      const { error } = await supabase.storage.from('avatars').upload(path, arrayBuffer, { upsert: true, contentType })
       if (error) throw error
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
       setAvatarUrl(`${urlData.publicUrl}?t=${Date.now()}`)
@@ -135,18 +152,18 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
 
   const inputStyle = {
     borderWidth: 1,
-    borderColor: 'rgba(234,236,239,0.8)',
+    borderColor: palette.borderColor,
     borderRadius: radii.input,
     height: 44,
     paddingHorizontal: 12,
-    color: colors.foreground,
+    color: palette.text,
     fontSize: 14,
     fontFamily: typography.fontFamily,
-    backgroundColor: colors.background,
+    backgroundColor: palette.inputBg,
   } as const
 
   const labelStyle = {
-    color: colors.mutedForeground,
+    color: palette.textMuted,
     fontFamily: typography.fontFamily,
     fontSize: 11,
     fontWeight: '600' as const,
@@ -158,7 +175,7 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: palette.bg }}>
         {/* Header */}
-        <View style={{ paddingTop: 20, paddingHorizontal: 20, paddingBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: 'rgba(234,236,239,0.8)' }}>
+        <View style={{ paddingTop: 20, paddingHorizontal: 20, paddingBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: palette.borderColor }}>
           <View>
             <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', letterSpacing: 1.1, textTransform: 'uppercase' }}>
               Step {step + 1} of {STEP_COUNT}
@@ -175,7 +192,7 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
         {/* Progress bar */}
         <View style={{ flexDirection: 'row', gap: 5, paddingHorizontal: 20, paddingTop: 14 }}>
           {Array.from({ length: STEP_COUNT }).map((_, i) => (
-            <View key={i} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i <= step ? colors.primary : 'rgba(234,236,239,0.9)' }} />
+            <View key={i} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i <= step ? colors.primary : palette.borderColor }} />
           ))}
         </View>
 
@@ -197,7 +214,7 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
             <View style={{ gap: 20 }}>
               <View style={{ gap: 8 }}>
                 <Text style={labelStyle}>Age</Text>
-                <TextInput value={ageRange} onChangeText={(v) => setAgeRange(v.replace(/[^\d]/g, ''))} keyboardType="number-pad" placeholder="e.g. 23" placeholderTextColor={colors.mutedForeground} style={inputStyle} />
+                <TextInput value={ageRange} onChangeText={(v) => setAgeRange(v.replace(/[^\d]/g, ''))} keyboardType="number-pad" placeholder="e.g. 23" placeholderTextColor={palette.textMuted} style={inputStyle} />
               </View>
               <SelectPopover label="Gender" value={gender} options={GENDER_OPTIONS} placeholder="Select gender" onSelect={setGender} />
             </View>
@@ -217,7 +234,7 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
               {isSweden && county
                 ? <SelectPopover label="City" value={city} options={cityOptions} placeholder="Select city" onSelect={setCity} />
                 : !isSweden
-                  ? <View style={{ gap: 8 }}><Text style={labelStyle}>City</Text><TextInput value={city} onChangeText={setCity} placeholder="Enter city" placeholderTextColor={colors.mutedForeground} style={inputStyle} /></View>
+                  ? <View style={{ gap: 8 }}><Text style={labelStyle}>City</Text><TextInput value={city} onChangeText={setCity} placeholder="Enter city" placeholderTextColor={palette.textMuted} style={inputStyle} /></View>
                   : null}
             </View>
           )}
@@ -230,18 +247,18 @@ export function ProfileWizardModal({ visible, onClose, userId }: Props) {
             <View style={{ gap: 20 }}>
               <View style={{ gap: 8 }}>
                 <Text style={labelStyle}>Address</Text>
-                <TextInput value={address} onChangeText={setAddress} placeholder="Street address" placeholderTextColor={colors.mutedForeground} style={inputStyle} />
+                <TextInput value={address} onChangeText={setAddress} placeholder="Street address" placeholderTextColor={palette.textMuted} style={inputStyle} />
               </View>
               <View style={{ gap: 8 }}>
                 <Text style={labelStyle}>Postal Code</Text>
-                <TextInput value={postalCode} onChangeText={setPostalCode} placeholder="e.g. 11234" placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" style={inputStyle} />
+                <TextInput value={postalCode} onChangeText={setPostalCode} placeholder="e.g. 11234" placeholderTextColor={palette.textMuted} keyboardType="number-pad" style={inputStyle} />
               </View>
             </View>
           )}
         </ScrollView>
 
         {/* Footer */}
-        <View style={{ padding: 20, paddingBottom: 34, gap: 10, borderTopWidth: 1, borderTopColor: 'rgba(234,236,239,0.8)' }}>
+        <View style={{ padding: 20, paddingBottom: 34, gap: 10, borderTopWidth: 1, borderTopColor: palette.borderColor }}>
           <LiquidButton
             label={saving ? 'Saving…' : step < STEP_COUNT - 1 ? 'Next' : 'Done'}
             onPress={saveCurrentStep}

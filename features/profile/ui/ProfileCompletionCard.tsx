@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { colors, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 type Item = {
   id: 'avatar' | 'personal' | 'categories' | 'location' | 'account' | 'shipping'
@@ -15,20 +16,21 @@ type Props = {
 }
 
 export function ProfileCompletionCard({ percentage, items, onPressItem }: Props) {
+  const { colors, palette } = useTheme()
   return (
     <View
       style={{
         borderRadius: radii.card,
         borderWidth: 1,
         borderColor: 'rgba(74,18,160,0.22)',
-        backgroundColor: 'rgba(255,255,255,0.85)',
+        backgroundColor: palette.cardBg,
         padding: 16,
         gap: 12,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <Text
-          style={{ flex: 1, color: colors.foreground, fontFamily: typography.fontFamily, fontSize: 15, lineHeight: 20, fontWeight: '700' }}
+          style={{ flex: 1, color: palette.text, fontFamily: typography.fontFamily, fontSize: 15, lineHeight: 20, fontWeight: '700' }}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.75}
@@ -38,7 +40,7 @@ export function ProfileCompletionCard({ percentage, items, onPressItem }: Props)
         <Text style={{ color: colors.primary, fontFamily: typography.fontFamily, fontSize: 18, lineHeight: 20, fontWeight: '700' }}>{percentage}%</Text>
       </View>
 
-      <View style={{ height: 8, borderRadius: radii.full, backgroundColor: 'rgba(23,31,42,0.12)', overflow: 'hidden' }}>
+      <View style={{ height: 8, borderRadius: radii.full, backgroundColor: palette.borderColor, overflow: 'hidden' }}>
         <View style={{ height: '100%', width: `${Math.max(0, Math.min(100, percentage))}%`, backgroundColor: colors.primary }} />
       </View>
 
@@ -53,7 +55,7 @@ export function ProfileCompletionCard({ percentage, items, onPressItem }: Props)
             <Text
               style={{
                 fontSize: 14,
-                color: item.done ? colors.mutedForeground : colors.foreground,
+                color: item.done ? palette.textMuted : palette.text,
                 fontFamily: typography.fontFamily,
                 textDecorationLine: item.done ? 'line-through' : 'none',
               }}

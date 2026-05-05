@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router'
 import { Campaign } from '@/features/core/types'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
-import { palette, shadows, typography } from '@/features/core/theme'
+import { shadows, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
 
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export function ProfileCollaborations({ items }: Props) {
+  const { palette } = useTheme()
   const router = useRouter()
 
   if (!items.length) {
@@ -32,9 +34,9 @@ export function ProfileCollaborations({ items }: Props) {
           style={{
             borderRadius: 24,
             borderWidth: 1,
-            borderColor: 'rgba(234,236,239,0.75)',
+            borderColor: palette.borderColor,
             overflow: 'hidden',
-            backgroundColor: '#fff',
+            backgroundColor: palette.card,
             ...shadows.card,
           }}
         >

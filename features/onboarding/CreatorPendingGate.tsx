@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { colors, palette, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 
 type Props = {
@@ -48,6 +49,7 @@ function bookingDates() {
 }
 
 export function CreatorPendingGate({ state }: Props) {
+  const { colors, palette } = useTheme()
   const { data: profile } = useCreatorProfile()
   const [expanded, setExpanded] = useState(false)
   const [appealOpen, setAppealOpen] = useState(false)
@@ -122,8 +124,8 @@ export function CreatorPendingGate({ state }: Props) {
         style={{
           borderRadius: 18,
           borderWidth: 1,
-          borderColor: 'rgba(234,236,239,0.7)',
-          backgroundColor: 'rgba(255,255,255,0.92)',
+          borderColor: palette.borderColor,
+          backgroundColor: palette.sectionBg,
           paddingHorizontal: 14,
           paddingVertical: 12,
           shadowColor: '#000',
@@ -145,7 +147,7 @@ export function CreatorPendingGate({ state }: Props) {
             <Text style={{ color: palette.text, fontWeight: '700', fontSize: 14, fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{title}</Text>
             <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{subtitle}</Text>
           </View>
-          <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.mutedForeground} />
+          <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={palette.textMuted} />
         </Pressable>
 
         {expanded ? (
@@ -184,13 +186,13 @@ export function CreatorPendingGate({ state }: Props) {
               <View
                 style={{
                   alignSelf: 'center',
-                  backgroundColor: '#FEF3C7',
+                  backgroundColor: palette.warningBg,
                   borderRadius: radii.full,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                 }}
               >
-                <Text style={{ color: '#B45309', fontSize: 11, fontWeight: '700', fontFamily: typography.fontFamily, letterSpacing: 0.3 }}>
+                <Text style={{ color: palette.warningText, fontSize: 11, fontWeight: '700', fontFamily: typography.fontFamily, letterSpacing: 0.3 }}>
                   {pillLabel}
                 </Text>
               </View>
@@ -234,10 +236,10 @@ export function CreatorPendingGate({ state }: Props) {
           <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })}>
           <View
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: palette.sectionBg,
               borderRadius: 20,
               borderWidth: 1,
-              borderColor: 'rgba(234,236,239,0.8)',
+              borderColor: palette.borderColor,
               padding: 16,
               maxHeight: '88%',
               minHeight: 360,
@@ -290,7 +292,7 @@ export function CreatorPendingGate({ state }: Props) {
                     minHeight: 110,
                     borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: 'rgba(234,236,239,0.9)',
+                    borderColor: palette.borderColor,
                     padding: 12,
                     textAlignVertical: 'top',
                     color: palette.text,
@@ -319,8 +321,8 @@ export function CreatorPendingGate({ state }: Props) {
                         style={{
                           borderRadius: 16,
                           borderWidth: 1,
-                          borderColor: selected ? 'rgba(74,18,160,0.48)' : 'rgba(234,236,239,0.9)',
-                          backgroundColor: selected ? 'rgba(74,18,160,0.10)' : 'rgba(255,255,255,0.95)',
+                          borderColor: selected ? 'rgba(74,18,160,0.48)' : palette.borderColor,
+                          backgroundColor: selected ? 'rgba(74,18,160,0.10)' : palette.cardBg,
                           paddingHorizontal: 14,
                           paddingVertical: 10,
                           minWidth: 92,
@@ -334,7 +336,7 @@ export function CreatorPendingGate({ state }: Props) {
                       >
                         <Text
                           style={{
-                            color: selected ? colors.primary : colors.mutedForeground,
+                            color: selected ? colors.primary : palette.textMuted,
                             fontSize: 10,
                             letterSpacing: 0.7,
                             fontWeight: '700',
@@ -371,8 +373,8 @@ export function CreatorPendingGate({ state }: Props) {
                           minHeight: 38,
                           borderRadius: 12,
                           borderWidth: 1,
-                          borderColor: selected ? colors.primary : 'rgba(234,236,239,0.9)',
-                          backgroundColor: selected ? 'rgba(74,18,160,0.08)' : '#fff',
+                          borderColor: selected ? colors.primary : palette.borderColor,
+                          backgroundColor: selected ? 'rgba(74,18,160,0.08)' : palette.cardBg,
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
@@ -394,7 +396,7 @@ export function CreatorPendingGate({ state }: Props) {
                 <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 20, fontFamily: typography.fontFamily }}>
                   Your appeal draft is ready. A meeting booking integration can submit this to the backend once wired.
                 </Text>
-                <View style={{ borderRadius: 12, borderWidth: 1, borderColor: 'rgba(234,236,239,0.9)', padding: 10, gap: 6 }}>
+                <View style={{ borderRadius: 12, borderWidth: 1, borderColor: palette.borderColor, padding: 10, gap: 6 }}>
                   <Text style={{ color: palette.text, fontSize: 12, fontWeight: '700', fontFamily: typography.fontFamily }}>Reason</Text>
                   <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: typography.fontFamily }}>{appealReason || '—'}</Text>
                   <Text style={{ color: palette.text, fontSize: 12, fontWeight: '700', fontFamily: typography.fontFamily }}>Booked Time</Text>
@@ -414,7 +416,7 @@ export function CreatorPendingGate({ state }: Props) {
                   }
                   setAppealStep((prev) => (prev === 1 ? prev : ((prev - 1) as 1 | 2 | 3)))
                 }}
-                style={{ minHeight: 40, borderRadius: radii.input, borderWidth: 1, borderColor: 'rgba(234,236,239,0.9)', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+                style={{ minHeight: 40, borderRadius: radii.input, borderWidth: 1, borderColor: palette.borderColor, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
               >
                 <Text style={{ color: palette.text, fontSize: 14, fontWeight: '600', fontFamily: typography.fontFamily }}>
                   {appealStep === 1 ? 'Close' : 'Back'}

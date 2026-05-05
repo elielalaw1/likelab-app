@@ -141,18 +141,24 @@ async function getCampaignAssets(campaignIds: string[]) {
     if (storagePath) {
       toSign.push({ campaignId, path: storagePath })
     } else if (raw.startsWith('http')) {
-      // External URL (not Supabase storage) — use as-is
       imageMap.set(campaignId, raw)
     }
   }
 
   if (toSign.length) {
-    const { data: signed } = await supabase.storage
-      .from(CAMPAIGN_ASSETS_BUCKET)
-      .createSignedUrls(toSign.map((e) => e.path), 3600)
+    // 7-day TTL + resize to 800px wide, 75% quality — drastically smaller files
+    const signedResults = await Promise.all(
+      toSign.map(({ path }) =>
+        supabase.storage
+          .from(CAMPAIGN_ASSETS_BUCKET)
+          .createSignedUrl(path, 7 * 24 * 3600, {
+            transform: { width: 800, quality: 75 },
+          })
+      )
+    )
 
     for (let i = 0; i < toSign.length; i++) {
-      const signedUrl = signed?.[i]?.signedUrl
+      const signedUrl = signedResults[i]?.data?.signedUrl
       if (signedUrl) imageMap.set(toSign[i].campaignId, signedUrl)
     }
   }

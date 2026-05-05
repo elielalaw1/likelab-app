@@ -1,6 +1,6 @@
 import { getApplications } from '@/features/applications/api'
 import { getCampaigns } from '@/features/campaigns/api'
-import { colors, palette } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { getDeliverables } from '@/features/deliverables/api'
 import { FloatingTabBar } from '@/features/navigation/FloatingTabBar'
 import { FloatingTabBarVisibilityProvider } from '@/features/navigation/FloatingTabBarVisibility'
@@ -21,6 +21,7 @@ function RealtimeSetup({ userId }: { userId: string }) {
 }
 
 export default function TabsLayout() {
+  const { colors, palette } = useTheme()
   const { session, loading } = useAuthSession()
   const queryClient = useQueryClient()
 
@@ -57,7 +58,7 @@ export default function TabsLayout() {
           sceneStyle: { backgroundColor: palette.bg },
         }}
       >
-        <Tabs.Screen name="overview" options={{ title: 'Home' }} />
+        <Tabs.Screen name="overview" options={{ title: 'Discover' }} />
         <Tabs.Screen name="campaigns" options={{ href: null }} />
         <Tabs.Screen name="applications" options={{ href: null }} />
         <Tabs.Screen name="deliverables" options={{ title: 'Deliverables' }} />

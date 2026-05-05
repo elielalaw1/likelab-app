@@ -1,4 +1,5 @@
-import { colors, palette, shadows, typography } from '@/features/core/theme'
+import { shadows, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
@@ -13,6 +14,7 @@ import { FlatList, Pressable, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 
 export default function DeliverablesPage() {
+  const { colors, palette } = useTheme()
   const queryClient = useQueryClient()
   const { data, isLoading, error, refetch } = useDeliverables()
 
@@ -110,7 +112,7 @@ export default function DeliverablesPage() {
             onPress={() => openCampaignVideos(item.campaignId)}
             style={{
               borderRadius: 22,
-              backgroundColor: '#fff',
+              backgroundColor: palette.cardBg,
               borderWidth: 1,
               borderColor: item.status === 'revision_requested' ? 'rgba(251,191,36,0.45)' : 'rgba(191,219,254,0.8)',
               padding: 16,

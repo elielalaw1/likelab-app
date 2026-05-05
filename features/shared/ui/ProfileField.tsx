@@ -1,5 +1,6 @@
 import { Text, TextInput, View } from 'react-native'
-import { colors, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 type Props = {
   label: string
@@ -22,13 +23,14 @@ export function ProfileField({
   prefixText,
   sanitizeText,
 }: Props) {
+  const { colors, palette } = useTheme()
   const displayValue = sanitizeText ? sanitizeText(value) : value
 
   return (
     <View style={{ gap: 8 }}>
       <Text
         style={{
-          color: colors.mutedForeground,
+          color: palette.textMuted,
           fontFamily: typography.fontFamily,
           fontSize: typography.sizes.formLabel,
           fontWeight: '600',
@@ -41,23 +43,23 @@ export function ProfileField({
       <View
         style={{
           borderWidth: 1,
-          borderColor: 'rgba(234,236,239,0.8)',
+          borderColor: palette.borderColor,
           borderRadius: radii.input,
           height: 40,
-          backgroundColor: editable ? colors.background : 'rgba(241,242,244,0.5)',
+          backgroundColor: editable ? palette.inputBg : palette.neutralBg,
           paddingHorizontal: 12,
           flexDirection: 'row',
           alignItems: 'center',
         }}
       >
         {prefixText ? (
-          <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: typography.fontFamily, marginRight: 2 }}>{prefixText}</Text>
+          <Text style={{ color: palette.textMuted, fontSize: 14, fontFamily: typography.fontFamily, marginRight: 2 }}>{prefixText}</Text>
         ) : null}
         <TextInput
           value={displayValue}
           onChangeText={(text) => onChangeText?.(sanitizeText ? sanitizeText(text) : text)}
           placeholder={placeholder}
-          placeholderTextColor={colors.mutedForeground}
+          placeholderTextColor={palette.textMuted}
           editable={editable}
           keyboardType={keyboardType}
           autoCapitalize="none"
@@ -65,7 +67,7 @@ export function ProfileField({
           style={{
             flex: 1,
             fontSize: 14,
-            color: colors.foreground,
+            color: palette.text,
             fontFamily: typography.fontFamily,
           }}
         />

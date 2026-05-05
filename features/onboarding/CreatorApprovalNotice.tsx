@@ -5,13 +5,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import * as SecureStore from 'expo-secure-store'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
-import { colors, palette, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 const NOTICE_KEY_PREFIX = 'creator_approved_notice_seen_v1:'
 const STATUS_KEY_PREFIX = 'creator_review_status_last_v1:'
 type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'unknown'
 
 export function CreatorApprovalNotice() {
+  const { colors, palette } = useTheme()
   const { data: profile, isFetched } = useCreatorProfile()
   const { session, loading: sessionLoading } = useAuthSession()
   const [open, setOpen] = useState(false)
@@ -162,8 +164,8 @@ export function CreatorApprovalNotice() {
           style={{
             borderRadius: 22,
             borderWidth: 1,
-            borderColor: 'rgba(234,236,239,0.95)',
-            backgroundColor: '#fff',
+            borderColor: palette.borderColor,
+            backgroundColor: palette.sectionBg,
             padding: 18,
             alignItems: 'center',
             gap: 12,
@@ -265,7 +267,7 @@ export function CreatorApprovalNotice() {
             You are now approved. Your creator account is fully unlocked.
           </Text>
 
-          <View style={{ width: '100%', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(234,236,239,0.9)', padding: 10, gap: 6 }}>
+          <View style={{ width: '100%', borderRadius: 12, borderWidth: 1, borderColor: palette.borderColor, padding: 10, gap: 6 }}>
             <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700' }}>
               What you can do now
             </Text>

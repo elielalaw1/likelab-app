@@ -1,5 +1,6 @@
 import { Text, TextInput, View } from 'react-native'
-import { colors, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { PHONE_CODE_OPTIONS } from '@/features/profile/location-data'
 import { SelectPopover } from '@/features/profile/ui/SelectPopover'
 
@@ -11,11 +12,12 @@ type Props = {
 }
 
 export function PhoneInput({ code, digits, onChangeCode, onChangeDigits }: Props) {
+  const { colors, palette } = useTheme()
   return (
     <View style={{ gap: 8 }}>
       <Text
         style={{
-          color: colors.mutedForeground,
+          color: palette.textMuted,
           fontFamily: typography.fontFamily,
           fontSize: typography.sizes.formLabel,
           fontWeight: '600',
@@ -44,16 +46,16 @@ export function PhoneInput({ code, digits, onChangeCode, onChangeDigits }: Props
             onChangeText={(value) => onChangeDigits(value.replace(/[^\d]/g, ''))}
             keyboardType="phone-pad"
             placeholder="70 123 4567"
-            placeholderTextColor={colors.mutedForeground}
+            placeholderTextColor={palette.textMuted}
             style={{
               borderWidth: 1,
-              borderColor: 'rgba(234,236,239,0.8)',
+              borderColor: palette.borderColor,
               borderRadius: radii.input,
               height: 40,
-              backgroundColor: colors.background,
+              backgroundColor: palette.inputBg,
               paddingHorizontal: 12,
               fontSize: 14,
-              color: colors.foreground,
+              color: palette.text,
               fontFamily: typography.fontFamily,
             }}
           />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Image,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { assertCreatorRole, NON_CREATOR_MESSAGE } from '@/lib/assert-creator-role'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import { designBackground, designWordmark } from '@/design/assets'
 
@@ -23,24 +24,44 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [loginCooldown, setLoginCooldown] = useState(0)
+  const failureCountRef = useRef(0)
+
+  useEffect(() => {
+    if (loginCooldown <= 0) return
+    const id = setTimeout(() => setLoginCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [loginCooldown])
 
   if (!sessionLoading && session) {
     return <Redirect href="/(tabs)/overview" />
   }
 
   const handleLogin = async () => {
+    if (loginCooldown > 0) return
     if (!email.trim() || !password) {
       Alert.alert('Missing fields', 'Enter your email and password.')
       return
     }
     try {
       setLoading(true)
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       })
       if (error) {
+        failureCountRef.current += 1
+        const delay = Math.min(3 * Math.pow(2, failureCountRef.current - 1), 30)
+        setLoginCooldown(Math.round(delay))
         Alert.alert('Sign in failed', error.message)
+        return
+      }
+      failureCountRef.current = 0
+      if (data.user) {
+        const isCreator = await assertCreatorRole(data.user.id)
+        if (!isCreator) {
+          Alert.alert('Access denied', NON_CREATOR_MESSAGE)
+        }
       }
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Something went wrong.')
@@ -152,13 +173,13 @@ export default function LoginPage() {
 
           <Pressable
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loading || loginCooldown > 0}
             style={{
               borderRadius: 14,
               borderWidth: 1.5,
               borderColor: '#C9D2FF',
               overflow: 'hidden',
-              opacity: loading ? 0.72 : 1,
+              opacity: (loading || loginCooldown > 0) ? 0.72 : 1,
             }}
           >
             <LinearGradient
@@ -168,7 +189,7 @@ export default function LoginPage() {
               style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 15 }}
             >
               <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? 'Signing in...' : loginCooldown > 0 ? `Try again in ${loginCooldown}s` : 'Sign in'}
               </Text>
             </LinearGradient>
           </Pressable>

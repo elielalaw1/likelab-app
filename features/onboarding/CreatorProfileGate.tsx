@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { colors, palette, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 type ChecklistItem = {
   key: string
@@ -16,6 +17,7 @@ type Props = {
 }
 
 export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }: Props) {
+  const { colors, palette } = useTheme()
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -23,8 +25,8 @@ export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }:
       style={{
         borderRadius: 18,
         borderWidth: 1,
-        borderColor: 'rgba(234,236,239,0.7)',
-        backgroundColor: 'rgba(255,255,255,0.92)',
+        borderColor: palette.borderColor,
+        backgroundColor: palette.sectionBg,
         paddingHorizontal: 14,
         paddingVertical: 12,
         shadowColor: '#000',
@@ -41,21 +43,21 @@ export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }:
             width: 24,
             height: 24,
             borderRadius: 12,
-            backgroundColor: '#FEF3C7',
+            backgroundColor: palette.warningBg,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B45309" />
+          <MaterialCommunityIcons name="alert-circle-outline" size={14} color={palette.warningText} />
         </View>
         <Text style={{ flex: 1, color: palette.text, fontWeight: '700', fontSize: 14, fontFamily: typography.fontFamily }}>
           Complete Your Profile
         </Text>
         <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>{percentage}%</Text>
-        <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.mutedForeground} />
+        <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={palette.textMuted} />
       </Pressable>
 
-      <View style={{ height: 6, borderRadius: 999, backgroundColor: 'rgba(23,31,42,0.12)', overflow: 'hidden' }}>
+      <View style={{ height: 6, borderRadius: 999, backgroundColor: palette.borderColor, overflow: 'hidden' }}>
         <View style={{ width: `${Math.max(0, Math.min(100, percentage))}%`, height: '100%', backgroundColor: colors.primary }} />
       </View>
 
@@ -70,7 +72,7 @@ export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }:
               />
               <Text
                 style={{
-                  color: item.done ? colors.mutedForeground : palette.text,
+                  color: item.done ? palette.textMuted : palette.text,
                   fontSize: 14,
                   fontFamily: typography.fontFamily,
                   textDecorationLine: item.done ? 'line-through' : 'none',
@@ -102,4 +104,3 @@ export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }:
     </View>
   )
 }
-

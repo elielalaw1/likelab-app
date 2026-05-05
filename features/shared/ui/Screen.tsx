@@ -1,7 +1,8 @@
 import { ReactNode, RefObject, useState, useCallback } from 'react'
 import { RefreshControl, ScrollView, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { palette, spacing } from '@/features/core/theme'
+import { spacing } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { getFloatingTabBarSpace } from '@/features/navigation/floatingTabBar.constants'
 import { useFocusEffect } from '@react-navigation/native'
@@ -17,6 +18,7 @@ type Props = {
 }
 
 export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh }: Props) {
+  const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { reportScroll, setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
   const bottomPad = spacing.xxl + (tabAware ? getFloatingTabBarSpace(insets.bottom) : 12) + overlayPadding

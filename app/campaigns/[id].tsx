@@ -1,5 +1,8 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, FlatList, ImageBackground, Linking, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, Text, View } from 'react-native'
+
+import { Image as ExpoImage } from 'expo-image'
+import * as Clipboard from 'expo-clipboard'
 import { router, useLocalSearchParams } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -9,8 +12,9 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, w
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
-import { formatCampaignGoal, formatDateRange, getDaysLeft, looksLikeTikTokUrl } from '@/features/core/format'
-import { colors, palette, radii, shadows, typography } from '@/features/core/theme'
+import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/core/format'
+import { radii, shadows, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -20,6 +24,7 @@ import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { toast } from '@/features/shared/ui/Toast'
+import { isValidTikTokUrl } from '@/lib/validate-tiktok-url'
 
 function fmtNum(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -58,14 +63,15 @@ function Section({
   borderColor?: string
   children: ReactNode
 }) {
+  const { palette } = useTheme()
   return (
     <View
       style={{
-        backgroundColor: 'rgba(255,255,255,0.92)',
+        backgroundColor: palette.sectionBg,
         borderRadius: 28,
         padding: 22,
         borderWidth: 1,
-        borderColor: borderColor || 'rgba(234,236,239,0.9)',
+        borderColor: borderColor || palette.borderColor,
         gap: 18,
         ...shadows.card,
       }}
@@ -81,11 +87,11 @@ function Section({
             backgroundColor: tint,
           }}
         >
-          <MaterialCommunityIcons name={icon} size={20} color={colors.foreground} />
+          <MaterialCommunityIcons name={icon} size={20} color={palette.text} />
         </View>
         <Text
           style={{
-            color: colors.mutedForeground,
+            color: palette.textMuted,
             fontFamily: typography.fontFamily,
             fontWeight: '700',
             fontSize: 11,
@@ -111,14 +117,15 @@ function Pill({ label, backgroundColor, color }: { label: string; backgroundColo
 }
 
 export default function CampaignDetailPage() {
+  const { colors, palette } = useTheme()
   const params = useLocalSearchParams<{ id: string; tab?: string }>()
   const campaignId = Array.isArray(params.id) ? params.id[0] : params.id
   const initialTab = Array.isArray(params.tab) ? params.tab[0] : params.tab
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId)
   const { data: profile } = useCreatorProfile()
-  const { data: campaignDeliverables, isLoading: loadingDeliverables, refetch: refetchCampaignDeliverables } = useCampaignDeliverables(campaignId)
-  const { data: allDeliverables, isLoading: loadingAllDeliverables, refetch: refetchAllDeliverables } = useDeliverables()
+  const { data: campaignDeliverables, isLoading: loadingDeliverables } = useCampaignDeliverables(campaignId)
+  const { data: allDeliverables, isLoading: loadingAllDeliverables } = useDeliverables()
   const applyMutation = useApplyToCampaign()
   const submitLinkMutation = useSubmitLink()
   const [activeTab, setActiveTab] = useState<'description' | 'brief' | 'videos'>(
@@ -127,6 +134,7 @@ export default function CampaignDetailPage() {
   const [deliverableInputs, setDeliverableInputs] = useState<Record<string, string>>({})
   const [leaderboard, setLeaderboard] = useState<{ rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number } | null>(null)
   const [applySuccess, setApplySuccess] = useState(false)
+  const [copiedTag, setCopiedTag] = useState<string | null>(null)
   const [tabMetrics, setTabMetrics] = useState<Record<'description' | 'brief' | 'videos', { x: number; width: number }>>({
     description: { x: 0, width: 0 },
     brief: { x: 0, width: 0 },
@@ -138,10 +146,8 @@ export default function CampaignDetailPage() {
   const bubbleInitialized = useRef(false)
 
   const profileComplete = profile ? isProfileComplete(profile) : false
-  const canApply = Boolean(profile?.reviewStatus === 'approved' && profileComplete)
   const currentApplicationStatus = campaign?.creatorApplicationStatus || null
   const applyBlockedByStatus = currentApplicationStatus === 'applied' || currentApplicationStatus === 'accepted'
-  const uploadedCount = (campaignDeliverables || []).filter((item) => item.status === 'uploaded' || item.status === 'published').length
 
   const handleApply = async () => {
     if (profile?.reviewStatus !== 'approved') {
@@ -169,8 +175,8 @@ export default function CampaignDetailPage() {
       toast.error('Please paste a TikTok URL first.')
       return
     }
-    if (!looksLikeTikTokUrl(value)) {
-      toast.error('Only TikTok URLs are accepted.')
+    if (!isValidTikTokUrl(value)) {
+      Alert.alert('Invalid URL', 'Please enter a valid TikTok video link.')
       return
     }
 
@@ -183,7 +189,11 @@ export default function CampaignDetailPage() {
     }
   }
 
-  const hashtagText = useMemo(() => campaign?.requiredHashtags || ['#annons'], [campaign?.requiredHashtags])
+  const hashtagText = useMemo(() => {
+    const tags = campaign?.requiredHashtags?.length ? campaign.requiredHashtags : ['#annons']
+    const hasLikelab = tags.some((t) => t.toLowerCase() === '#likelab')
+    return hasLikelab ? tags : [...tags, '#LikeLab']
+  }, [campaign?.requiredHashtags])
   const visibleDeliverables = useMemo(() => {
     if ((campaignDeliverables || []).length) return campaignDeliverables || []
     return (allDeliverables || []).filter((item) => item.campaignId === campaignId)
@@ -238,9 +248,9 @@ export default function CampaignDetailPage() {
       <View
         style={{
           borderRadius: 28,
-          backgroundColor: 'rgba(255,255,255,0.94)',
+          backgroundColor: palette.sectionBg,
           borderWidth: 1,
-          borderColor: ctaState.tone === 'success' ? 'rgba(167,243,208,0.95)' : 'rgba(234,236,239,0.85)',
+          borderColor: ctaState.tone === 'success' ? palette.successBg : palette.borderColor,
           padding: 16,
           gap: 14,
           ...shadows.hero,
@@ -340,17 +350,27 @@ export default function CampaignDetailPage() {
         </Pressable>
       </Animated.View>
 
-      {isLoading ? <ActivityIndicator color={colors.primary} /> : null}
+      {isLoading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : null}
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load this campaign.</Text> : null}
 
       {campaign ? (
         <>
           <Animated.View entering={FadeInDown.duration(250).delay(80)}>
             <View style={{ borderRadius: 34, overflow: 'hidden', backgroundColor: '#0E0A1C', ...shadows.hero }}>
-              <ImageBackground
-                source={campaign.coverImageUrl ? { uri: campaign.coverImageUrl } : undefined}
-                style={{ height: 380, backgroundColor: '#1A0F2E' }}
-              >
+              <View style={{ height: 380, backgroundColor: '#1A0F2E' }}>
+                {campaign.coverImageUrl ? (
+                  <ExpoImage
+                    source={{ uri: campaign.coverImageUrl }}
+                    style={{ position: 'absolute', inset: 0 }}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={300}
+                  />
+                ) : null}
                 {/* Top fade for badge readability */}
                 <LinearGradient
                   colors={['rgba(0,0,0,0.52)', 'transparent']}
@@ -412,7 +432,7 @@ export default function CampaignDetailPage() {
                     ) : null}
                   </View>
                 </View>
-              </ImageBackground>
+              </View>
             </View>
           </Animated.View>
 
@@ -422,9 +442,9 @@ export default function CampaignDetailPage() {
               gap: 8,
               padding: 8,
               borderRadius: 26,
-              backgroundColor: 'rgba(248,250,252,0.56)',
+              backgroundColor: palette.tabBarBg,
               borderWidth: 1,
-              borderColor: 'rgba(15,23,42,0.08)',
+              borderColor: palette.tabBarBorder,
               shadowColor: '#0F172A',
               shadowOpacity: 0.08,
               shadowRadius: 18,
@@ -544,13 +564,56 @@ export default function CampaignDetailPage() {
 
           {activeTab === 'brief' && (
             <>
-              {campaign.videoRequirements ? (
-                <Section icon="video-outline" title="Video Requirements" tint="rgba(251,113,133,0.14)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.videoRequirements}
-                  </Text>
+              {/* Stat cells row */}
+              {(() => {
+                const cells = [
+                  { label: 'Required Videos', value: campaign.requiredVideos, icon: 'video-outline' as const },
+                  { label: 'Creation Days', value: campaign.creationDays, icon: 'clock-outline' as const },
+                  { label: 'Review Days', value: campaign.reviewDays, icon: 'eye-outline' as const },
+                  { label: 'Rights (Days)', value: campaign.contentRightsDays, icon: 'shield-check-outline' as const },
+                ].filter((c) => c.value != null)
+                if (!cells.length) return null
+                return (
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    {cells.map((cell) => (
+                      <View
+                        key={cell.label}
+                        style={{
+                          flex: 1,
+                          backgroundColor: palette.cardBg,
+                          borderRadius: 20,
+                          paddingVertical: 14,
+                          paddingHorizontal: 8,
+                          alignItems: 'center',
+                          gap: 5,
+                          borderWidth: 1,
+                          borderColor: palette.borderColor,
+                          ...shadows.card,
+                        }}
+                      >
+                        <MaterialCommunityIcons name={cell.icon} size={16} color={palette.textMuted} />
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '800', color: palette.text, letterSpacing: -0.5 }}>
+                          {cell.value}
+                        </Text>
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, textAlign: 'center' }}>
+                          {cell.label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )
+              })()}
+
+              {/* Required Disclosure */}
+              {campaign.requiredDisclosure ? (
+                <Section icon="alert-circle-outline" title="Required Disclosure" tint="rgba(251,191,36,0.16)" borderColor="rgba(253,230,138,0.8)">
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                    <Pill label={campaign.requiredDisclosure} backgroundColor="rgba(251,191,36,0.16)" color="#b45309" />
+                  </View>
                 </Section>
               ) : null}
+
+              {/* Instructions */}
               {campaign.instructions ? (
                 <Section icon="pencil-outline" title="Your Instructions" tint="rgba(96,165,250,0.16)" borderColor="rgba(167,243,208,0.9)">
                   <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
@@ -558,6 +621,42 @@ export default function CampaignDetailPage() {
                   </Text>
                 </Section>
               ) : null}
+
+              {/* Video Requirements */}
+              {campaign.videoRequirements ? (
+                <Section icon="video-outline" title="Video Requirements" tint="rgba(251,113,133,0.14)">
+                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
+                    {campaign.videoRequirements}
+                  </Text>
+                </Section>
+              ) : null}
+
+              {/* Brief & Guidelines */}
+              {campaign.briefGuidelines ? (
+                <Section icon="file-document-outline" title="Brief & Guidelines" tint="rgba(139,92,246,0.12)">
+                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
+                    {campaign.briefGuidelines}
+                  </Text>
+                </Section>
+              ) : null}
+
+              {/* Key Messages */}
+              {(campaign.keyMessages || []).length > 0 ? (
+                <Section icon="message-text-outline" title="Key Messages" tint="rgba(45,212,191,0.14)">
+                  <View style={{ gap: 10 }}>
+                    {campaign.keyMessages?.map((msg, i) => (
+                      <View key={i} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: palette.textMuted, marginTop: 9 }} />
+                        <Text style={{ flex: 1, fontSize: 15, color: palette.text, lineHeight: 22, fontFamily: typography.fontFamily }}>
+                          {msg}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </Section>
+              ) : null}
+
+              {/* Brand Voice */}
               {campaign.brandVoice ? (
                 <Section icon="account-voice" title="Brand Voice" tint="rgba(45,212,191,0.14)">
                   <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
@@ -565,15 +664,68 @@ export default function CampaignDetailPage() {
                   </Text>
                 </Section>
               ) : null}
-              {hashtagText.length > 0 ? (
-                <Section icon="pound" title="Required Hashtags" tint="rgba(139,92,246,0.14)">
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                    {hashtagText.map((tag, i) => (
-                      <Pill key={`${tag}-${i}`} label={tag} backgroundColor="rgba(139,92,246,0.14)" color="#6D28D9" />
+
+              {/* Brand Tone */}
+              {campaign.brandTone ? (
+                <Section icon="tune-variant" title="Brand Tone" tint="rgba(251,113,133,0.12)">
+                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
+                    {campaign.brandTone}
+                  </Text>
+                </Section>
+              ) : null}
+
+              {/* Target Audience */}
+              {campaign.targetAudience ? (
+                <Section icon="account-group-outline" title="Target Audience" tint="rgba(96,165,250,0.14)">
+                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
+                    {campaign.targetAudience}
+                  </Text>
+                </Section>
+              ) : null}
+
+              {/* Platforms */}
+              {(campaign.platforms || []).length > 0 ? (
+                <Section icon="web" title="Platforms" tint="rgba(139,92,246,0.10)">
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                    {campaign.platforms?.map((p, i) => (
+                      <Pill key={i} label={formatPlatform(p)} backgroundColor="rgba(139,92,246,0.10)" color="#6D28D9" />
                     ))}
                   </View>
                 </Section>
               ) : null}
+
+              {/* Required Hashtags */}
+              {hashtagText.length > 0 ? (
+                <Section icon="pound" title="Required Hashtags" tint="rgba(139,92,246,0.14)">
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    {hashtagText.map((tag, i) => (
+                      <Pressable
+                        key={`${tag}-${i}`}
+                        onPress={async () => {
+                          await Clipboard.setStringAsync(tag)
+                          setCopiedTag(tag)
+                          setTimeout(() => setCopiedTag(null), 2000)
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radii.full, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(139,92,246,0.14)' }}
+                      >
+                        <Text style={{ color: '#6D28D9', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700' }}>{tag}</Text>
+                        <MaterialCommunityIcons
+                          name={copiedTag === tag ? 'check' : 'content-copy'}
+                          size={13}
+                          color={copiedTag === tag ? '#16A34A' : '#6D28D9'}
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                  {copiedTag ? (
+                    <Text style={{ color: '#16A34A', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600' }}>Kopierad!</Text>
+                  ) : (
+                    <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12 }}>Tryck på en hashtag för att kopiera</Text>
+                  )}
+                </Section>
+              ) : null}
+
+              {/* Example Links */}
               {(campaign.exampleLinks || []).length > 0 ? (
                 <Section icon="link-variant" title="Example Links" tint="rgba(96,165,250,0.14)">
                   <View style={{ gap: 12 }}>
@@ -582,6 +734,47 @@ export default function CampaignDetailPage() {
                         <Text style={{ color: '#2563EB', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '600' }}>{link}</Text>
                       </Pressable>
                     ))}
+                  </View>
+                </Section>
+              ) : null}
+
+              {/* Things to Avoid */}
+              {campaign.thingsToAvoid ? (
+                <Section icon="cancel" title="Things to Avoid" tint="rgba(239,68,68,0.10)" borderColor="rgba(254,202,202,0.9)">
+                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
+                    {campaign.thingsToAvoid}
+                  </Text>
+                </Section>
+              ) : null}
+
+              {/* Prize Distribution — only visible for accepted creators */}
+              {currentApplicationStatus === 'accepted' && (campaign.prizeDistribution || []).length > 0 ? (
+                <Section icon="trophy-outline" title="Prize Distribution" tint="rgba(251,191,36,0.16)" borderColor="rgba(253,230,138,0.8)">
+                  <View style={{ gap: 10 }}>
+                    {campaign.prizeDistribution?.map((amount, i) => {
+                      const medal = MEDAL[i + 1] || { bg: palette.cardBg, text: palette.textMuted }
+                      return (
+                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <View
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 16,
+                              backgroundColor: medal.bg,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '800', fontSize: 13, color: medal.text }}>
+                              {i + 1}
+                            </Text>
+                          </View>
+                          <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700', color: palette.text }}>
+                            {amount.toLocaleString('sv-SE')} SEK
+                          </Text>
+                        </View>
+                      )
+                    })}
                   </View>
                 </Section>
               ) : null}
@@ -595,11 +788,11 @@ export default function CampaignDetailPage() {
               {leaderboard ? (
                 <Animated.View entering={FadeInDown.delay(100).duration(400)}>
                   {(() => {
-                    const medal = MEDAL[leaderboard.rank] || { bg: '#f1f5f9', text: colors.mutedForeground }
+                    const medal = MEDAL[leaderboard.rank] || { bg: palette.sectionBg, text: palette.textMuted }
                     const pct = leaderboard.top_views > 0 ? Math.max(4, (leaderboard.my_views / leaderboard.top_views) * 100) : 4
                     const barColor = leaderboard.rank === 1 ? '#f59e0b' : '#6366f1'
                     return (
-                      <View style={{ borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(234,236,239,0.5)', backgroundColor: 'rgba(255,255,255,0.92)', gap: 12, ...shadows.card }}>
+                      <View style={{ borderRadius: 16, padding: 16, borderWidth: 1, borderColor: palette.borderSoft, backgroundColor: palette.cardBg, gap: 12, ...shadows.card }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                           <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: medal.bg, alignItems: 'center', justifyContent: 'center' }}>
                             <Text style={{ fontFamily: typography.fontFamily, fontWeight: '800', fontSize: 16, color: medal.text }}>#{leaderboard.rank}</Text>
@@ -615,7 +808,7 @@ export default function CampaignDetailPage() {
                           <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: palette.text, fontWeight: '600' }}>{fmtNum(leaderboard.my_views)} views</Text>
                           <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: palette.textMuted }}>Leader: {fmtNum(leaderboard.top_views)}</Text>
                         </View>
-                        <View style={{ height: 8, borderRadius: 4, backgroundColor: '#f1f5f9', overflow: 'hidden' }}>
+                        <View style={{ height: 8, borderRadius: 4, backgroundColor: palette.borderColor, overflow: 'hidden' }}>
                           <View style={{ height: '100%', width: `${pct}%`, backgroundColor: barColor, borderRadius: 4 }} />
                         </View>
                       </View>
@@ -676,8 +869,8 @@ export default function CampaignDetailPage() {
                         style={{
                           borderRadius: 12,
                           borderWidth: 1,
-                          borderColor: 'rgba(234,236,239,0.9)',
-                          backgroundColor: '#fff',
+                          borderColor: palette.borderColor,
+                          backgroundColor: palette.inputBg,
                           paddingHorizontal: 12,
                           paddingVertical: 10,
                           gap: 4,

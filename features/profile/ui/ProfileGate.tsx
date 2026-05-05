@@ -5,7 +5,8 @@ import { BlurView } from 'expo-blur'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useCreatorProfile } from '@/features/profile/hooks'
-import { colors, palette, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
 import { getProfileCompletion } from '@/features/profile/completion'
@@ -38,6 +39,7 @@ function useTypewriter(text: string, active: boolean, speed = 45, pauseAfter?: s
 type Props = { userId: string }
 
 export function ProfileGate({ userId: _userId }: Props) {
+  const { colors, palette } = useTheme()
   const { data: profile, isLoading, isFetched } = useCreatorProfile()
   const insets = useSafeAreaInsets()
   const [dismissed, setDismissed] = useState(false)
@@ -80,7 +82,7 @@ export function ProfileGate({ userId: _userId }: Props) {
         {!dismissed && (
           <Pressable onPress={dismiss} style={StyleSheet.absoluteFill} pointerEvents="auto">
             <BlurView tint="dark" intensity={28} style={[StyleSheet.absoluteFill, { justifyContent: 'center', padding: 24 }]}>
-              <Pressable onPress={() => {}} style={{ borderRadius: radii.card, backgroundColor: 'rgba(255,255,255,0.97)', padding: 24, gap: 16 }}>
+              <Pressable onPress={() => {}} style={{ borderRadius: radii.card, backgroundColor: palette.sectionBg, padding: 24, gap: 16 }}>
                 <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '800', lineHeight: 28 }}>
                   {displayed}
                   {!done ? <Text style={{ color: colors.primary }}>|</Text> : null}
@@ -103,9 +105,9 @@ export function ProfileGate({ userId: _userId }: Props) {
             left: 16,
             right: 16,
             borderRadius: radii.card,
-            backgroundColor: 'rgba(255,255,255,0.94)',
+            backgroundColor: palette.sectionBg,
             borderWidth: 1,
-            borderColor: 'rgba(234,236,239,0.85)',
+            borderColor: palette.borderColor,
             shadowColor: colors.primary,
             shadowRadius: 20,
             shadowOffset: { width: 0, height: 4 },
@@ -122,7 +124,7 @@ export function ProfileGate({ userId: _userId }: Props) {
                   <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700' }}>Complete Your Profile</Text>
                   <Text style={{ color: colors.primary, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>{percentage}%</Text>
                 </View>
-                <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(234,236,239,0.9)', overflow: 'hidden', width: '100%' }}>
+                <View style={{ height: 5, borderRadius: 3, backgroundColor: palette.borderColor, overflow: 'hidden', width: '100%' }}>
                   <View style={{ height: '100%', width: `${Math.max(0, Math.min(100, percentage))}%`, backgroundColor: colors.primary, borderRadius: 3 }} />
                 </View>
               </View>
@@ -131,11 +133,11 @@ export function ProfileGate({ userId: _userId }: Props) {
           </Pressable>
 
           {expanded && (
-            <Animated.View entering={FadeIn.duration(200)} style={{ borderTopWidth: 1, borderTopColor: 'rgba(234,236,239,0.8)', padding: 14, gap: 10 }}>
+            <Animated.View entering={FadeIn.duration(200)} style={{ borderTopWidth: 1, borderTopColor: palette.borderColor, padding: 14, gap: 10 }}>
               {items.map((item, i) => (
                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <MaterialCommunityIcons name={item.done ? 'check-circle-outline' : 'checkbox-blank-circle-outline'} size={17} color={item.done ? '#10B981' : 'rgba(74,18,160,0.55)'} />
-                  <Text style={{ fontSize: 13, color: item.done ? colors.mutedForeground : palette.text, fontFamily: typography.fontFamily, textDecorationLine: item.done ? 'line-through' : 'none' }}>
+                  <Text style={{ fontSize: 13, color: item.done ? palette.textMuted : palette.text, fontFamily: typography.fontFamily, textDecorationLine: item.done ? 'line-through' : 'none' }}>
                     {item.label}
                   </Text>
                 </View>

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { Text, View } from 'react-native'
-import { colors, glass, radii, shadows, spacing, typography } from '@/features/core/theme'
+import { radii, shadows, spacing, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 type Props = {
   title?: string
@@ -8,13 +9,14 @@ type Props = {
 }
 
 export function SectionCard({ title, children }: Props) {
+  const { palette, colors } = useTheme()
   return (
     <View
       style={{
-        backgroundColor: glass.surface,
+        backgroundColor: palette.cardBg,
         borderRadius: radii.card,
         borderWidth: 1,
-        borderColor: glass.borderSoft,
+        borderColor: palette.borderColor,
         padding: spacing.card,
         gap: spacing.md,
         ...shadows.card,
@@ -23,7 +25,7 @@ export function SectionCard({ title, children }: Props) {
       {title ? (
         <Text
           style={{
-            color: colors.mutedForeground,
+            color: palette.textMuted,
             fontFamily: typography.fontFamily,
             fontWeight: '600',
             fontSize: typography.sizes.sectionHeader,

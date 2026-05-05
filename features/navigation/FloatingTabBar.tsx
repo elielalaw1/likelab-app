@@ -1,17 +1,61 @@
-import { colors } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
+import { getProfileCompletion } from '@/features/profile/completion'
+import { useCreatorProfile } from '@/features/profile/hooks'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { useQueryClient } from '@tanstack/react-query'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, StyleSheet } from 'react-native'
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
+import { Pressable, StyleSheet, View } from 'react-native'
+import Animated, { interpolate, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+function ProfileIncompleteDot() {
+  const { data: profile } = useCreatorProfile()
+  const { isComplete } = getProfileCompletion(profile)
+  const bounce = useSharedValue(0)
+
+  useEffect(() => {
+    if (!isComplete) {
+      bounce.value = withRepeat(
+        withSequence(withTiming(-5, { duration: 380 }), withTiming(0, { duration: 380 })),
+        -1,
+        false
+      )
+    } else {
+      bounce.value = 0
+    }
+  }, [isComplete, bounce])
+
+  const dotStyle = useAnimatedStyle(() => ({ transform: [{ translateY: bounce.value }] }))
+
+  if (isComplete) return null
+
+  return (
+    <Animated.View
+      style={[
+        {
+          position: 'absolute',
+          top: -1,
+          right: -1,
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: '#EF4444',
+          borderWidth: 1.5,
+          borderColor: '#fff',
+        },
+        dotStyle,
+      ]}
+    />
+  )
+}
+
 function TabIcon({ focused, name }: { focused: boolean; name: string }) {
+  const { colors, palette } = useTheme()
   const progress = useSharedValue(focused ? 1 : 0)
 
   useEffect(() => {
@@ -34,10 +78,10 @@ function TabIcon({ focused, name }: { focused: boolean; name: string }) {
   return (
     <Animated.View style={[{ width: 24, height: 24 }, containerStyle]}>
       <Animated.View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, activeStyle]}>
-        <MaterialCommunityIcons name={entry?.active || 'circle'} size={23} color={colors.foreground} />
+        <MaterialCommunityIcons name={entry?.active || 'circle'} size={23} color={palette.text} />
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, inactiveStyle]}>
-        <MaterialCommunityIcons name={entry?.inactive || 'circle-outline'} size={22} color={colors.mutedForeground} />
+        <MaterialCommunityIcons name={entry?.inactive || 'circle-outline'} size={22} color={palette.textMuted} />
       </Animated.View>
     </Animated.View>
   )
@@ -54,6 +98,7 @@ const visibleTabNames = new Set(['overview', 'deliverables', 'profile'])
 const BAR_HORIZONTAL_PADDING = 8
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { visible } = useFloatingTabBarVisibility()
   const queryClient = useQueryClient()
@@ -120,7 +165,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           height: FLOATING_TAB_BAR_HEIGHT,
           borderRadius: 30,
           borderWidth: 1,
-          borderColor: 'rgba(15,23,42,0.08)',
+          borderColor: palette.tabBarBorder,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: BAR_HORIZONTAL_PADDING,
@@ -266,7 +311,10 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               backgroundColor: 'transparent',
             }}
           >
-            <TabIcon focused={focused} name={name} />
+            <View style={{ position: 'relative' }}>
+              <TabIcon focused={focused} name={name} />
+              {name === 'profile' && <ProfileIncompleteDot />}
+            </View>
           </Pressable>
         )
       })}

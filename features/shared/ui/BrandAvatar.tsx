@@ -1,4 +1,5 @@
-import { Image, Text, View } from 'react-native'
+import { Image as ExpoImage } from 'expo-image'
+import { Text, View } from 'react-native'
 import { typography } from '@/features/core/theme'
 
 type Props = {
@@ -13,10 +14,11 @@ export function BrandAvatar({ logoUrl, brandName, size = 24 }: Props) {
 
   if (logoUrl) {
     return (
-      <Image
+      <ExpoImage
         source={{ uri: logoUrl }}
         style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: 'rgba(255,255,255,0.12)' }}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
       />
     )
   }

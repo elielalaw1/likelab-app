@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   ImageBackground,
@@ -13,17 +13,27 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
+import { consumePendingAuth } from '@/lib/pending-auth'
 import { designBackground } from '@/design/assets'
 
 const CODE_LENGTH = 6
+const RESEND_COOLDOWN_SECONDS = 60
 
 export default function VerifyOtpPage() {
-  const { email, password } = useLocalSearchParams<{ email: string; password: string }>()
+  const { email } = useLocalSearchParams<{ email: string }>()
+  const passwordRef = useRef(consumePendingAuth()?.password ?? null)
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''))
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const inputRefs = useRef<(TextInput | null)[]>([])
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const id = setTimeout(() => setResendCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [resendCooldown])
 
   const code = digits.join('')
 
@@ -63,10 +73,10 @@ export default function VerifyOtpPage() {
         setError(data?.error ?? 'Invalid or expired code.')
         return
       }
-      if (password) {
+      if (passwordRef.current) {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email ?? '',
-          password,
+          password: passwordRef.current,
         })
         if (signInError) {
           router.replace('/login')
@@ -82,6 +92,7 @@ export default function VerifyOtpPage() {
   }
 
   const handleResend = async () => {
+    if (resendCooldown > 0) return
     try {
       setResending(true)
       setError(null)
@@ -94,6 +105,7 @@ export default function VerifyOtpPage() {
       }
       setDigits(Array(CODE_LENGTH).fill(''))
       inputRefs.current[0]?.focus()
+      setResendCooldown(RESEND_COOLDOWN_SECONDS)
       Alert.alert('Code sent', 'A new code has been sent to your email.')
     } catch {
       setError('Something went wrong. Try again.')
@@ -206,9 +218,9 @@ export default function VerifyOtpPage() {
               <Text style={{ color: '#6C7E9E', fontSize: 14, fontFamily: 'Montserrat' }}>
                 Didn&apos;t receive it?
               </Text>
-              <Pressable onPress={handleResend} disabled={resending || verifying}>
-                <Text style={{ color: '#101525', fontSize: 14, fontWeight: '700', fontFamily: 'Montserrat', opacity: resending ? 0.5 : 1 }}>
-                  {resending ? 'Sending...' : 'Resend code'}
+              <Pressable onPress={handleResend} disabled={resending || verifying || resendCooldown > 0}>
+                <Text style={{ color: '#101525', fontSize: 14, fontWeight: '700', fontFamily: 'Montserrat', opacity: (resending || resendCooldown > 0) ? 0.5 : 1 }}>
+                  {resending ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
                 </Text>
               </Pressable>
             </View>

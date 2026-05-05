@@ -35,18 +35,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 }
 
-export async function sendPushNotification(expoPushToken: string, title: string, body: string) {
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Accept-encoding': 'gzip, deflate',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ to: expoPushToken, sound: 'default', title, body }),
-  })
-}
-
 export async function savePushToken(token: string, userId: string): Promise<void> {
   try {
     await supabase
@@ -54,6 +42,17 @@ export async function savePushToken(token: string, userId: string): Promise<void
       .update({ push_token: token })
       .eq('user_id', userId)
   } catch {
-    // Column may not exist yet — safe to ignore
+    // safe to ignore
+  }
+}
+
+export async function deletePushToken(userId: string): Promise<void> {
+  try {
+    await supabase
+      .from('creator_profiles')
+      .update({ push_token: null })
+      .eq('user_id', userId)
+  } catch {
+    // safe to ignore
   }
 }

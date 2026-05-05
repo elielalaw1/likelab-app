@@ -6,7 +6,8 @@ import { countryFlag } from '@/features/core/format'
 import { formatCountyLabel } from '@/features/profile/location-data'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
-import { colors, palette, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 type Props = {
   profile: CreatorProfile
@@ -21,6 +22,7 @@ function summaryLocation(profile: CreatorProfile) {
 }
 
 export function ProfileHero({ profile, onAvatarPress }: Props) {
+  const { colors, palette } = useTheme()
   const location = summaryLocation(profile)
 
   return (
@@ -62,6 +64,47 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
             <Pressable onPress={() => Linking.openURL(`https://tiktok.com/@${profile.tiktokHandle!.replace(/^@+/, '')}`).catch(() => {})}>
               <Text style={{ fontFamily: typography.fontFamily, color: colors.primary, fontSize: 14 }}>@{profile.tiktokHandle.replace(/^@+/, '')}</Text>
             </Pressable>
+          ) : null}
+
+          {profile.tiktokHandle && (profile.tiktokLikes != null || profile.tiktokViews != null || profile.tiktokFollowers != null) ? (
+            <View style={{ flexDirection: 'row', gap: 24, marginTop: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(15,23,42,0.07)', width: '100%', justifyContent: 'center' }}>
+              {profile.tiktokLikes != null ? (
+                <View style={{ alignItems: 'center', gap: 2 }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', color: palette.text, letterSpacing: -0.3 }}>
+                    {profile.tiktokLikes}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    Likes
+                  </Text>
+                </View>
+              ) : null}
+              {profile.tiktokLikes != null && (profile.tiktokViews != null || profile.tiktokFollowers != null) ? (
+                <View style={{ width: 1, backgroundColor: 'rgba(15,23,42,0.07)', alignSelf: 'stretch' }} />
+              ) : null}
+              {profile.tiktokViews != null ? (
+                <View style={{ alignItems: 'center', gap: 2 }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', color: palette.text, letterSpacing: -0.3 }}>
+                    {profile.tiktokViews}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    Views
+                  </Text>
+                </View>
+              ) : null}
+              {profile.tiktokViews != null && profile.tiktokFollowers != null ? (
+                <View style={{ width: 1, backgroundColor: 'rgba(15,23,42,0.07)', alignSelf: 'stretch' }} />
+              ) : null}
+              {profile.tiktokFollowers != null ? (
+                <View style={{ alignItems: 'center', gap: 2 }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', color: palette.text, letterSpacing: -0.3 }}>
+                    {profile.tiktokFollowers}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    Followers
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           ) : null}
           {profile.instagramHandle ? (
             <Pressable onPress={() => Linking.openURL(`https://instagram.com/${profile.instagramHandle!.replace(/^@+/, '')}`).catch(() => {})}>

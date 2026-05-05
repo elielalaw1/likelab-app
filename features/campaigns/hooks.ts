@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { applyToCampaign, getCampaignById, getCampaignDeliverables, getCampaigns } from '@/features/campaigns/api'
 
 const queryPerf = {
-  staleTime: 2 * 60 * 1000,
-  gcTime: 30 * 60 * 1000,
+  staleTime: 6 * 60 * 60 * 1000,
+  gcTime: 8 * 60 * 60 * 1000,
   refetchOnMount: false as const,
   refetchOnWindowFocus: false as const,
 }
@@ -44,7 +44,6 @@ export function useApplyToCampaign() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

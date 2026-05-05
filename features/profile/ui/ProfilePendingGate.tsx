@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { supabase } from '@/lib/supabase'
-import { colors, palette, radii, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
 
@@ -17,6 +18,7 @@ type AppealStep = 'idle' | 'reason' | 'confirm'
 type Props = { userId: string }
 
 export function ProfilePendingGate({ userId }: Props) {
+  const { colors, palette } = useTheme()
   const { data: profile } = useCreatorProfile()
   const insets = useSafeAreaInsets()
   const [expanded, setExpanded] = useState(false)
@@ -66,9 +68,9 @@ export function ProfilePendingGate({ userId }: Props) {
             left: 16,
             right: 16,
             borderRadius: radii.card,
-            backgroundColor: 'rgba(255,255,255,0.94)',
+            backgroundColor: palette.sectionBg,
             borderWidth: 1,
-            borderColor: isRejected ? 'rgba(254,202,202,0.9)' : 'rgba(234,236,239,0.85)',
+            borderColor: isRejected ? palette.dangerBg : palette.borderColor,
             shadowColor: '#000',
             shadowOpacity: 0.15,
             shadowRadius: 20,
@@ -102,7 +104,7 @@ export function ProfilePendingGate({ userId }: Props) {
           </Pressable>
 
           {expanded && (
-            <Animated.View entering={FadeIn.duration(200)} style={{ borderTopWidth: 1, borderTopColor: 'rgba(234,236,239,0.8)', padding: 14, gap: 12 }}>
+            <Animated.View entering={FadeIn.duration(200)} style={{ borderTopWidth: 1, borderTopColor: palette.borderColor, padding: 14, gap: 12 }}>
               {isPending && (
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -110,7 +112,7 @@ export function ProfilePendingGate({ userId }: Props) {
                       <View key={label} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
                         <View style={{
                           width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-                          backgroundColor: i < 2 ? colors.primary : 'rgba(234,236,239,0.9)',
+                          backgroundColor: i < 2 ? colors.primary : palette.borderColor,
                         }}>
                           {i < 2
                             ? <MaterialCommunityIcons name="check" size={16} color="#fff" />
@@ -121,7 +123,7 @@ export function ProfilePendingGate({ userId }: Props) {
                           {label}
                         </Text>
                         {i < STEPS.length - 1 && (
-                          <View style={{ position: 'absolute', top: 14, left: '60%', right: '-40%', height: 2, backgroundColor: i < 1 ? colors.primary : 'rgba(234,236,239,0.9)' }} />
+                          <View style={{ position: 'absolute', top: 14, left: '60%', right: '-40%', height: 2, backgroundColor: i < 1 ? colors.primary : palette.borderColor }} />
                         )}
                       </View>
                     ))}
@@ -150,7 +152,7 @@ export function ProfilePendingGate({ userId }: Props) {
       {/* Appeal Modal */}
       <Modal visible={appealStep !== 'idle'} transparent animationType="fade" onRequestClose={() => setAppealStep('idle')}>
         <Pressable onPress={() => setAppealStep('idle')} style={{ flex: 1, backgroundColor: 'rgba(10,15,30,0.3)', justifyContent: 'center', padding: 20 }}>
-          <Pressable onPress={() => {}} style={{ borderRadius: radii.card, backgroundColor: '#fff', padding: 20, gap: 14, borderWidth: 1, borderColor: 'rgba(234,236,239,0.85)' }}>
+          <Pressable onPress={() => {}} style={{ borderRadius: radii.card, backgroundColor: palette.sectionBg, padding: 20, gap: 14, borderWidth: 1, borderColor: palette.borderColor }}>
             {appealStep === 'reason' && (
               <>
                 <Text style={{ fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', color: palette.text }}>Appeal Decision</Text>
@@ -163,14 +165,14 @@ export function ProfilePendingGate({ userId }: Props) {
                   multiline
                   numberOfLines={4}
                   placeholder="Describe your situation..."
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={palette.textMuted}
                   style={{
                     borderWidth: 1,
-                    borderColor: 'rgba(234,236,239,0.8)',
+                    borderColor: palette.borderColor,
                     borderRadius: radii.input,
                     padding: 12,
                     minHeight: 100,
-                    color: colors.foreground,
+                    color: palette.text,
                     fontFamily: typography.fontFamily,
                     fontSize: 14,
                     textAlignVertical: 'top',

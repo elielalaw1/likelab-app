@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { DimensionValue, View } from 'react-native'
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
 import { radii, shadows } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 
 function Bone({ width, height, borderRadius = 10 }: { width: DimensionValue; height: number; borderRadius?: number }) {
   const opacity = useSharedValue(1)
@@ -24,13 +25,14 @@ function Bone({ width, height, borderRadius = 10 }: { width: DimensionValue; hei
 }
 
 export function SkeletonCampaignCard() {
+  const { palette } = useTheme()
   return (
     <View
       style={{
-        backgroundColor: 'rgba(255,255,255,0.8)',
+        backgroundColor: palette.cardBg,
         borderRadius: radii.card,
         borderWidth: 1,
-        borderColor: 'rgba(234,236,239,0.5)',
+        borderColor: palette.borderSoft,
         overflow: 'hidden',
         ...shadows.card,
       }}
@@ -50,11 +52,12 @@ export function SkeletonCampaignCard() {
 }
 
 export function SkeletonDeliverableCard() {
+  const { palette } = useTheme()
   return (
     <View
       style={{
         borderRadius: 22,
-        backgroundColor: '#fff',
+        backgroundColor: palette.cardBg,
         borderWidth: 1,
         borderColor: 'rgba(191,219,254,0.8)',
         padding: 16,

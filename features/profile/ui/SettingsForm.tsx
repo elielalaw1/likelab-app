@@ -11,7 +11,8 @@ import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { ProfileField } from '@/features/shared/ui/ProfileField'
-import { colors, palette, radii, spacing, typography } from '@/features/core/theme'
+import { radii, spacing, typography } from '@/features/core/theme'
+import { useTheme } from '@/features/core/useTheme'
 import { useCreatorProfile, useUpdateCreatorProfile } from '@/features/profile/hooks'
 import { CreatorProfile } from '@/features/core/types'
 import { CountrySelect } from '@/features/profile/ui/CountrySelect'
@@ -57,6 +58,7 @@ type Props = {
 }
 
 export function SettingsForm({ focusSection, onboarding }: Props) {
+  const { colors, palette } = useTheme()
   const { data, isLoading, error } = useCreatorProfile()
   const updateMutation = useUpdateCreatorProfile()
   const queryClient = useQueryClient()
@@ -168,15 +170,16 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
 
       if (result.canceled || !result.assets[0]?.uri) return
 
-      const uri = result.assets[0].uri
-      const extFromMime = result.assets[0].mimeType?.split('/')[1]
+      const asset = result.assets[0]
+      const uri = asset.uri
+      const extFromMime = asset.mimeType?.split('/')[1]
       const ext = (extFromMime || uri.split('.').pop() || 'jpg').split('?')[0].toLowerCase()
+      const contentType = asset.mimeType || `image/${ext}`
       const path = `${data.id}/avatar.${ext}`
-      const response = await fetch(uri)
-      const arrayBuffer = await response.arrayBuffer()
-      const contentType = result.assets[0].mimeType || `image/${ext}`
 
       setAvatarUploading(true)
+      const response = await fetch(uri)
+      const arrayBuffer = await response.arrayBuffer()
       const { error: uploadError } = await supabase.storage.from('avatars').upload(path, arrayBuffer, {
         upsert: true,
         contentType,
@@ -287,8 +290,8 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
           paddingHorizontal: 10,
           borderRadius: radii.input,
           borderWidth: 1,
-          borderColor: 'rgba(234,236,239,0.8)',
-          backgroundColor: '#fff',
+          borderColor: palette.borderColor,
+          backgroundColor: palette.inputBg,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
@@ -315,8 +318,8 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
           style={{
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: 'rgba(234,236,239,0.9)',
-            backgroundColor: '#fff',
+            borderColor: palette.borderColor,
+            backgroundColor: palette.inputBg,
             paddingHorizontal: 12,
             paddingVertical: 10,
             flexDirection: 'row',
@@ -354,7 +357,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
       <View onLayout={markSectionY('avatar')}>
         <SectionCard>
           <Pressable onPress={handlePickAvatar} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 80, height: 80, borderRadius: 40, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(234,236,239,0.9)' }}>
+            <View style={{ width: 80, height: 80, borderRadius: 40, overflow: 'hidden', borderWidth: 1, borderColor: palette.borderColor }}>
               <Image
                 source={{
                   uri:
@@ -430,7 +433,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             <View style={{ flex: 1, gap: 8 }}>
               <Text
                 style={{
-                  color: colors.mutedForeground,
+                  color: palette.textMuted,
                   fontFamily: typography.fontFamily,
                   fontSize: typography.sizes.formLabel,
                   fontWeight: '600',
@@ -445,16 +448,16 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
                 onChangeText={(value) => setForm((prev) => ({ ...prev, ageRange: value.replace(/[^\d]/g, '') }))}
                 keyboardType="numeric"
                 placeholder="Your age"
-                placeholderTextColor={colors.mutedForeground}
+                placeholderTextColor={palette.textMuted}
                 style={{
                   borderWidth: 1,
-                  borderColor: 'rgba(234,236,239,0.8)',
+                  borderColor: palette.borderColor,
                   borderRadius: radii.input,
                   height: 40,
-                  backgroundColor: colors.background,
+                  backgroundColor: palette.inputBg,
                   paddingHorizontal: 12,
                   fontSize: 14,
-                  color: colors.foreground,
+                  color: palette.text,
                   fontFamily: typography.fontFamily,
                 }}
               />
@@ -611,9 +614,9 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             onPress={() => undefined}
             style={{
               borderRadius: 16,
-              backgroundColor: '#fff',
+              backgroundColor: palette.sectionBg,
               borderWidth: 1,
-              borderColor: 'rgba(234,236,239,0.8)',
+              borderColor: palette.borderColor,
               padding: 16,
               gap: 12,
             }}
@@ -633,17 +636,18 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
               style={{
                 height: 44,
                 borderWidth: 1,
-                borderColor: 'rgba(234,236,239,0.8)',
+                borderColor: palette.borderColor,
                 borderRadius: radii.input,
                 paddingHorizontal: 12,
                 color: palette.text,
+                backgroundColor: palette.inputBg,
                 fontFamily: typography.fontFamily,
               }}
             />
             <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
               <Pressable
                 onPress={() => setDeleteModalOpen(false)}
-                style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: radii.input, borderWidth: 1, borderColor: 'rgba(234,236,239,0.8)' }}
+                style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: radii.input, borderWidth: 1, borderColor: palette.borderColor }}
               >
                 <Text style={{ fontFamily: typography.fontFamily, color: palette.text }}>Cancel</Text>
               </Pressable>

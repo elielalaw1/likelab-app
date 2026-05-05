@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { AuthInput } from '@/features/auth/components/AuthInput'
 import { ReviewTable } from '@/features/auth/components/ReviewTable'
 import { fetchTikTokStats, signupCreator, stripAtPrefix } from '@/features/auth/api'
+import { setPendingAuth } from '@/lib/pending-auth'
 import { authColors } from '@/features/auth/theme'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { designBackground, designSignupWordmark } from '@/design/assets'
@@ -214,7 +215,8 @@ export default function SignupPage() {
         followers: followersFormatted,
         likes: likesFormatted,
       })
-      router.replace(`/verify-otp?email=${encodeURIComponent(email.trim())}&password=${encodeURIComponent(password)}` as never)
+      setPendingAuth({ email: email.trim(), password })
+      router.replace(`/verify-otp?email=${encodeURIComponent(email.trim())}` as never)
     } catch (error) {
       Alert.alert('Signup failed', error instanceof Error ? error.message : 'Could not create account')
     } finally {

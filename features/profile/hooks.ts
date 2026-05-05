@@ -16,9 +16,9 @@ export function useCreatorProfile() {
     // Realtime is primary. Polling is fallback while account is not approved.
     refetchInterval: (query) => {
       const status = (query.state.data?.reviewStatus || '').toLowerCase().trim()
-      return status === 'approved' ? false : 15_000
+      return status === 'approved' ? false : 30_000
     },
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
     placeholderData: (previous) => previous,
   })
 }
