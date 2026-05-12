@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
@@ -144,6 +144,8 @@ export default function CampaignDetailPage() {
   const bubbleWidth = useSharedValue(0)
   const bubbleScale = useSharedValue(1)
   const bubbleInitialized = useRef(false)
+  const scrollRef = useRef<ScrollView>(null)
+  const videosY = useRef<number>(0)
 
   const profileComplete = profile ? isProfileComplete(profile) : false
   const currentApplicationStatus = campaign?.creatorApplicationStatus || null
@@ -303,14 +305,24 @@ export default function CampaignDetailPage() {
 
   useEffect(() => {
     if (!campaignId) return
-    supabase.rpc('get_campaign_leaderboard_position', { p_campaign_id: campaignId }).then(({ data }) => {
-      if (data && data.length > 0) setLeaderboard(data[0])
-    })
+    void Promise.resolve(
+      supabase.rpc('get_campaign_leaderboard_position', { p_campaign_id: campaignId })
+        .then(({ data }) => { if (data && data.length > 0) setLeaderboard(data[0]) })
+    ).catch(() => {})
   }, [campaignId])
 
   useEffect(() => {
     setActiveTab(initialTab === 'videos' ? 'videos' : initialTab === 'brief' ? 'brief' : 'description')
   }, [initialTab])
+
+  useEffect(() => {
+    if (activeTab !== 'videos' || loadingDeliverables || loadingAllDeliverables) return
+    if (!visibleDeliverables.length) return
+    const timeout = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: videosY.current, animated: true })
+    }, 350)
+    return () => clearTimeout(timeout)
+  }, [activeTab, loadingDeliverables, loadingAllDeliverables, visibleDeliverables.length])
 
   // Snap to position on first layout (no animation)
   useEffect(() => {
@@ -340,7 +352,7 @@ export default function CampaignDetailPage() {
   }))
 
   return (
-    <Screen tabAware={false} overlay={stickyBar} overlayPadding={176}>
+    <Screen tabAware={false} overlay={stickyBar} overlayPadding={176} scrollRef={scrollRef}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
@@ -782,7 +794,7 @@ export default function CampaignDetailPage() {
           )}
 
           {activeTab === 'videos' ? (
-            <>
+            <View onLayout={(e) => { videosY.current = e.nativeEvent.layout.y }}>
               {loadingDeliverables || loadingAllDeliverables ? <ActivityIndicator color={colors.primary} /> : null}
 
               {leaderboard ? (
@@ -887,7 +899,7 @@ export default function CampaignDetailPage() {
                   </Section>
                 )}
               />
-            </>
+            </View>
           ) : null}
 
         </>

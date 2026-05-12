@@ -146,20 +146,17 @@ async function getCampaignAssets(campaignIds: string[]) {
   }
 
   if (toSign.length) {
-    // 7-day TTL + resize to 800px wide, 75% quality — drastically smaller files
-    const signedResults = await Promise.all(
-      toSign.map(({ path }) =>
-        supabase.storage
-          .from(CAMPAIGN_ASSETS_BUCKET)
-          .createSignedUrl(path, 7 * 24 * 3600, {
-            transform: { width: 800, quality: 75 },
-          })
-      )
-    )
+    // Single batch call instead of one request per image — 7-day TTL
+    const { data: signedData } = await supabase.storage
+      .from(CAMPAIGN_ASSETS_BUCKET)
+      .createSignedUrls(toSign.map(({ path }) => path), 7 * 24 * 3600)
 
-    for (let i = 0; i < toSign.length; i++) {
-      const signedUrl = signedResults[i]?.data?.signedUrl
-      if (signedUrl) imageMap.set(toSign[i].campaignId, signedUrl)
+    const signedByPath = new Map(
+      (signedData || []).filter((r) => r.signedUrl).map((r) => [r.path, r.signedUrl])
+    )
+    for (const { campaignId, path } of toSign) {
+      const signedUrl = signedByPath.get(path)
+      if (signedUrl) imageMap.set(campaignId, signedUrl)
     }
   }
 
@@ -324,7 +321,7 @@ export async function getCampaignDeliverables(campaignId: string): Promise<Deliv
 
   const { data, error } = await supabase
     .from('deliverables')
-    .select('id, campaign_id, status, platform, type, url, notes, campaigns(name, brand_id)')
+    .select('id, campaign_id, status, platform, type, url, campaigns(name, brand_id)')
     .eq('creator_id', userId)
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: true })

@@ -3,7 +3,7 @@ import { CreatorProfile } from '@/features/core/types'
 export type ProfileCompletionSection = 'avatar' | 'personal' | 'categories' | 'location' | 'account' | 'shipping'
 
 export type ProfileCompletionItem = {
-  key: 'avatar_url' | 'age_range' | 'primary_category' | 'gender' | 'country' | 'phone' | 'address' | 'postal_code'
+  key: 'avatar_url' | 'age_range' | 'primary_category' | 'gender' | 'country' | 'address' | 'postal_code'
   label: string
   done: boolean
   section: ProfileCompletionSection
@@ -20,7 +20,6 @@ export function getProfileCompletion(profile?: CreatorProfile | null) {
     { key: 'primary_category', label: 'Choose a primary category', done: filled(profile?.primaryCategory), section: 'categories' },
     { key: 'gender', label: 'Select your gender', done: filled(profile?.gender), section: 'personal' },
     { key: 'country', label: 'Add your country', done: filled(profile?.country), section: 'location' },
-    { key: 'phone', label: 'Add phone number', done: filled(profile?.phone), section: 'account' },
     { key: 'address', label: 'Add your street address', done: filled(profile?.address), section: 'shipping' },
     { key: 'postal_code', label: 'Add your postal code', done: filled(profile?.postalCode), section: 'shipping' },
   ]

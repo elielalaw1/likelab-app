@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
 import { consumePendingAuth } from '@/lib/pending-auth'
+import { updateCreatorProfile } from '@/features/profile/api'
 import { designBackground } from '@/design/assets'
 
 const CODE_LENGTH = 6
@@ -21,7 +22,9 @@ const RESEND_COOLDOWN_SECONDS = 60
 
 export default function VerifyOtpPage() {
   const { email } = useLocalSearchParams<{ email: string }>()
-  const passwordRef = useRef(consumePendingAuth()?.password ?? null)
+  const pendingRef = useRef(consumePendingAuth())
+  const passwordRef = useRef(pendingRef.current?.password ?? null)
+  const phoneRef = useRef(pendingRef.current?.phone ?? null)
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''))
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
@@ -45,7 +48,7 @@ export default function VerifyOtpPage() {
     setError(null)
 
     if (digit && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus()
+      setTimeout(() => inputRefs.current[index + 1]?.focus(), 0)
     }
   }
 
@@ -54,7 +57,7 @@ export default function VerifyOtpPage() {
       const next = [...digits]
       next[index - 1] = ''
       setDigits(next)
-      inputRefs.current[index - 1]?.focus()
+      setTimeout(() => inputRefs.current[index - 1]?.focus(), 0)
     }
   }
 
@@ -81,6 +84,9 @@ export default function VerifyOtpPage() {
         if (signInError) {
           router.replace('/login')
           return
+        }
+        if (phoneRef.current) {
+          await updateCreatorProfile({ phone: phoneRef.current }).catch(() => null)
         }
       }
       router.replace('/(tabs)/overview')

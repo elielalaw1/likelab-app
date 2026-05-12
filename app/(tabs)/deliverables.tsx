@@ -1,17 +1,30 @@
-import { shadows, typography } from '@/features/core/theme'
+import { radii, shadows, spacing, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { Screen } from '@/features/shared/ui/Screen'
 import { SkeletonDeliverableCard } from '@/features/shared/ui/SkeletonCard'
-import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { BlurView } from 'expo-blur'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { FlatList, Pressable, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
+import { DeliverableStatus } from '@/features/core/types'
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = {
+  submitted:     { label: 'In review',  color: '#6366F1', icon: 'clock-outline' },
+  pending_review:{ label: 'In review',  color: '#6366F1', icon: 'clock-outline' },
+  uploaded:      { label: 'Uploaded',   color: '#6366F1', icon: 'upload-outline' },
+  approved:      { label: 'Approved',   color: '#16A34A', icon: 'check-circle-outline' },
+  published:     { label: 'Published',  color: '#0EA5E9', icon: 'star-circle-outline' },
+  flagged:       { label: 'Flagged',    color: '#DC2626', icon: 'flag-outline' },
+}
+
+const HISTORY_STATUSES: DeliverableStatus[] = ['submitted', 'pending_review', 'uploaded', 'approved', 'published', 'flagged']
 
 export default function DeliverablesPage() {
   const { colors, palette } = useTheme()
@@ -25,17 +38,14 @@ export default function DeliverablesPage() {
 
   const needsAction = useMemo(() => {
     const actionable = (data || []).filter((item) => item.status === 'revision_requested' || item.status === 'pending')
-    const grouped = new Map<
-      string,
-      {
-        campaignId: string
-        campaignTitle: string
-        status: 'revision_requested' | 'pending'
-        platform: string
-        count: number
-        flagReason?: string | null
-      }
-    >()
+    const grouped = new Map<string, {
+      campaignId: string
+      campaignTitle: string
+      status: 'revision_requested' | 'pending'
+      platform: string
+      count: number
+      flagReason?: string | null
+    }>()
 
     for (const item of actionable) {
       const actionableStatus = item.status === 'revision_requested' ? 'revision_requested' : 'pending'
@@ -51,24 +61,23 @@ export default function DeliverablesPage() {
         })
         continue
       }
-
       existing.count += 1
       if (existing.status !== 'revision_requested' && actionableStatus === 'revision_requested') {
         existing.status = 'revision_requested'
       }
-      if (!existing.flagReason && item.flagReason) {
-        existing.flagReason = item.flagReason
-      }
+      if (!existing.flagReason && item.flagReason) existing.flagReason = item.flagReason
     }
 
     return Array.from(grouped.values())
   }, [data])
 
+  const history = useMemo(() =>
+    (data || []).filter((item) => HISTORY_STATUSES.includes(item.status as DeliverableStatus)),
+    [data]
+  )
+
   const openCampaignVideos = (campaignId: string) =>
-    router.push({
-      pathname: '/campaigns/[id]',
-      params: { id: campaignId, tab: 'videos' },
-    })
+    router.push({ pathname: '/campaigns/[id]', params: { id: campaignId, tab: 'videos' } })
 
   return (
     <Screen onRefresh={onRefresh}>
@@ -79,7 +88,7 @@ export default function DeliverablesPage() {
           My Projects
         </Text>
         <Text style={{ color: palette.textMuted, fontSize: typography.sizes.subtitle, fontFamily: typography.fontFamily }}>
-          Submit and track your content deliverables
+          Videos you need to create and submit
         </Text>
       </Animated.View>
 
@@ -93,59 +102,125 @@ export default function DeliverablesPage() {
         </>
       ) : null}
 
+      {/* Needs action */}
       <FlatList
         data={needsAction}
         keyExtractor={(item) => item.campaignId}
         scrollEnabled={false}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
         ListEmptyComponent={
           !isLoading ? (
             <EmptyState
-              title="Nothing Needs Action"
-              subtitle="When a deliverable needs submission or revision, it will appear here."
-              icon="package-variant-closed"
+              title="You're all caught up!"
+              subtitle="When you have videos to submit, they'll show up here."
+              icon="check-circle-outline"
             />
           ) : null
         }
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => openCampaignVideos(item.campaignId)}
-            style={{
-              borderRadius: 22,
-              backgroundColor: palette.cardBg,
-              borderWidth: 1,
-              borderColor: item.status === 'revision_requested' ? 'rgba(251,191,36,0.45)' : 'rgba(191,219,254,0.8)',
-              padding: 16,
-              gap: 10,
-              ...shadows.card,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <Text style={{ flex: 1, color: palette.text, fontFamily: typography.fontFamily, fontSize: 17, fontWeight: '700' }}>
-                {item.campaignTitle}
-              </Text>
-              <StatusBadge status={item.status} />
-            </View>
-
-            <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 13 }}>
-              {`${item.platform || 'tiktok'} - ${item.count} video${item.count === 1 ? '' : 's'}`}
-            </Text>
-
-            {item.flagReason ? (
-              <Text style={{ color: '#9A3412', fontFamily: typography.fontFamily, fontSize: 13, lineHeight: 19 }}>
-                {item.flagReason}
-              </Text>
-            ) : null}
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MaterialCommunityIcons name="arrow-right" size={16} color={colors.primary} />
-              <Text style={{ color: colors.primary, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700' }}>
-                Open in Your Videos
-              </Text>
-            </View>
-          </Pressable>
-        )}
+        renderItem={({ item, index }) => {
+          const isRevision = item.status === 'revision_requested'
+          return (
+            <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
+              <Pressable onPress={() => openCampaignVideos(item.campaignId)}>
+                <View style={{ borderRadius: 26, overflow: 'hidden', borderWidth: 1, borderColor: isRevision ? 'rgba(217,119,6,0.2)' : 'rgba(15,23,42,0.07)', ...shadows.hero }}>
+                  <BlurView tint="light" intensity={60} style={{ position: 'absolute', inset: 0 }} />
+                  <LinearGradient
+                    colors={isRevision ? ['rgba(255,251,235,0.95)', 'rgba(255,255,255,0.88)'] : ['rgba(255,255,255,0.96)', 'rgba(248,250,252,0.88)']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={{ position: 'absolute', inset: 0 }}
+                  />
+                  <View style={{ padding: spacing.lg + 2, gap: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 21, fontWeight: '800', color: palette.text, letterSpacing: -0.5, lineHeight: 26 }}>
+                          {item.count === 1 ? '1 video to submit' : `${item.count} videos to submit`}
+                        </Text>
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: palette.textMuted }}>
+                          {item.campaignTitle}
+                        </Text>
+                      </View>
+                      <View style={{ position: 'relative' }}>
+                        <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: isRevision ? 'rgba(217,119,6,0.1)' : 'rgba(15,23,42,0.05)', alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialCommunityIcons name={isRevision ? 'pencil-outline' : 'video-outline'} size={22} color={isRevision ? '#D97706' : palette.text} />
+                        </View>
+                        <View style={{ position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#fff' }}>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', fontFamily: 'System' }}>{item.count}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    {isRevision ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <MaterialCommunityIcons name="alert-circle-outline" size={13} color="#D97706" />
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600', color: '#D97706' }}>Revision requested</Text>
+                      </View>
+                    ) : null}
+                    {item.flagReason ? (
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: '#9A3412', lineHeight: 18 }}>{item.flagReason}</Text>
+                    ) : null}
+                    <View style={{ height: 1, backgroundColor: 'rgba(15,23,42,0.06)' }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700', color: colors.primary }}>Open & submit</Text>
+                      <MaterialCommunityIcons name="arrow-right-circle-outline" size={20} color={colors.primary} />
+                    </View>
+                  </View>
+                </View>
+              </Pressable>
+            </Animated.View>
+          )
+        }}
       />
+
+      {/* History */}
+      {history.length > 0 ? (
+        <Animated.View entering={FadeInDown.delay(200).duration(300)} style={{ gap: 12 }}>
+          <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.9, textTransform: 'uppercase' }}>
+            History
+          </Text>
+          {history.map((item, index) => {
+            const cfg = STATUS_CONFIG[item.status] || { label: item.status, color: palette.textMuted, icon: 'circle-outline' as const }
+            return (
+              <Animated.View key={item.id} entering={FadeInDown.delay(index * 40).duration(250)}>
+                <Pressable
+                  onPress={() => openCampaignVideos(item.campaignId)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    backgroundColor: palette.cardBg,
+                    borderRadius: radii.card,
+                    borderWidth: 1,
+                    borderColor: palette.borderSoft,
+                    padding: 14,
+                    ...shadows.card,
+                  }}
+                >
+                  {/* Status icon */}
+                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${cfg.color}14`, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialCommunityIcons name={cfg.icon} size={20} color={cfg.color} />
+                  </View>
+
+                  {/* Info */}
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700', color: palette.text }} numberOfLines={1}>
+                      {item.campaignTitle}
+                    </Text>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: palette.textMuted }}>
+                      {item.platform ? `${item.platform.charAt(0).toUpperCase()}${item.platform.slice(1)}` : 'TikTok'}
+                    </Text>
+                  </View>
+
+                  {/* Status pill */}
+                  <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: `${cfg.color}14` }}>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: cfg.color }}>
+                      {cfg.label}
+                    </Text>
+                  </View>
+                </Pressable>
+              </Animated.View>
+            )
+          })}
+        </Animated.View>
+      ) : null}
     </Screen>
   )
 }

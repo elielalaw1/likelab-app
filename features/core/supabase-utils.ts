@@ -21,8 +21,7 @@ export async function firstSuccessfulQuery<T>(attempts: FetchAttempt<T>[]) {
 
 export async function getCurrentUserId() {
   const { data, error } = await supabase.auth.getUser()
-  if (error) throw error
-  if (!data.user) throw new Error('User not authenticated')
+  if (error || !data.user) throw new Error('User not authenticated')
   return data.user.id
 }
 

@@ -1,7 +1,7 @@
-import { FlatList, Pressable, Text, View } from 'react-native'
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
@@ -13,6 +13,7 @@ import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
+import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { useQueryClient } from '@tanstack/react-query'
 
 
@@ -22,6 +23,14 @@ export default function ProjectsPage() {
   const { data, isLoading, error, refetch: refetchCampaigns } = useCampaigns()
   const { data: deliverables, refetch: refetchDeliverables } = useDeliverables()
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const scrollRef = useRef<ScrollView>(null)
+
+  useEffect(() => {
+    const unsub = scrollEvents.on('scrollToTop:overview', () => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true })
+    })
+    return unsub
+  }, [])
 
   const onRefresh = useCallback(async () => {
     await Promise.all([
@@ -57,7 +66,7 @@ export default function ProjectsPage() {
   const isGrid = viewMode === 'grid'
 
   return (
-    <Screen onRefresh={onRefresh}>
+    <Screen onRefresh={onRefresh} scrollRef={scrollRef}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>

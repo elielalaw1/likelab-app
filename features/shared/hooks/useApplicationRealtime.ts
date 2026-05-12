@@ -24,13 +24,20 @@ export function useApplicationRealtime(userId: string) {
           }
 
           if (oldStatus !== 'accepted' && newStatus === 'accepted') {
+            queryClient.invalidateQueries({ queryKey: ['deliverables'] })
             toast.success('Your application was accepted! 🎉')
           } else if (oldStatus === 'applied' && newStatus === 'rejected') {
             toast.error('Your application was not accepted.')
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          // Invalidate so next mount gets fresh data via polling
+          queryClient.invalidateQueries({ queryKey: ['applications'] })
+          queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)

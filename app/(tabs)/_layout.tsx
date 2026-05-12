@@ -1,16 +1,13 @@
-import { getApplications } from '@/features/applications/api'
-import { getCampaigns } from '@/features/campaigns/api'
 import { useTheme } from '@/features/core/useTheme'
-import { getDeliverables } from '@/features/deliverables/api'
+import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { FloatingTabBar } from '@/features/navigation/FloatingTabBar'
 import { FloatingTabBarVisibilityProvider } from '@/features/navigation/FloatingTabBarVisibility'
-import { getCreatorProfile } from '@/features/profile/api'
 import { CreatorProfileLiveSync } from '@/features/profile/CreatorProfileLiveSync'
 import { ProfileGate } from '@/features/profile/ui/ProfileGate'
 import { ProfilePendingGate } from '@/features/profile/ui/ProfilePendingGate'
 import { useApplicationRealtime } from '@/features/shared/hooks/useApplicationRealtime'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
-import { useQueryClient } from '@tanstack/react-query'
+import * as Notifications from 'expo-notifications'
 import { Redirect, Tabs } from 'expo-router'
 import { useEffect } from 'react'
 import { ActivityIndicator, View } from 'react-native'
@@ -20,19 +17,17 @@ function RealtimeSetup({ userId }: { userId: string }) {
   return null
 }
 
+function BadgeSync() {
+  const count = useDeliverablesBadgeCount()
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(count).catch(() => {})
+  }, [count])
+  return null
+}
+
 export default function TabsLayout() {
   const { colors, palette } = useTheme()
   const { session, loading } = useAuthSession()
-  const queryClient = useQueryClient()
-
-  useEffect(() => {
-    if (!session) return
-
-    queryClient.prefetchQuery({ queryKey: ['campaigns'], queryFn: getCampaigns })
-    queryClient.prefetchQuery({ queryKey: ['applications'], queryFn: getApplications })
-    queryClient.prefetchQuery({ queryKey: ['deliverables'], queryFn: getDeliverables })
-    queryClient.prefetchQuery({ queryKey: ['creator-profile'], queryFn: getCreatorProfile })
-  }, [session, queryClient])
 
   if (loading) {
     return (
@@ -50,6 +45,7 @@ export default function TabsLayout() {
     <FloatingTabBarVisibilityProvider>
       <CreatorProfileLiveSync userId={session.user.id} />
       <RealtimeSetup userId={session.user.id} />
+      <BadgeSync />
       <Tabs
         tabBar={(props) => <FloatingTabBar {...props} />}
         screenOptions={{

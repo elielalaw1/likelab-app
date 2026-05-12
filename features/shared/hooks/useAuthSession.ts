@@ -2,8 +2,13 @@ import { useSyncExternalStore } from 'react'
 import { Session } from '@supabase/supabase-js'
 import * as SecureStore from 'expo-secure-store'
 import { clearPersistedSupabaseSession, supabase } from '@/lib/supabase'
-import { assertCreatorRole } from '@/lib/assert-creator-role'
+import { assertCreatorRole, clearCreatorRoleCache } from '@/lib/assert-creator-role'
 import { deletePushToken } from '@/features/notifications/push'
+import { queryClient } from '@/lib/query-client'
+import { getCampaigns } from '@/features/campaigns/api'
+import { getApplications } from '@/features/applications/api'
+import { getDeliverables } from '@/features/deliverables/api'
+import { getCreatorProfile } from '@/features/profile/api'
 
 const FIRST_LAUNCH_KEY = 'likelab_first_launch_v1'
 
@@ -75,6 +80,11 @@ function initializeAuthSessionStore() {
           setAuthState({ session: null, loading: false })
           return
         }
+
+        queryClient.prefetchQuery({ queryKey: ['campaigns'], queryFn: getCampaigns })
+        queryClient.prefetchQuery({ queryKey: ['applications'], queryFn: getApplications })
+        queryClient.prefetchQuery({ queryKey: ['deliverables'], queryFn: getDeliverables })
+        queryClient.prefetchQuery({ queryKey: ['creator-profile'], queryFn: getCreatorProfile })
       }
 
       setAuthState({ session: data.session, loading: false })
@@ -82,9 +92,12 @@ function initializeAuthSessionStore() {
       if (isInvalidRefreshTokenError(error)) {
         await clearPersistedSupabaseSession()
         await supabase.auth.signOut({ scope: 'local' })
+        setAuthState({ session: null, loading: false })
+      } else {
+        // Unknown error (e.g. Supabase SDK internal error) — unblock loading but don't
+        // sign out. onAuthStateChange will fire if session state genuinely changes.
+        setAuthState({ session: null, loading: false })
       }
-
-      setAuthState({ session: null, loading: false })
     } finally {
       clearTimeout(timeoutId)
     }
@@ -96,21 +109,19 @@ function initializeAuthSessionStore() {
         void deletePushToken(lastKnownUserId)
         lastKnownUserId = null
       }
+      void clearCreatorRoleCache()
       setAuthState({ session: null, loading: false })
       return
     }
 
     if (event === 'TOKEN_REFRESHED' && !currentSession) {
       await clearPersistedSupabaseSession()
+      setAuthState({ session: null, loading: false })
+      return
     }
 
-    if (event === 'TOKEN_REFRESHED' && currentSession?.user) {
-      const isCreator = await assertCreatorRole(currentSession.user.id)
-      if (!isCreator) {
-        return
-      }
-    }
-
+    // Don't re-check role on token refresh — role was verified at login and doesn't change.
+    // Re-checking here caused random logouts when the DB query returned empty (RLS/network).
     setAuthState({ session: currentSession, loading: false })
   })
 }

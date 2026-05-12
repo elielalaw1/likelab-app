@@ -1,6 +1,8 @@
 import { useTheme } from '@/features/core/useTheme'
+import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
+import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { getProfileCompletion } from '@/features/profile/completion'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
@@ -50,6 +52,26 @@ function ProfileIncompleteDot() {
         },
         dotStyle,
       ]}
+    />
+  )
+}
+
+function DeliverablesPendingDot() {
+  const count = useDeliverablesBadgeCount()
+  if (!count) return null
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        top: -1,
+        right: -1,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#EF4444',
+        borderWidth: 1.5,
+        borderColor: '#fff',
+      }}
     />
   )
 }
@@ -268,7 +290,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           })
 
           if (focused && name === 'overview') {
-            // Discreet Home refresh: keep UI instant, update data silently in background.
+            scrollEvents.emit('scrollToTop:overview')
             queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'active' })
             queryClient.invalidateQueries({ queryKey: ['creator-profile'], refetchType: 'active' })
             queryClient.invalidateQueries({ queryKey: ['campaigns'], refetchType: 'active' })
@@ -314,6 +336,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             <View style={{ position: 'relative' }}>
               <TabIcon focused={focused} name={name} />
               {name === 'profile' && <ProfileIncompleteDot />}
+              {name === 'deliverables' && <DeliverablesPendingDot />}
             </View>
           </Pressable>
         )

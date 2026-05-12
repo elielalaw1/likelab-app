@@ -1,6 +1,7 @@
 import { Stack, router } from 'expo-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from '@/lib/query-client'
+import { useEffect, useRef } from 'react'
 import { Alert, View } from 'react-native'
 import { useFonts } from 'expo-font'
 import {
@@ -152,25 +153,6 @@ export default function RootLayout() {
     'Montserrat-Bold': Montserrat_700Bold,
     'Montserrat-ExtraBold': Montserrat_800ExtraBold,
   })
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 2 * 60 * 1000,
-            gcTime: 30 * 60 * 1000,
-            retry: 1,
-            refetchOnWindowFocus: false,
-            refetchOnMount: false,
-            refetchOnReconnect: true,
-          },
-          mutations: {
-            retry: 0,
-          },
-        },
-      })
-  )
-
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync()

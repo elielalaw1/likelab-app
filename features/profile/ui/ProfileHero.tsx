@@ -1,6 +1,8 @@
-import { Linking, Pressable, Text, View } from 'react-native'
+import { Animated, Easing, Linking, Pressable, Text, View } from 'react-native'
+import { useEffect, useRef } from 'react'
 import { Image } from 'expo-image'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { CreatorProfile } from '@/features/core/types'
 import { countryFlag } from '@/features/core/format'
 import { formatCountyLabel } from '@/features/profile/location-data'
@@ -24,18 +26,39 @@ function summaryLocation(profile: CreatorProfile) {
 export function ProfileHero({ profile, onAvatarPress }: Props) {
   const { colors, palette } = useTheme()
   const location = summaryLocation(profile)
+  const pulse = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start()
+  }, [])
 
   return (
     <SectionCard>
-      <View style={{ alignItems: 'center', gap: 10 }}>
+      <View style={{ alignItems: 'center', gap: 6 }}>
         <Pressable onPress={onAvatarPress} style={{ alignItems: 'center', justifyContent: 'center' }}>
-          {profile.avatarUrl ? (
-            <Image source={{ uri: profile.avatarUrl }} style={{ width: 104, height: 104, borderRadius: 52 }} />
-          ) : (
-            <View style={{ width: 104, height: 104, borderRadius: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(74,18,160,0.08)' }}>
-              <MaterialCommunityIcons name="account" size={56} color={colors.primary} />
+          <Animated.View style={{ transform: [{ scale: pulse }] }}>
+          <LinearGradient
+            colors={['#4A12A0', '#1DD3D6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ width: 114, height: 114, borderRadius: 57, padding: 3, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <View style={{ width: 108, height: 108, borderRadius: 54, backgroundColor: '#fff', padding: 2 }}>
+              {profile.avatarUrl ? (
+                <Image source={{ uri: profile.avatarUrl }} style={{ width: '100%', height: '100%', borderRadius: 52 }} />
+              ) : (
+                <View style={{ flex: 1, borderRadius: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(74,18,160,0.08)' }}>
+                  <MaterialCommunityIcons name="account" size={56} color={colors.primary} />
+                </View>
+              )}
             </View>
-          )}
+          </LinearGradient>
+          </Animated.View>
           <View
             style={{
               position: 'absolute',
@@ -55,19 +78,36 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
           </View>
         </Pressable>
 
-        <View style={{ alignItems: 'center', gap: 4 }}>
-          <Text style={{ fontFamily: typography.fontFamily, color: palette.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.32 }}>
+        <View style={{ alignItems: 'center', gap: 3 }}>
+          <Text style={{ fontFamily: typography.fontFamily, color: palette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.32 }}>
             {profile.displayName || 'Creator'}
           </Text>
 
-          {profile.tiktokHandle ? (
-            <Pressable onPress={() => Linking.openURL(`https://tiktok.com/@${profile.tiktokHandle!.replace(/^@+/, '')}`).catch(() => {})}>
-              <Text style={{ fontFamily: typography.fontFamily, color: colors.primary, fontSize: 14 }}>@{profile.tiktokHandle.replace(/^@+/, '')}</Text>
-            </Pressable>
-          ) : null}
+          <View style={{ gap: 6, alignItems: 'center', marginTop: 2, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {profile.tiktokHandle ? (
+              <Pressable
+                onPress={() => Linking.openURL(`https://tiktok.com/@${profile.tiktokHandle!.replace(/^@+/, '')}`).catch(() => {})}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
+              >
+                <Ionicons name="logo-tiktok" size={13} color="#fff" />
+                <Text style={{ fontFamily: typography.fontFamily, color: '#fff', fontSize: 12, fontWeight: '700' }}>@{profile.tiktokHandle.replace(/^@+/, '')}</Text>
+              </Pressable>
+            ) : null}
+            {profile.instagramHandle ? (
+              <Pressable
+                onPress={() => Linking.openURL(`https://instagram.com/${profile.instagramHandle!.replace(/^@+/, '')}`).catch(() => {})}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E1306C', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
+              >
+                <MaterialCommunityIcons name="instagram" size={13} color="#fff" />
+                <Text style={{ fontFamily: typography.fontFamily, color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                  @{profile.instagramHandle.replace(/^@+/, '')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
 
           {profile.tiktokHandle && (profile.tiktokLikes != null || profile.tiktokViews != null || profile.tiktokFollowers != null) ? (
-            <View style={{ flexDirection: 'row', gap: 24, marginTop: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(15,23,42,0.07)', width: '100%', justifyContent: 'center' }}>
+            <View style={{ flexDirection: 'row', gap: 20, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(15,23,42,0.07)', width: '100%', justifyContent: 'center' }}>
               {profile.tiktokLikes != null ? (
                 <View style={{ alignItems: 'center', gap: 2 }}>
                   <Text style={{ fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', color: palette.text, letterSpacing: -0.3 }}>
@@ -106,16 +146,8 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
               ) : null}
             </View>
           ) : null}
-          {profile.instagramHandle ? (
-            <Pressable onPress={() => Linking.openURL(`https://instagram.com/${profile.instagramHandle!.replace(/^@+/, '')}`).catch(() => {})}>
-              <Text style={{ fontFamily: typography.fontFamily, color: '#E1306C', fontSize: 14 }}>
-                @{profile.instagramHandle.replace(/^@+/, '')}
-              </Text>
-            </Pressable>
-          ) : null}
-
           {profile.primaryCategory ? (
-            <View style={{ marginTop: 4, flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <View style={{ marginTop: 2, flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
               <View style={{ borderRadius: radii.full, backgroundColor: 'rgba(74,18,160,0.08)', paddingHorizontal: 10, paddingVertical: 5 }}>
                 <Text style={{ fontFamily: typography.fontFamily, color: colors.primary, fontSize: 12, fontWeight: '600' }}>{profile.primaryCategory}</Text>
               </View>
@@ -128,13 +160,13 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
           ) : null}
 
           {location ? (
-            <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <MaterialCommunityIcons name="map-marker-outline" size={15} color={palette.textMuted} />
               <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 13 }}>{location}</Text>
             </View>
           ) : null}
 
-          <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ marginTop: 2, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {profile.reviewStatus ? <StatusBadge status={profile.reviewStatus} /> : null}
             {profile.completionPercentage < 100 ? (
               <View style={{ borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(234,179,8,0.14)' }}>

@@ -36,6 +36,7 @@ export function useDeclineInvitation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

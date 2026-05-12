@@ -23,7 +23,11 @@ export function CreatorProfileLiveSync({ userId }: Props) {
           queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'active' })
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          queryClient.invalidateQueries({ queryKey: ['creator-profile'], refetchType: 'active' })
+        }
+      })
 
     return () => {
       if (channel) supabase.removeChannel(channel)

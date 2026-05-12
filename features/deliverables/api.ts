@@ -9,7 +9,7 @@ export async function getDeliverables() {
 
   const { data, error } = await supabase
     .from('deliverables')
-    .select('id, campaign_id, status, platform, type, url, notes, flag_reason, campaigns(name, brand_id)')
+    .select('id, campaign_id, status, platform, type, url, flag_reason, campaigns(name, brand_id)')
     .eq('creator_id', userId)
     .order('created_at', { ascending: false })
 

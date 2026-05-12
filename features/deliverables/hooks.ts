@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { getDeliverables, getLatestSubmission, getSubmissionById, submitDeliverableUrl, submitLink, uploadVideo } from '@/features/deliverables/api'
 import { VideoCompressionOptions } from '@/lib/video-compression'
 
@@ -17,6 +17,14 @@ export function useDeliverables() {
     ...queryPerf,
     placeholderData: (previous) => previous,
   })
+}
+
+export function useDeliverablesBadgeCount() {
+  const { data } = useDeliverables()
+  return useMemo(
+    () => (data || []).filter((d) => d.status === 'pending' || d.status === 'revision_requested').length,
+    [data]
+  )
 }
 
 export function useSubmitDeliverable() {

@@ -1,4 +1,4 @@
-type PendingAuth = { email: string; password: string }
+type PendingAuth = { email: string; password: string; phone?: string | null }
 
 let _pending: PendingAuth | null = null
 

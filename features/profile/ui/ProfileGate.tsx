@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
 import { BlurView } from 'expo-blur'
@@ -46,6 +46,7 @@ export function ProfileGate({ userId: _userId }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
   const glowOpacity = useSharedValue(0)
+  const gateShownOnce = useRef(false)
 
   useEffect(() => {
     glowOpacity.value = dismissed
@@ -54,8 +55,9 @@ export function ProfileGate({ userId: _userId }: Props) {
   }, [dismissed, glowOpacity])
 
   useEffect(() => {
-    if (!isLoading && isFetched && profile && !getProfileCompletion(profile).isComplete) {
-      setDismissed(false)
+    if (!isLoading && isFetched && profile && !gateShownOnce.current) {
+      gateShownOnce.current = true
+      if (!getProfileCompletion(profile).isComplete) setDismissed(false)
     }
   }, [isFetched, isLoading, profile])
 

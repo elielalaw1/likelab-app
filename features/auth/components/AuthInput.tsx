@@ -12,7 +12,7 @@ type Props = {
   placeholder: string
   secureTextEntry?: boolean
   showToggle?: boolean
-  keyboardType?: 'default' | 'email-address'
+  keyboardType?: 'default' | 'email-address' | 'phone-pad'
   autoCapitalize?: 'none' | 'words' | 'sentences' | 'characters'
   prefixText?: string
   sanitizeText?: (text: string) => string

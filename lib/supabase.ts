@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { Platform } from 'react-native'
+import { AppState, Platform } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
@@ -111,6 +111,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: false,
   },
+})
+
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') {
+    supabase.auth.startAutoRefresh()
+    // Force immediate refresh in case token expired while app was backgrounded
+    void supabase.auth.getSession()
+  } else {
+    supabase.auth.stopAutoRefresh()
+  }
 })
 
 export async function clearPersistedSupabaseSession() {

@@ -88,6 +88,7 @@ export default function SignupPage() {
   const [tiktokHandle, setTiktokHandle] = useState('')
   const [instagramHandle, setInstagramHandle] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fetchingStats, setFetchingStats] = useState(false)
@@ -215,7 +216,7 @@ export default function SignupPage() {
         followers: followersFormatted,
         likes: likesFormatted,
       })
-      setPendingAuth({ email: email.trim(), password })
+      setPendingAuth({ email: email.trim(), password, phone: phone.trim() || null })
       router.replace(`/verify-otp?email=${encodeURIComponent(email.trim())}` as never)
     } catch (error) {
       Alert.alert('Signup failed', error instanceof Error ? error.message : 'Could not create account')
@@ -370,6 +371,14 @@ export default function SignupPage() {
                       onChangeText={setEmail}
                       placeholder="you@example.com"
                       keyboardType="email-address"
+                    />
+
+                    <AuthInput
+                      label="PHONE NUMBER"
+                      value={phone}
+                      onChangeText={setPhone}
+                      placeholder="+46 70 123 45 67"
+                      keyboardType="phone-pad"
                     />
 
                     <AuthInput

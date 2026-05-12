@@ -29,8 +29,8 @@ export function AvatarPreviewModal({ visible, uri, onClose }: Props) {
           {uri ? (
             <Image
               source={{ uri }}
-              contentFit="contain"
-              style={{ width: '100%', height: '78%', borderRadius: 18, backgroundColor: palette.text }}
+              contentFit="cover"
+              style={{ width: 280, height: 280, borderRadius: 140, backgroundColor: palette.text }}
             />
           ) : (
             <View style={{ width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' }}>

@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native'
+import { Dimensions, Pressable, ScrollView, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { Campaign } from '@/features/core/types'
@@ -25,40 +25,49 @@ export function ProfileCollaborations({ items }: Props) {
     )
   }
 
+  const cardWidth = Dimensions.get('window').width * 0.62
+
   return (
     <SectionCard title="Latest Collaborations">
-      {items.slice(0, 3).map((item) => (
-        <Pressable
-          key={item.id}
-          onPress={() => router.push(campaignRouteParams(item) as never)}
-          style={{
-            borderRadius: 24,
-            borderWidth: 1,
-            borderColor: palette.borderColor,
-            overflow: 'hidden',
-            backgroundColor: palette.card,
-            ...shadows.card,
-          }}
-        >
-          {item.coverImageUrl ? (
-            <Image source={{ uri: item.coverImageUrl }} style={{ width: '100%', height: 148 }} contentFit="cover" />
-          ) : (
-            <View style={{ height: 148, backgroundColor: 'rgba(74,18,160,0.08)' }} />
-          )}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+      >
+        {items.map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={() => router.push(campaignRouteParams(item) as never)}
+            style={{
+              width: cardWidth,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: palette.borderColor,
+              overflow: 'hidden',
+              backgroundColor: palette.card,
+              ...shadows.card,
+            }}
+          >
+            {item.coverImageUrl ? (
+              <Image source={{ uri: item.coverImageUrl }} style={{ width: '100%', height: 110 }} contentFit="cover" />
+            ) : (
+              <View style={{ height: 110, backgroundColor: 'rgba(74,18,160,0.08)' }} />
+            )}
 
-          <View style={{ padding: 16, gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <Text style={{ flex: 1, fontFamily: typography.fontFamily, color: palette.text, fontSize: 17, fontWeight: '700' }} numberOfLines={1}>
+            <View style={{ padding: 12, gap: 4 }}>
+              <Text style={{ fontFamily: typography.fontFamily, color: palette.text, fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
                 {item.title}
               </Text>
-              <StatusBadge status={item.creatorApplicationStatus || 'accepted'} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 12 }} numberOfLines={1}>
+                  {item.brandName || 'Brand'}
+                </Text>
+                <StatusBadge status={item.creatorApplicationStatus || 'accepted'} />
+              </View>
             </View>
-            <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 14 }} numberOfLines={1}>
-              {item.brandName || 'Brand'}
-            </Text>
-          </View>
-        </Pressable>
-      ))}
+          </Pressable>
+        ))}
+      </ScrollView>
     </SectionCard>
   )
 }

@@ -32,7 +32,9 @@ export function useCampaignDeliverables(campaignId?: string) {
     queryKey: ['deliverables', 'campaign', campaignId],
     queryFn: () => getCampaignDeliverables(campaignId || ''),
     enabled: Boolean(campaignId),
-    ...queryPerf,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: true,
     placeholderData: (previous) => previous,
   })
 }
