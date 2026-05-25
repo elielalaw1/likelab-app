@@ -20,10 +20,10 @@ export function GlassCard({ children, style, intensity = 28, strong = false, rad
           borderRadius: radius,
           overflow: 'hidden',
           shadowColor: '#000',
-          shadowOpacity: 0.13,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 8,
+          shadowOpacity: 0.09,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 5,
         },
         style,
       ]}
@@ -49,6 +49,6 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,1)',
   },
-  innerDefault: { backgroundColor: 'rgba(255,255,255,0.82)' },
-  innerStrong: { backgroundColor: 'rgba(255,255,255,0.90)' },
+  innerDefault: { backgroundColor: 'rgba(255,255,255,0.62)' },
+  innerStrong: { backgroundColor: 'rgba(255,255,255,0.72)' },
 })

@@ -9,8 +9,8 @@ import Animated, {
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 
-const COLORS_A = ['#EDE8FF', '#FCE8F8', '#DBEAFE', '#D1FAE5', '#FEF9C3', '#FFE4E6'] as const
-const COLORS_B = ['#FFE4E6', '#DBEAFE', '#FEF9C3', '#EDE8FF', '#FCE8F8', '#D1FAE5'] as const
+const COLORS_A = ['#E4DFF5', '#F0E8F5', '#DDE8F5', '#E0F0EC', '#F5F0E8', '#F0E8EE'] as const
+const COLORS_B = ['#F0E8EE', '#DDE8F5', '#F5F0E8', '#E4DFF5', '#F0E8F5', '#E0F0EC'] as const
 
 export function WallpaperBackground({ children }: { children: ReactNode }) {
   const progress = useSharedValue(0)
@@ -27,7 +27,7 @@ export function WallpaperBackground({ children }: { children: ReactNode }) {
   const styleB = useAnimatedStyle(() => ({ opacity: progress.value }))
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#EDE9F5' }}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styleA]}>
         <LinearGradient
           colors={COLORS_A as unknown as readonly [string, string, ...string[]]}
