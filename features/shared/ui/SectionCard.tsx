@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { Text, View } from 'react-native'
-import { radii, shadows, spacing, typography } from '@/features/core/theme'
-import { useTheme } from '@/features/core/useTheme'
+import { spacing, typography } from '@/features/core/theme'
+import { GlassCard } from '@/features/shared/ui/GlassCard'
 
 type Props = {
   title?: string
@@ -9,34 +9,25 @@ type Props = {
 }
 
 export function SectionCard({ title, children }: Props) {
-  const { palette, colors } = useTheme()
   return (
-    <View
-      style={{
-        backgroundColor: palette.cardBg,
-        borderRadius: radii.card,
-        borderWidth: 1,
-        borderColor: palette.borderColor,
-        padding: spacing.card,
-        gap: spacing.md,
-        ...shadows.card,
-      }}
-    >
-      {title ? (
-        <Text
-          style={{
-            color: palette.textMuted,
-            fontFamily: typography.fontFamily,
-            fontWeight: '600',
-            fontSize: typography.sizes.sectionHeader,
-            letterSpacing: 0.88,
-            textTransform: 'uppercase',
-          }}
-        >
-          {title}
-        </Text>
-      ) : null}
-      {children}
-    </View>
+    <GlassCard>
+      <View style={{ padding: spacing.card, gap: spacing.md }}>
+        {title ? (
+          <Text
+            style={{
+              color: 'rgba(28,28,30,0.35)',
+              fontFamily: typography.fontFamily,
+              fontWeight: '700',
+              fontSize: 9,
+              letterSpacing: 1.8,
+              textTransform: 'uppercase',
+            }}
+          >
+            {title}
+          </Text>
+        ) : null}
+        {children}
+      </View>
+    </GlassCard>
   )
 }

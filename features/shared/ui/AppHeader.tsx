@@ -1,4 +1,5 @@
 import { Animated, Dimensions, Image, Modal, Pressable, Text, View } from 'react-native'
+import { BlurView } from 'expo-blur'
 import { Image as ExpoImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useRef, useState } from 'react'
@@ -43,7 +44,32 @@ export function AppHeader() {
   }
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.xs }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        paddingBottom: spacing.sm,
+        marginHorizontal: -spacing.page,
+        marginTop: -spacing.sm,
+        backgroundColor: 'rgba(255,255,255,0.72)',
+        borderBottomWidth: 0.5,
+        borderBottomColor: 'rgba(255,255,255,1)',
+        shadowColor: '#6040A0',
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+        overflow: 'hidden',
+      }}
+    >
+      <BlurView
+        tint="light"
+        intensity={40}
+        style={{ position: 'absolute', inset: 0 }}
+      />
 
       {/* 7 taps — confetti */}
       <Modal visible={showConfetti} transparent animationType="none" statusBarTranslucent>
@@ -66,7 +92,7 @@ export function AppHeader() {
         </Pressable>
       </Modal>
       <Pressable onPress={handleLogoPress} hitSlop={8}>
-        <Image source={topLogo} style={{ width: 44, height: 44 }} resizeMode="contain" />
+        <Image source={topLogo} style={{ width: 78, height: 78 }} resizeMode="contain" />
       </Pressable>
 
       <Pressable onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>

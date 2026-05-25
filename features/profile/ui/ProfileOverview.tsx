@@ -10,6 +10,7 @@ import { ProfileStats } from '@/features/profile/ui/ProfileStats'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { Screen } from '@/features/shared/ui/Screen'
+import { GlassCard } from '@/features/shared/ui/GlassCard'
 import { supabase } from '@/lib/supabase'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useQueryClient } from '@tanstack/react-query'
@@ -110,7 +111,8 @@ export function ProfileOverview() {
         </>
       ) : null}
 
-      <View style={{ borderRadius: radii.card, borderWidth: 1, borderColor: palette.borderSoft, overflow: 'hidden', marginTop: 8 }}>
+      <GlassCard radius={radii.card} style={{ marginTop: 8 }}>
+        <View>
         <Pressable
           onPress={() => setContactOpen((v) => !v)}
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}
@@ -137,8 +139,8 @@ export function ProfileOverview() {
                   gap: 12,
                   paddingHorizontal: 16,
                   paddingVertical: 13,
-                  borderTopWidth: 1,
-                  borderColor: palette.borderSoft,
+                  borderTopWidth: 0.5,
+                  borderColor: 'rgba(255,255,255,0.6)',
                 }}
               >
                 <MaterialCommunityIcons name={item.icon as any} size={20} color={palette.textMuted} />
@@ -151,7 +153,8 @@ export function ProfileOverview() {
             ))}
           </>
         ) : null}
-      </View>
+        </View>
+      </GlassCard>
     </Screen>
   )
 }

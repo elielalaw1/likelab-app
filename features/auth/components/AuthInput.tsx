@@ -12,7 +12,7 @@ type Props = {
   placeholder: string
   secureTextEntry?: boolean
   showToggle?: boolean
-  keyboardType?: 'default' | 'email-address' | 'phone-pad'
+  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad'
   autoCapitalize?: 'none' | 'words' | 'sentences' | 'characters'
   prefixText?: string
   sanitizeText?: (text: string) => string
@@ -53,13 +53,18 @@ export function AuthInput({
       <View
         style={{
           height: 50,
-          borderWidth: 1,
-          borderColor: authColors.border,
+          borderWidth: 0.5,
+          borderColor: 'rgba(255,255,255,0.9)',
           borderRadius: 12,
-          backgroundColor: 'rgba(255,255,255,0.92)',
+          backgroundColor: 'rgba(255,255,255,0.65)',
           paddingHorizontal: 14,
           flexDirection: 'row',
           alignItems: 'center',
+          shadowColor: '#6040A0',
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 3,
         }}
       >
         {prefixText ? (

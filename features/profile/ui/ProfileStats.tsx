@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
-import { shadows, typography } from '@/features/core/theme'
+import { typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
+import { GlassCard } from '@/features/shared/ui/GlassCard'
 
 type Props = {
   activeCampaignsCount: number
@@ -26,38 +27,30 @@ export function ProfileStats({
     { label: 'Deliverables', value: deliverablesCount, onPress: onPressDeliverables },
   ]
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        borderRadius: 20,
-        backgroundColor: palette.card,
-        borderWidth: 1,
-        borderColor: palette.borderColor,
-        ...shadows.card,
-        overflow: 'hidden',
-      }}
-    >
-      {stats.map((stat, i) => (
-        <Pressable
-          key={stat.label}
-          onPress={stat.onPress}
-          disabled={!stat.onPress}
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            paddingVertical: 14,
-            borderLeftWidth: i > 0 ? 1 : 0,
-            borderLeftColor: palette.borderColor,
-          }}
-        >
-          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-            {stat.value}
-          </Text>
-          <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-            {stat.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
+    <GlassCard radius={20} intensity={24}>
+      <View style={{ flexDirection: 'row' }}>
+        {stats.map((stat, i) => (
+          <Pressable
+            key={stat.label}
+            onPress={stat.onPress}
+            disabled={!stat.onPress}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingVertical: 14,
+              borderLeftWidth: i > 0 ? 0.5 : 0,
+              borderLeftColor: 'rgba(255,255,255,0.7)',
+            }}
+          >
+            <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+              {stat.value}
+            </Text>
+            <Text style={{ color: 'rgba(28,28,30,0.35)', fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '700', marginTop: 4, letterSpacing: 1.8, textTransform: 'uppercase' }}>
+              {stat.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </GlassCard>
   )
 }

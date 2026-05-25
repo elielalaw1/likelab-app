@@ -16,6 +16,7 @@ import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/cor
 import { glass, radii, shadows, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { CountUp, springs } from '@/features/motion/springs'
+import { GlassCard } from '@/features/shared/ui/GlassCard'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -56,57 +57,53 @@ function canSubmitDeliverable(status: string) {
 function Section({
   icon,
   title,
-  tint,
-  borderColor,
   children,
 }: {
   icon: keyof typeof MaterialCommunityIcons.glyphMap
   title: string
-  tint: string
+  tint?: string
   borderColor?: string
   children: ReactNode
 }) {
   const { palette } = useTheme()
   return (
-    <View
-      style={{
-        backgroundColor: palette.sectionBg,
-        borderRadius: 28,
-        padding: 22,
-        borderWidth: 1,
-        borderColor: borderColor || palette.borderColor,
-        gap: 18,
-        ...shadows.card,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        <View
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 14,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: tint,
-          }}
-        >
-          <MaterialCommunityIcons name={icon} size={20} color={palette.text} />
+    <GlassCard radius={22}>
+      <View style={{ padding: 22, gap: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(255,255,255,0.6)',
+              borderWidth: 0.5,
+              borderColor: 'rgba(255,255,255,0.9)',
+              shadowColor: '#6040A0',
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+            }}
+          >
+            <MaterialCommunityIcons name={icon} size={16} color={palette.text} />
+          </View>
+          <Text
+            style={{
+              color: 'rgba(28,28,30,0.35)',
+              fontFamily: typography.fontFamily,
+              fontWeight: '700',
+              fontSize: 9,
+              letterSpacing: 1.8,
+              textTransform: 'uppercase',
+            }}
+          >
+            {title}
+          </Text>
         </View>
-        <Text
-          style={{
-            color: palette.textMuted,
-            fontFamily: typography.fontFamily,
-            fontWeight: '700',
-            fontSize: 11,
-            letterSpacing: 1.1,
-            textTransform: 'uppercase',
-          }}
-        >
-          {title}
-        </Text>
+        {children}
       </View>
-      {children}
-    </View>
+    </GlassCard>
   )
 }
 
