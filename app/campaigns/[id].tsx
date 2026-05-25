@@ -13,7 +13,7 @@ import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/core/format'
-import { radii, shadows, typography } from '@/features/core/theme'
+import { glass, radii, shadows, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { CountUp, springs } from '@/features/motion/springs'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
@@ -535,9 +535,8 @@ export default function CampaignDetailPage() {
               gap: 8,
               padding: 8,
               borderRadius: 26,
-              backgroundColor: palette.tabBarBg,
-              borderWidth: 1,
-              borderColor: palette.tabBarBorder,
+              borderTopWidth: 0.5,
+              borderTopColor: 'rgba(255,255,255,0.9)',
               shadowColor: '#0F172A',
               shadowOpacity: 0.08,
               shadowRadius: 18,
@@ -546,28 +545,8 @@ export default function CampaignDetailPage() {
               overflow: 'hidden',
             }}
           >
-            <BlurView tint="light" intensity={64} style={{ position: 'absolute', inset: 0 }} />
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(248,250,252,0.68)', 'rgba(255,255,255,0.52)']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={{ position: 'absolute', inset: 0 }}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(255,255,255,0.34)', 'rgba(255,255,255,0.02)']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 0.4 }}
-              style={{ position: 'absolute', left: 1, right: 1, top: 1, height: 18, borderTopLeftRadius: 26, borderTopRightRadius: 26 }}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(15,23,42,0)', 'rgba(15,23,42,0.06)']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 16, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 }}
-            />
+            <BlurView tint="light" intensity={glass.blurIntensitySubtle} style={{ position: 'absolute', inset: 0 }} />
+            <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: glass.surfaceBackground }} />
             <Animated.View
               pointerEvents="none"
               style={[
@@ -576,11 +555,13 @@ export default function CampaignDetailPage() {
                   top: 9,
                   height: 60,
                   borderRadius: 10,
-                  backgroundColor: colors.primary,
-                  shadowColor: colors.primary,
-                  shadowOpacity: 0.28,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 4 },
+                  backgroundColor: 'rgba(255,255,255,0.82)',
+                  borderWidth: 0.5,
+                  borderColor: 'rgba(255,255,255,0.95)',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.08,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
                 },
                 tabBubbleStyle,
               ]}
@@ -599,8 +580,8 @@ export default function CampaignDetailPage() {
                 }}
                 style={{ flex: 1, minHeight: 66, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}
               >
-                <MaterialCommunityIcons name={tab.icon} size={20} color={activeTab === tab.key ? '#fff' : palette.textMuted} />
-                <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: activeTab === tab.key ? '700' : '400', color: activeTab === tab.key ? '#fff' : palette.textMuted, textAlign: 'center' }}>
+                <MaterialCommunityIcons name={tab.icon} size={20} color={activeTab === tab.key ? glass.darkText : palette.textMuted} />
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: activeTab === tab.key ? '700' : '400', color: activeTab === tab.key ? glass.darkText : palette.textMuted, textAlign: 'center' }}>
                   {tab.label}
                 </Text>
               </Pressable>
@@ -658,11 +639,11 @@ export default function CampaignDetailPage() {
                           alignItems: 'center',
                           gap: 6,
                           borderWidth: StyleSheet.hairlineWidth,
-                          borderColor: 'rgba(74,18,160,0.18)',
+                          borderColor: 'rgba(255,255,255,0.9)',
                           ...shadows.card,
                         }}
                       >
-                        <MaterialCommunityIcons name={cell.icon} size={16} color={colors.primary} style={{ opacity: 0.6 }} />
+                        <MaterialCommunityIcons name={cell.icon} size={16} color={glass.darkText} style={{ opacity: 0.55 }} />
                         <CountUp
                           value={Number(cell.value) || 0}
                           duration={600}

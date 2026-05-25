@@ -1,5 +1,5 @@
 import { useApplications } from '@/features/applications/hooks'
-import { typography } from '@/features/core/theme'
+import { radii, screenGradients, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -11,11 +11,11 @@ import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { Screen } from '@/features/shared/ui/Screen'
 import { supabase } from '@/lib/supabase'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { ActivityIndicator, Text, View } from 'react-native'
+import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native'
 
 export function ProfileOverview() {
   const { colors, palette } = useTheme()
@@ -24,6 +24,7 @@ export function ProfileOverview() {
   const { data: deliverables } = useDeliverables()
   const queryClient = useQueryClient()
   const [avatarOpen, setAvatarOpen] = useState(false)
+  const [contactOpen, setContactOpen] = useState(false)
 
   const acceptedCampaigns = useMemo(() => {
     const acceptedApplications = (applicationsData?.applications || []).filter((item) => item.status === 'accepted')
@@ -60,7 +61,7 @@ export function ProfileOverview() {
   }
 
   return (
-    <Screen>
+    <Screen gradient={screenGradients.profile}>
       <AppHeader />
 
       {profileLoading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -108,6 +109,49 @@ export function ProfileOverview() {
           <AvatarPreviewModal visible={avatarOpen} uri={profile.avatarUrl || undefined} onClose={() => setAvatarOpen(false)} />
         </>
       ) : null}
+
+      <View style={{ borderRadius: radii.card, borderWidth: 1, borderColor: palette.borderSoft, overflow: 'hidden', marginTop: 8 }}>
+        <Pressable
+          onPress={() => setContactOpen((v) => !v)}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}
+        >
+          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700' }}>
+            Contact Us
+          </Text>
+          <MaterialCommunityIcons name={contactOpen ? 'chevron-up' : 'chevron-down'} size={20} color={palette.textMuted} />
+        </Pressable>
+        {contactOpen ? (
+          <>
+            {[
+              { icon: 'email-outline', label: 'Email', sub: 'info@likelab.io', url: 'mailto:info@likelab.io' },
+              { icon: 'phone-outline', label: 'Phone', sub: '040-614 31 60', url: 'tel:+46406143160' },
+              { icon: 'instagram', label: 'Instagram', sub: '@likelab', url: 'https://instagram.com/likelab' },
+              { icon: 'linkedin', label: 'LinkedIn', sub: 'likelab-io', url: 'https://www.linkedin.com/company/likelab-io' },
+            ].map((item, i) => (
+              <Pressable
+                key={item.label}
+                onPress={() => Linking.openURL(item.url)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 13,
+                  borderTopWidth: 1,
+                  borderColor: palette.borderSoft,
+                }}
+              >
+                <MaterialCommunityIcons name={item.icon as any} size={20} color={palette.textMuted} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600' }}>{item.label}</Text>
+                  <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12 }}>{item.sub}</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={palette.textMuted} />
+              </Pressable>
+            ))}
+          </>
+        ) : null}
+      </View>
     </Screen>
   )
 }

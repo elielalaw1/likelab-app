@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { typography } from '@/features/core/theme'
+import { screenGradients, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useApplyToCampaign, useCampaigns } from '@/features/campaigns/hooks'
 import { useDeliverables } from '@/features/deliverables/hooks'
@@ -73,7 +73,7 @@ export default function ProjectsPage() {
   const isGrid = viewMode === 'grid'
 
   return (
-    <Screen onRefresh={onRefresh} scrollRef={scrollRef}>
+    <Screen onRefresh={onRefresh} scrollRef={scrollRef} gradient={screenGradients.discover}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>

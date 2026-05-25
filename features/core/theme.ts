@@ -141,6 +141,22 @@ export const glass = {
   border: 'rgba(3,7,18,0.05)',
   borderSoft: 'rgba(3,7,18,0.04)',
   highlight: 'rgba(255,255,255,0.6)',
+  // ─── Liquid Glass tokens (iOS 26-inspired)
+  cardBackground: 'rgba(255,255,255,0.62)',
+  surfaceBackground: 'rgba(255,255,255,0.45)',
+  liquidBorder: 'rgba(255,255,255,0.8)',
+  borderStrong: 'rgba(255,255,255,0.95)',
+  darkButton: 'rgba(13,13,26,0.82)',
+  darkText: '#0d0d1a',
+  blurIntensityCard: 55,
+  blurIntensityTabBar: 80,
+  blurIntensitySubtle: 40,
+}
+
+export const screenGradients = {
+  discover:     { colors: ['#f0ecff', '#e8f4ff', '#f5f0ff'] as const, start: { x: 0.15, y: 0 } as const, end: { x: 0.85, y: 1 } as const },
+  profile:      { colors: ['#fff5f0', '#f0f5ff', '#f5f0ff'] as const, start: { x: 0.25, y: 0 } as const, end: { x: 0.75, y: 1 } as const },
+  deliverables: { colors: ['#f0f8ff', '#f5f0ff', '#e8f5f0'] as const, start: { x: 0.2, y: 0 } as const, end: { x: 0.8, y: 1 } as const },
 }
 
 export const gradients = {

@@ -1,11 +1,18 @@
 import { ReactNode, RefObject, useState, useCallback } from 'react'
-import { RefreshControl, ScrollView, View } from 'react-native'
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
 import { spacing } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { getFloatingTabBarSpace } from '@/features/navigation/floatingTabBar.constants'
 import { useFocusEffect } from '@react-navigation/native'
+
+type GradientSpec = {
+  colors: readonly [string, string, ...string[]]
+  start?: { x: number; y: number }
+  end?: { x: number; y: number }
+}
 
 type Props = {
   children: ReactNode
@@ -15,9 +22,10 @@ type Props = {
   overlayPadding?: number
   scrollRef?: RefObject<ScrollView | null>
   onRefresh?: () => Promise<void>
+  gradient?: GradientSpec
 }
 
-export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh }: Props) {
+export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient }: Props) {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { reportScroll, setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
@@ -40,6 +48,15 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }}>
+      {gradient ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={gradient.colors as never}
+          start={gradient.start ?? { x: 0.2, y: 0 }}
+          end={gradient.end ?? { x: 0.8, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      ) : null}
       {scroll ? (
         <ScrollView
           ref={scrollRef}

@@ -1,4 +1,4 @@
-import { radii, shadows, spacing, typography } from '@/features/core/theme'
+import { radii, screenGradients, shadows, spacing, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
@@ -82,7 +82,7 @@ export default function DeliverablesPage() {
     router.push({ pathname: '/campaigns/[id]', params: { id: campaignId, tab: 'videos' } })
 
   return (
-    <Screen onRefresh={onRefresh}>
+    <Screen onRefresh={onRefresh} gradient={screenGradients.deliverables}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
@@ -143,7 +143,7 @@ export default function DeliverablesPage() {
                           fontFamily: typography.fontFamily,
                           fontSize: 48,
                           fontWeight: '800',
-                          color: isRevision ? '#D97706' : colors.primary,
+                          color: isRevision ? '#D97706' : '#0d0d1a',
                           letterSpacing: -2,
                           lineHeight: 52,
                           padding: 0,

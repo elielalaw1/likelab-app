@@ -155,16 +155,16 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
                       duration={600}
                       style={{
                         fontFamily: typography.fontFamily,
-                        fontSize: 28,
+                        fontSize: 20,
                         fontWeight: '800',
                         color: palette.text,
-                        letterSpacing: -1,
+                        letterSpacing: -0.6,
                         padding: 0,
                         textAlign: 'center',
-                        minWidth: 24,
+                        minWidth: 22,
                       }}
                     />
-                    <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 11, fontWeight: '300', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                    <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 8, fontWeight: '300', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 1.3 }}>
                       {stat.label}
                     </Text>
                   </View>

@@ -4,7 +4,8 @@ import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { Campaign } from '@/features/core/types'
 import { useEffect, useState } from 'react'
 import { formatCampaignGoal, formatDateRange } from '@/features/core/format'
-import { radii, shadows, spacing, typography } from '@/features/core/theme'
+import { glass, radii, shadows, spacing, typography } from '@/features/core/theme'
+import { BlurView } from 'expo-blur'
 import { useTheme } from '@/features/core/useTheme'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
@@ -146,10 +147,10 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
   ) : (
     <View
       style={{
-        backgroundColor: palette.cardBg,
+        backgroundColor: 'transparent',
         borderRadius: radii.card,
-        borderWidth: hasUrgentDeliverables ? 5 : 4,
-        borderColor: hasUrgentDeliverables ? '#EF4444' : '#11192F',
+        borderWidth: hasUrgentDeliverables ? 2 : 0.5,
+        borderColor: hasUrgentDeliverables ? '#EF4444' : 'rgba(255,255,255,0.9)',
         overflow: 'hidden',
         ...shadows.card,
       }}
@@ -200,7 +201,8 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
         ) : null}
       </View>
 
-      <View style={{ padding: spacing.lg, gap: spacing.sm }}>
+      <BlurView intensity={glass.blurIntensityCard} tint="light" style={{ borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.9)' }}>
+      <View style={{ padding: spacing.lg, gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.65)' }}>
         {/* Title + tap hint */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text
@@ -243,8 +245,10 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
             }}
           >
             <View style={{
-              backgroundColor: applyState === 'applied' ? '#16A34A' : applyState === 'blocked' ? '#EF4444' : '#11192F',
+              backgroundColor: applyState === 'applied' ? '#16A34A' : applyState === 'blocked' ? '#EF4444' : glass.darkButton,
               borderRadius: 14,
+              borderWidth: 0.5,
+              borderColor: 'rgba(255,255,255,0.1)',
               paddingVertical: 16,
               flexDirection: 'row',
               alignItems: 'center',
@@ -300,6 +304,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           ) : null}
         </Pressable>
       </View>
+      </BlurView>
     </View>
   )
 

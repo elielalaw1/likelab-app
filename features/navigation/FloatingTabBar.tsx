@@ -1,4 +1,5 @@
 import { useTheme } from '@/features/core/useTheme'
+import { glass } from '@/features/core/theme'
 import { springs } from '@/features/motion/springs'
 import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
@@ -10,7 +11,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { useQueryClient } from '@tanstack/react-query'
 import { BlurView } from 'expo-blur'
-import { LinearGradient } from 'expo-linear-gradient'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated'
@@ -121,7 +121,7 @@ const visibleTabNames = new Set(['overview', 'deliverables', 'profile'])
 const BAR_HORIZONTAL_PADDING = 8
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { palette } = useTheme()
+  useTheme()
   const insets = useSafeAreaInsets()
   const { visible } = useFloatingTabBarVisibility()
   const queryClient = useQueryClient()
@@ -203,8 +203,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           bottom: bottomOffset,
           height: FLOATING_TAB_BAR_HEIGHT,
           borderRadius: 30,
-          borderWidth: 1,
-          borderColor: palette.tabBarBorder,
+          borderTopWidth: 0.5,
+          borderTopColor: 'rgba(255,255,255,0.9)',
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: BAR_HORIZONTAL_PADDING,
@@ -223,32 +223,12 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
     >
       <BlurView
         tint="light"
-        intensity={72}
-        style={{
-          position: 'absolute',
-          inset: 0,
-        }}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(248,250,252,0.68)', 'rgba(255,255,255,0.52)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        intensity={glass.blurIntensityTabBar}
         style={{ position: 'absolute', inset: 0 }}
       />
-      <LinearGradient
+      <View
         pointerEvents="none"
-        colors={['rgba(255,255,255,0.34)', 'rgba(255,255,255,0.02)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.6 }}
-        style={{ position: 'absolute', left: 1, right: 1, top: 1, height: 12, borderTopLeftRadius: 30, borderTopRightRadius: 30 }}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(15,23,42,0)', 'rgba(15,23,42,0.06)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 18, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}
+        style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.55)' }}
       />
       <Animated.View
         pointerEvents="none"
@@ -259,41 +239,17 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             width: bubbleWidth,
             height: 42,
             borderRadius: 999,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.86)',
-            shadowColor: 'rgba(109,40,217,1)',
-            shadowOpacity: 0.18,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 4 },
+            backgroundColor: 'rgba(255,255,255,0.82)',
+            borderWidth: 0.5,
+            borderColor: 'rgba(255,255,255,0.95)',
+            shadowColor: '#000',
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
           },
           bubbleStyle,
         ]}
-      >
-        <BlurView
-          tint="light"
-          intensity={48}
-          style={{ position: 'absolute', inset: 0 }}
-        />
-        <LinearGradient
-          colors={['rgba(255,255,255,0.72)', 'rgba(239,233,255,0.52)', 'rgba(228,246,255,0.32)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{ position: 'absolute', inset: 0, borderRadius: 999 }}
-        />
-        <LinearGradient
-          colors={['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']}
-          start={{ x: 0.08, y: 0.02 }}
-          end={{ x: 0.88, y: 0.72 }}
-          style={{ position: 'absolute', inset: 0, borderRadius: 999 }}
-        />
-        <LinearGradient
-          colors={['rgba(139,92,246,0.16)', 'rgba(56,189,248,0.1)', 'rgba(255,255,255,0.02)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', inset: 0, borderRadius: 999 }}
-        />
-      </Animated.View>
+      />
       {routes.map((route) => {
         const focused = state.routes[state.index].key === route.key
         const descriptor = descriptors[route.key]
