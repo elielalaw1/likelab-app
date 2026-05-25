@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
@@ -657,8 +657,8 @@ export default function CampaignDetailPage() {
                           paddingHorizontal: 8,
                           alignItems: 'center',
                           gap: 6,
-                          borderWidth: 0.5,
-                          borderColor: 'rgba(74,18,160,0.12)',
+                          borderWidth: StyleSheet.hairlineWidth,
+                          borderColor: 'rgba(74,18,160,0.18)',
                           ...shadows.card,
                         }}
                       >

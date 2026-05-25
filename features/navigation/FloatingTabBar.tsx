@@ -178,6 +178,22 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   }))
 
   return (
+    <>
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: bottomOffset + FLOATING_TAB_BAR_HEIGHT + 6,
+          height: StyleSheet.hairlineWidth,
+          backgroundColor: 'rgba(0,0,0,0.07)',
+          zIndex: 79,
+        },
+        animatedStyle,
+      ]}
+    />
     <Animated.View
       style={[
         {
@@ -343,5 +359,6 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         )
       })}
     </Animated.View>
+    </>
   )
 }
