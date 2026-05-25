@@ -14,6 +14,8 @@ import { useCallback, useMemo } from 'react'
 import { FlatList, Pressable, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { DeliverableStatus } from '@/features/core/types'
+import { CountUp } from '@/features/motion/springs'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = {
   submitted:     { label: 'In review',  color: '#6366F1', icon: 'clock-outline' },
@@ -84,11 +86,11 @@ export default function DeliverablesPage() {
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
-        <Text style={{ fontSize: typography.sizes.pageTitle, fontWeight: '700', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -0.32 }}>
-          My Projects
+        <Text style={{ fontSize: 42, fontWeight: '300', color: palette.textMuted, fontFamily: typography.fontFamilyLight, letterSpacing: -1.5, lineHeight: 46 }}>
+          My
         </Text>
-        <Text style={{ color: palette.textMuted, fontSize: typography.sizes.subtitle, fontFamily: typography.fontFamily }}>
-          Videos you need to create and submit
+        <Text style={{ fontSize: 42, fontWeight: '800', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -1.5, lineHeight: 46 }}>
+          projects
         </Text>
       </Animated.View>
 
@@ -129,24 +131,28 @@ export default function DeliverablesPage() {
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                     style={{ position: 'absolute', inset: 0 }}
                   />
-                  <View style={{ padding: spacing.lg + 2, gap: 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 21, fontWeight: '800', color: palette.text, letterSpacing: -0.5, lineHeight: 26 }}>
-                          {item.count === 1 ? '1 video to submit' : `${item.count} videos to submit`}
-                        </Text>
-                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: palette.textMuted }}>
-                          {item.campaignTitle}
-                        </Text>
-                      </View>
-                      <View style={{ position: 'relative' }}>
-                        <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: isRevision ? 'rgba(217,119,6,0.1)' : 'rgba(15,23,42,0.05)', alignItems: 'center', justifyContent: 'center' }}>
-                          <MaterialCommunityIcons name={isRevision ? 'pencil-outline' : 'video-outline'} size={22} color={isRevision ? '#D97706' : palette.text} />
-                        </View>
-                        <View style={{ position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#fff' }}>
-                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', fontFamily: 'System' }}>{item.count}</Text>
-                        </View>
-                      </View>
+                  <View style={{ padding: spacing.lg + 4, gap: 14 }}>
+                    <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 13, fontWeight: '300', color: palette.textMuted }} numberOfLines={1}>
+                      {item.campaignTitle}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
+                      <CountUp
+                        value={item.count}
+                        duration={600}
+                        style={{
+                          fontFamily: typography.fontFamily,
+                          fontSize: 48,
+                          fontWeight: '800',
+                          color: isRevision ? '#D97706' : colors.primary,
+                          letterSpacing: -2,
+                          lineHeight: 52,
+                          padding: 0,
+                          minWidth: 40,
+                        }}
+                      />
+                      <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 14, fontWeight: '300', color: palette.textMuted, paddingBottom: 8 }}>
+                        {item.count === 1 ? 'video to submit' : 'videos to submit'}
+                      </Text>
                     </View>
                     {isRevision ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -157,11 +163,14 @@ export default function DeliverablesPage() {
                     {item.flagReason ? (
                       <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: '#9A3412', lineHeight: 18 }}>{item.flagReason}</Text>
                     ) : null}
-                    <View style={{ height: 1, backgroundColor: 'rgba(15,23,42,0.06)' }} />
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700', color: colors.primary }}>Open & submit</Text>
-                      <MaterialCommunityIcons name="arrow-right-circle-outline" size={20} color={colors.primary} />
-                    </View>
+                    <LiquidButton
+                      label="Open & submit"
+                      onPress={() => openCampaignVideos(item.campaignId)}
+                      tone="primary"
+                      minHeight={50}
+                      borderRadius={14}
+                      icon={<MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />}
+                    />
                   </View>
                 </View>
               </Pressable>

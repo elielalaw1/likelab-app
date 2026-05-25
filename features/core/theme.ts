@@ -85,6 +85,7 @@ export const spacing = {
 
 export const typography = {
   fontFamily: 'Montserrat',
+  fontFamilyLight: 'Montserrat-Light',
   lineHeights: {
     heading: 1.12,
     body: 1.45,
@@ -101,6 +102,35 @@ export const typography = {
     button: 14,
     sectionHeader: 11,
     body: 14,
+  },
+  // ─── Premium display tiers (paired light/bold for weight-contrast hierarchy)
+  display: {
+    fontFamily: 'Montserrat-Light',
+    fontSize: 46,
+    fontWeight: '300' as const,
+    lineHeight: 50,
+    letterSpacing: -2,
+  },
+  displayBold: {
+    fontFamily: 'Montserrat',
+    fontSize: 46,
+    fontWeight: '800' as const,
+    lineHeight: 50,
+    letterSpacing: -2,
+  },
+  hero: {
+    fontFamily: 'Montserrat-Light',
+    fontSize: 34,
+    fontWeight: '300' as const,
+    lineHeight: 38,
+    letterSpacing: -1,
+  },
+  heroBold: {
+    fontFamily: 'Montserrat',
+    fontSize: 34,
+    fontWeight: '800' as const,
+    lineHeight: 38,
+    letterSpacing: -1,
   },
 }
 
@@ -122,10 +152,10 @@ export const gradients = {
 export const shadows = {
   card: {
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    shadowOpacity: 0.09,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   navbar: {
     shadowColor: '#000',

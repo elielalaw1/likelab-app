@@ -1,4 +1,4 @@
-import { FlatList, Pressable, ScrollView, Text, View } from 'react-native'
+import { Alert, FlatList, Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -7,8 +7,9 @@ import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
-import { useCampaigns } from '@/features/campaigns/hooks'
+import { useApplyToCampaign, useCampaigns } from '@/features/campaigns/hooks'
 import { useDeliverables } from '@/features/deliverables/hooks'
+import { useCreatorProfile } from '@/features/profile/hooks'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
@@ -21,6 +22,9 @@ export default function ProjectsPage() {
   const { colors, palette } = useTheme()
   const queryClient = useQueryClient()
   const { data, isLoading, error, refetch: refetchCampaigns } = useCampaigns()
+  const applyMutation = useApplyToCampaign()
+  const { data: profile } = useCreatorProfile()
+  const isApproved = profile?.approved === true
   const { data: deliverables, refetch: refetchDeliverables } = useDeliverables()
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const scrollRef = useRef<ScrollView>(null)
@@ -52,7 +56,10 @@ export default function ProjectsPage() {
   }, [deliverables])
 
   const accepted = useMemo(() => (data || []).filter((c) => c.creatorApplicationStatus === 'accepted'), [data])
-  const browsable = useMemo(() => (data || []).filter((c) => c.creatorApplicationStatus !== 'accepted'), [data])
+  const browsable = useMemo(
+    () => (data || []).filter((c) => c.creatorApplicationStatus !== 'accepted' && c.creatorApplicationStatus !== 'rejected'),
+    [data]
+  )
 
   const browseRows = useMemo(
     () => Array.from({ length: Math.ceil(browsable.length / 2) }, (_, i) => browsable.slice(i * 2, i * 2 + 2)),
@@ -70,11 +77,11 @@ export default function ProjectsPage() {
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
-        <Text style={{ fontSize: 38, fontWeight: '800', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -1 }}>
+        <Text style={{ fontSize: 42, fontWeight: '300', color: palette.textMuted, fontFamily: typography.fontFamilyLight, letterSpacing: -1.5, lineHeight: 46 }}>
           Discover
         </Text>
-        <Text style={{ color: palette.textMuted, fontSize: typography.sizes.subtitle, fontFamily: typography.fontFamily }}>
-          Apply to brand campaigns
+        <Text style={{ fontSize: 42, fontWeight: '800', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -1.5, lineHeight: 46 }}>
+          campaigns
         </Text>
       </Animated.View>
 
@@ -142,10 +149,18 @@ export default function ProjectsPage() {
           scrollEnabled={false}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           ListEmptyComponent={!isLoading ? <EmptyState title="No Campaigns" subtitle="No new campaigns available right now." icon="bullhorn-outline" /> : null}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <CampaignCard
               campaign={item}
+              index={index}
               onPress={() => router.push(campaignRouteParams(item) as never)}
+              onApply={() => {
+                if (!isApproved) {
+                  Alert.alert('Awaiting approval', 'Your account is pending review. You\'ll be able to apply once approved.')
+                  return false
+                }
+                applyMutation.mutate(item.id)
+              }}
             />
           )}
         />
@@ -180,9 +195,10 @@ export default function ProjectsPage() {
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-              renderItem={({ item }) => (
+              renderItem={({ item, index }) => (
                 <CampaignCard
                   campaign={item}
+                  index={index}
                   badge={badgeCounts[item.id]}
                   onPress={() => router.push(campaignRouteParams(item) as never)}
                 />

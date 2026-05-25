@@ -1,10 +1,11 @@
 import { Stack, router } from 'expo-router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/query-client'
-import { useEffect, useRef } from 'react'
-import { Alert, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Alert, Text, View } from 'react-native'
 import { useFonts } from 'expo-font'
 import {
+  Montserrat_300Light,
   Montserrat_400Regular,
   Montserrat_500Medium,
   Montserrat_600SemiBold,
@@ -58,7 +59,7 @@ function resolveNotificationRoute(data: Record<string, unknown>): string | null 
   }
 }
 
-const NOTIF_EXPLAIN_KEY = 'notif_explain_shown_v1'
+const NOTIF_EXPLAIN_KEY = 'notif_explain_shown_v2'
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -92,15 +93,18 @@ function PushNotificationSetup() {
       if (!alreadyShown) {
         await SecureStore.setItemAsync(NOTIF_EXPLAIN_KEY, '1').catch(() => {})
         Alert.alert(
-          'Notifications',
-          'We\'ll only notify you about updates to your collaborations — no spam.',
-          [{
-            text: 'OK',
-            onPress: async () => {
-              const token = await registerForPushNotificationsAsync()
-              if (token) savePushToken(token, userId)
+          'Stay in the loop 🔔',
+          'We\'ll only notify you when a brand accepts you, assigns you a collab, or approves your content. No ads, no spam — ever.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            {
+              text: 'Turn on notifications',
+              onPress: async () => {
+                const token = await registerForPushNotificationsAsync()
+                if (token) savePushToken(token, userId)
+              },
             },
-          }]
+          ]
         )
       } else {
         const token = await registerForPushNotificationsAsync()
@@ -145,22 +149,58 @@ function PushNotificationSetup() {
   return null
 }
 
+const KILLSWITCH_GIST_API = 'https://api.github.com/gists/9f23eb439b9a2edf58e812d3c9e0f9f4'
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Montserrat: Montserrat_400Regular,
+    'Montserrat-Light': Montserrat_300Light,
     'Montserrat-Medium': Montserrat_500Medium,
     'Montserrat-SemiBold': Montserrat_600SemiBold,
     'Montserrat-Bold': Montserrat_700Bold,
     'Montserrat-ExtraBold': Montserrat_800ExtraBold,
   })
+  const [killswitch, setKillswitch] = useState<{ blocked: boolean; message: string } | null>(null)
+
   useEffect(() => {
-    if (fontsLoaded) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    fetch(KILLSWITCH_GIST_API, { signal: controller.signal, headers: { 'Accept': 'application/vnd.github+json' } })
+      .then((r) => r.json())
+      .then((gist) => {
+        clearTimeout(timeout)
+        const content = gist?.files?.['likelab-config.json']?.content
+        const data = content ? JSON.parse(content) : { active: true }
+        if (data.active === false) {
+          setKillswitch({ blocked: true, message: data.message || 'Tillfälligt otillgänglig.' })
+        } else {
+          setKillswitch({ blocked: false, message: '' })
+        }
+      })
+      .catch(() => {
+        clearTimeout(timeout)
+        setKillswitch({ blocked: true, message: 'Kunde inte ansluta till tjänsten.' })
+      })
+  }, [])
+
+  useEffect(() => {
+    if (fontsLoaded && killswitch !== null) {
       SplashScreen.hideAsync()
     }
-  }, [fontsLoaded])
+  }, [fontsLoaded, killswitch])
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || killswitch === null) {
     return null
+  }
+
+  if (killswitch.blocked) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
+        <Text style={{ color: '#fff', textAlign: 'center', padding: 32, fontSize: 16 }}>
+          {killswitch.message}
+        </Text>
+      </View>
+    )
   }
 
   return (

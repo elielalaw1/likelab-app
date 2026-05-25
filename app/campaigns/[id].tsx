@@ -1,9 +1,9 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native'
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
@@ -15,6 +15,7 @@ import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/core/format'
 import { radii, shadows, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
+import { CountUp, springs } from '@/features/motion/springs'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -25,6 +26,8 @@ import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { toast } from '@/features/shared/ui/Toast'
 import { isValidTikTokUrl } from '@/lib/validate-tiktok-url'
+import * as StoreReview from 'expo-store-review'
+import * as SecureStore from 'expo-secure-store'
 
 function fmtNum(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -122,7 +125,27 @@ export default function CampaignDetailPage() {
   const campaignId = Array.isArray(params.id) ? params.id[0] : params.id
   const initialTab = Array.isArray(params.tab) ? params.tab[0] : params.tab
 
-  const { data: campaign, isLoading, error } = useCampaign(campaignId)
+  const { data: campaign, isLoading, error, refetch: refetchCampaign, isFetching, dataUpdatedAt } = useCampaign(campaignId)
+
+  useFocusEffect(
+    useCallback(() => {
+      if (campaignId) {
+        void refetchCampaign()
+      }
+    }, [campaignId, refetchCampaign])
+  )
+
+  useEffect(() => {
+    if (campaign) {
+      console.log('[campaign detail]', {
+        id: campaign.id,
+        endDate: campaign.endDate,
+        daysLeft: getDaysLeft(campaign.endDate),
+        isFetching,
+        dataUpdatedAt: new Date(dataUpdatedAt).toISOString(),
+      })
+    }
+  }, [campaign, isFetching, dataUpdatedAt])
   const { data: profile } = useCreatorProfile()
   const { data: campaignDeliverables, isLoading: loadingDeliverables } = useCampaignDeliverables(campaignId)
   const { data: allDeliverables, isLoading: loadingAllDeliverables } = useDeliverables()
@@ -134,6 +157,7 @@ export default function CampaignDetailPage() {
   const [deliverableInputs, setDeliverableInputs] = useState<Record<string, string>>({})
   const [leaderboard, setLeaderboard] = useState<{ rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number } | null>(null)
   const [applySuccess, setApplySuccess] = useState(false)
+  const [showBrandPopup, setShowBrandPopup] = useState(false)
   const [copiedTag, setCopiedTag] = useState<string | null>(null)
   const [tabMetrics, setTabMetrics] = useState<Record<'description' | 'brief' | 'videos', { x: number; width: number }>>({
     description: { x: 0, width: 0 },
@@ -166,6 +190,16 @@ export default function CampaignDetailPage() {
       await applyMutation.mutateAsync(campaignId)
       setApplySuccess(true)
       toast.success('Application sent!')
+      StoreReview.isAvailableAsync().then(async (available) => {
+        if (!available) return
+        const REVIEW_KEY = 'last_review_request'
+        const last = await SecureStore.getItemAsync(REVIEW_KEY).catch(() => null)
+        const thirtyDays = 30 * 24 * 60 * 60 * 1000
+        if (!last || Date.now() - Number(last) > thirtyDays) {
+          await StoreReview.requestReview()
+          await SecureStore.setItemAsync(REVIEW_KEY, String(Date.now())).catch(() => {})
+        }
+      }).catch(() => {})
     } catch (applyError) {
       toast.error(applyError instanceof Error ? applyError.message : 'Could not apply')
     }
@@ -339,8 +373,8 @@ export default function CampaignDetailPage() {
     const metric = tabMetrics[activeTab]
     if (!metric?.width || !bubbleInitialized.current) return
     const inset = 1
-    bubbleLeft.value = withSpring(metric.x + inset, { damping: 18, stiffness: 210, mass: 0.7 })
-    bubbleWidth.value = withSpring(Math.max(0, metric.width - inset * 2), { damping: 18, stiffness: 210, mass: 0.7 })
+    bubbleLeft.value = withSpring(metric.x + inset, springs.snappy)
+    bubbleWidth.value = withSpring(Math.max(0, metric.width - inset * 2), springs.snappy)
     bubbleScale.value = withSequence(withTiming(1.04, { duration: 120 }), withTiming(1, { duration: 180 }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
@@ -351,8 +385,51 @@ export default function CampaignDetailPage() {
     transform: [{ scale: bubbleScale.value }],
   }))
 
+  function openSocial(handle: string, platform: 'instagram' | 'tiktok') {
+    const clean = handle.replace(/^@/, '')
+    const url = platform === 'instagram'
+      ? `https://instagram.com/${clean}`
+      : `https://tiktok.com/@${clean}`
+    Linking.openURL(url)
+  }
+
   return (
-    <Screen tabAware={false} overlay={stickyBar} overlayPadding={176} scrollRef={scrollRef}>
+    <>
+      <Modal transparent animationType="fade" visible={showBrandPopup} onRequestClose={() => setShowBrandPopup(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }} onPress={() => setShowBrandPopup(false)}>
+          <Pressable style={{ backgroundColor: '#1a1a1a', borderRadius: 20, padding: 24, width: 280, gap: 16 }} onPress={() => {}}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <BrandAvatar logoUrl={campaign?.brandLogoUrl} brandName={campaign?.brandName} size={36} />
+              <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700', fontFamily: typography.fontFamily }}>
+                {campaign?.brandName || 'Brand'}
+              </Text>
+            </View>
+            {campaign?.brandInstagram ? (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14 }}
+                onPress={() => { setShowBrandPopup(false); openSocial(campaign.brandInstagram!, 'instagram') }}
+              >
+                <MaterialCommunityIcons name="instagram" size={22} color="#E1306C" />
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', fontFamily: typography.fontFamily }}>
+                  {campaign.brandInstagram}
+                </Text>
+              </Pressable>
+            ) : null}
+            {campaign?.brandTiktok ? (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14 }}
+                onPress={() => { setShowBrandPopup(false); openSocial(campaign.brandTiktok!, 'tiktok') }}
+              >
+                <MaterialCommunityIcons name="music-note" size={22} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', fontFamily: typography.fontFamily }}>
+                  {campaign.brandTiktok}
+                </Text>
+              </Pressable>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Screen tabAware={false} overlay={stickyBar} overlayPadding={176} scrollRef={scrollRef}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
@@ -412,12 +489,16 @@ export default function CampaignDetailPage() {
 
                 {/* Bottom content */}
                 <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 22, gap: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Pressable
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                    onPress={() => (campaign.brandInstagram || campaign.brandTiktok) ? setShowBrandPopup(true) : undefined}
+                    disabled={!campaign.brandInstagram && !campaign.brandTiktok}
+                  >
                     <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={22} />
                     <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: '600', fontFamily: typography.fontFamily }}>
                       {campaign.brandName || 'Brand'}
                     </Text>
-                  </View>
+                  </Pressable>
                   <Text style={{ color: '#fff', fontSize: 30, fontWeight: '800', lineHeight: 35, letterSpacing: -0.7, fontFamily: typography.fontFamily }}>
                     {campaign.title}
                   </Text>
@@ -494,38 +575,16 @@ export default function CampaignDetailPage() {
                   position: 'absolute',
                   top: 9,
                   height: 60,
-                  borderRadius: 20,
-                  overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.86)',
-                  shadowColor: 'rgba(109,40,217,1)',
-                  shadowOpacity: 0.18,
-                  shadowRadius: 14,
+                  borderRadius: 10,
+                  backgroundColor: colors.primary,
+                  shadowColor: colors.primary,
+                  shadowOpacity: 0.28,
+                  shadowRadius: 10,
                   shadowOffset: { width: 0, height: 4 },
                 },
                 tabBubbleStyle,
               ]}
-            >
-              <BlurView tint="light" intensity={48} style={{ position: 'absolute', inset: 0 }} />
-              <LinearGradient
-                colors={['rgba(255,255,255,0.72)', 'rgba(239,233,255,0.52)', 'rgba(228,246,255,0.32)']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={{ flex: 1, borderRadius: 20 }}
-              />
-              <LinearGradient
-                colors={['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']}
-                start={{ x: 0.08, y: 0.02 }}
-                end={{ x: 0.88, y: 0.72 }}
-                style={{ position: 'absolute', inset: 0, borderRadius: 20 }}
-              />
-              <LinearGradient
-                colors={['rgba(139,92,246,0.16)', 'rgba(56,189,248,0.1)', 'rgba(255,255,255,0.02)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ position: 'absolute', inset: 0, borderRadius: 20 }}
-              />
-            </Animated.View>
+            />
             {([
               { key: 'description', icon: 'target', label: 'Description' },
               { key: 'brief', icon: 'file-document-outline', label: 'Brief' },
@@ -538,10 +597,10 @@ export default function CampaignDetailPage() {
                   const { x, width } = event.nativeEvent.layout
                   setTabMetrics((prev) => (prev[tab.key].x === x && prev[tab.key].width === width ? prev : { ...prev, [tab.key]: { x, width } }))
                 }}
-                style={{ flex: 1, minHeight: 66, borderRadius: 20, alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                style={{ flex: 1, minHeight: 66, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}
               >
-                <MaterialCommunityIcons name={tab.icon} size={20} color={activeTab === tab.key ? palette.text : palette.textMuted} />
-                <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: activeTab === tab.key ? palette.text : palette.textMuted, textAlign: 'center' }}>
+                <MaterialCommunityIcons name={tab.icon} size={20} color={activeTab === tab.key ? '#fff' : palette.textMuted} />
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: activeTab === tab.key ? '700' : '400', color: activeTab === tab.key ? '#fff' : palette.textMuted, textAlign: 'center' }}>
                   {tab.label}
                 </Text>
               </Pressable>
@@ -594,20 +653,31 @@ export default function CampaignDetailPage() {
                           flex: 1,
                           backgroundColor: palette.cardBg,
                           borderRadius: 20,
-                          paddingVertical: 14,
+                          paddingVertical: 16,
                           paddingHorizontal: 8,
                           alignItems: 'center',
-                          gap: 5,
-                          borderWidth: 1,
-                          borderColor: palette.borderColor,
+                          gap: 6,
+                          borderWidth: 0.5,
+                          borderColor: 'rgba(74,18,160,0.12)',
                           ...shadows.card,
                         }}
                       >
-                        <MaterialCommunityIcons name={cell.icon} size={16} color={palette.textMuted} />
-                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '800', color: palette.text, letterSpacing: -0.5 }}>
-                          {cell.value}
-                        </Text>
-                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, textAlign: 'center' }}>
+                        <MaterialCommunityIcons name={cell.icon} size={16} color={colors.primary} style={{ opacity: 0.6 }} />
+                        <CountUp
+                          value={Number(cell.value) || 0}
+                          duration={600}
+                          style={{
+                            fontFamily: typography.fontFamily,
+                            fontSize: 28,
+                            fontWeight: '800',
+                            color: palette.text,
+                            letterSpacing: -1,
+                            padding: 0,
+                            minWidth: 28,
+                            textAlign: 'center',
+                          }}
+                        />
+                        <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 10, fontWeight: '300', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' }}>
                           {cell.label}
                         </Text>
                       </View>
@@ -905,5 +975,6 @@ export default function CampaignDetailPage() {
         </>
       ) : null}
     </Screen>
+    </>
   )
 }

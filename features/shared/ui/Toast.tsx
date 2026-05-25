@@ -36,7 +36,7 @@ function ToastRow({ item, onDone }: { item: ToastItem; onDone: (id: number) => v
 
   return (
     <Animated.View
-      entering={FadeInDown.springify().damping(18).stiffness(200)}
+      entering={FadeInDown.springify().damping(22).stiffness(200).mass(0.8)}
       exiting={FadeOutDown.duration(200)}
       style={{
         flexDirection: 'row',

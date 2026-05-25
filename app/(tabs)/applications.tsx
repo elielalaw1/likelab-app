@@ -1,6 +1,7 @@
 import { useAcceptInvitation, useApplications, useDeclineInvitation } from '@/features/applications/hooks'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
 import { shadows, typography } from '@/features/core/theme'
+import { springs } from '@/features/motion/springs'
 import { useTheme } from '@/features/core/useTheme'
 import { CreatorInvitation } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
@@ -293,16 +294,8 @@ export default function ApplicationsPage() {
     const targetX = metric.x + leftInset
     const targetWidth = Math.max(0, metric.width - leftInset - rightInset)
 
-    bubbleX.value = withSpring(targetX, {
-      damping: 18,
-      stiffness: 210,
-      mass: 0.7,
-    })
-    bubbleWidth.value = withSpring(targetWidth, {
-      damping: 18,
-      stiffness: 210,
-      mass: 0.7,
-    })
+    bubbleX.value = withSpring(targetX, springs.balanced)
+    bubbleWidth.value = withSpring(targetWidth, springs.balanced)
     bubbleScale.value = withSequence(withTiming(1.06, { duration: 120 }), withTiming(1, { duration: 180 }))
   }, [activeFilter, bubbleScale, bubbleWidth, bubbleX, tabMetrics])
 

@@ -1,8 +1,8 @@
-import { Animated, Easing, Linking, Pressable, Text, View } from 'react-native'
+import { Alert, Animated, Easing, Linking, Pressable, Text, View } from 'react-native'
 import { useEffect, useRef } from 'react'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { CreatorProfile } from '@/features/core/types'
 import { countryFlag } from '@/features/core/format'
 import { formatCountyLabel } from '@/features/profile/location-data'
@@ -10,6 +10,7 @@ import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
+import { CountUp } from '@/features/motion/springs'
 
 type Props = {
   profile: CreatorProfile
@@ -79,20 +80,32 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
         </Pressable>
 
         <View style={{ alignItems: 'center', gap: 3 }}>
-          <Text style={{ fontFamily: typography.fontFamily, color: palette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.32 }}>
-            {profile.displayName || 'Creator'}
-          </Text>
-
-          <View style={{ gap: 6, alignItems: 'center', marginTop: 2, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {profile.tiktokHandle ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ fontFamily: typography.fontFamily, color: palette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.32 }}>
+              {profile.displayName || 'Creator'}
+            </Text>
+            {profile.reviewStatus === 'approved' && profile.completionPercentage >= 100 ? (
               <Pressable
-                onPress={() => Linking.openURL(`https://tiktok.com/@${profile.tiktokHandle!.replace(/^@+/, '')}`).catch(() => {})}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
+                onPress={() =>
+                  Alert.alert(
+                    'Verifierad creator',
+                    'Ditt konto är granskat och godkänt av LikeLab, och din profil är 100% komplett.'
+                  )
+                }
+                hitSlop={8}
               >
-                <Ionicons name="logo-tiktok" size={13} color="#fff" />
-                <Text style={{ fontFamily: typography.fontFamily, color: '#fff', fontSize: 12, fontWeight: '700' }}>@{profile.tiktokHandle.replace(/^@+/, '')}</Text>
+                <MaterialCommunityIcons name="shield-check" size={20} color="#1DA1F2" />
               </Pressable>
             ) : null}
+          </View>
+
+          {profile.tiktokBio ? (
+            <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 18, marginTop: 2 }}>
+              {profile.tiktokBio}
+            </Text>
+          ) : null}
+
+          <View style={{ gap: 6, alignItems: 'center', marginTop: 2, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
             {profile.instagramHandle ? (
               <Pressable
                 onPress={() => Linking.openURL(`https://instagram.com/${profile.instagramHandle!.replace(/^@+/, '')}`).catch(() => {})}
@@ -104,46 +117,60 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
                 </Text>
               </Pressable>
             ) : null}
+            {(profile.tiktokHandle || profile.tiktokConnected) ? (() => {
+              const rawHandle = profile.tiktokHandle?.replace(/^@+/, '') ?? ''
+              const handleIsUrl = /^https?:\/\//i.test(rawHandle)
+              const targetUrl = profile.tiktokProfileUrl
+                ?? (handleIsUrl ? rawHandle : rawHandle ? `https://tiktok.com/@${rawHandle}` : undefined)
+              const label = !handleIsUrl && rawHandle ? `@${rawHandle}` : 'View on TikTok'
+              return (
+                <Pressable
+                  onPress={() => targetUrl ? Linking.openURL(targetUrl).catch(() => {}) : undefined}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
+                >
+                  <FontAwesome5 name="tiktok" size={12} color="#fff" />
+                  <Text style={{ fontFamily: typography.fontFamily, color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                    {label}
+                  </Text>
+                  {profile.tiktokVerified ? (
+                    <MaterialCommunityIcons name="check-decagram" size={13} color="#20D5EC" />
+                  ) : null}
+                </Pressable>
+              )
+            })() : null}
           </View>
 
-          {profile.tiktokHandle && (profile.tiktokLikes != null || profile.tiktokViews != null || profile.tiktokFollowers != null) ? (
-            <View style={{ flexDirection: 'row', gap: 20, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(15,23,42,0.07)', width: '100%', justifyContent: 'center' }}>
-              {profile.tiktokLikes != null ? (
-                <View style={{ alignItems: 'center', gap: 2 }}>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', color: palette.text, letterSpacing: -0.3 }}>
-                    {profile.tiktokLikes}
-                  </Text>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                    Likes
-                  </Text>
+          {profile.tiktokConnected && (profile.tiktokFollowers != null || profile.tiktokFollowing != null || profile.tiktokLikes != null || profile.tiktokVideoCount != null) ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(15,23,42,0.07)', width: '100%', justifyContent: 'center' }}>
+              {[
+                { label: 'Followers', value: profile.tiktokFollowers },
+                { label: 'Following', value: profile.tiktokFollowing },
+                { label: 'Likes', value: profile.tiktokLikes },
+                { label: 'Videos', value: profile.tiktokVideoCount },
+              ].filter((s) => s.value != null).map((stat, i, arr) => (
+                <View key={stat.label} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ alignItems: 'center', gap: 4, paddingHorizontal: 16 }}>
+                    <CountUp
+                      value={Number(stat.value) || 0}
+                      duration={600}
+                      style={{
+                        fontFamily: typography.fontFamily,
+                        fontSize: 28,
+                        fontWeight: '800',
+                        color: palette.text,
+                        letterSpacing: -1,
+                        padding: 0,
+                        textAlign: 'center',
+                        minWidth: 24,
+                      }}
+                    />
+                    <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 11, fontWeight: '300', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                      {stat.label}
+                    </Text>
+                  </View>
+                  {i < arr.length - 1 ? <View style={{ width: 0.5, height: 36, backgroundColor: 'rgba(0,0,0,0.12)' }} /> : null}
                 </View>
-              ) : null}
-              {profile.tiktokLikes != null && (profile.tiktokViews != null || profile.tiktokFollowers != null) ? (
-                <View style={{ width: 1, backgroundColor: 'rgba(15,23,42,0.07)', alignSelf: 'stretch' }} />
-              ) : null}
-              {profile.tiktokViews != null ? (
-                <View style={{ alignItems: 'center', gap: 2 }}>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', color: palette.text, letterSpacing: -0.3 }}>
-                    {profile.tiktokViews}
-                  </Text>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                    Views
-                  </Text>
-                </View>
-              ) : null}
-              {profile.tiktokViews != null && profile.tiktokFollowers != null ? (
-                <View style={{ width: 1, backgroundColor: 'rgba(15,23,42,0.07)', alignSelf: 'stretch' }} />
-              ) : null}
-              {profile.tiktokFollowers != null ? (
-                <View style={{ alignItems: 'center', gap: 2 }}>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', color: palette.text, letterSpacing: -0.3 }}>
-                    {profile.tiktokFollowers}
-                  </Text>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                    Followers
-                  </Text>
-                </View>
-              ) : null}
+              ))}
             </View>
           ) : null}
           {profile.primaryCategory ? (

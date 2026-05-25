@@ -1,4 +1,5 @@
 import { useTheme } from '@/features/core/useTheme'
+import { springs } from '@/features/motion/springs'
 import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
@@ -82,7 +83,7 @@ function TabIcon({ focused, name }: { focused: boolean; name: string }) {
 
   useEffect(() => {
     progress.value = focused
-      ? withSpring(1, { damping: 13, stiffness: 300, mass: 0.65 })
+      ? withSpring(1, springs.snappy)
       : withTiming(0, { duration: 170 })
   }, [focused, progress])
 
@@ -95,7 +96,7 @@ function TabIcon({ focused, name }: { focused: boolean; name: string }) {
     ],
   }))
   const activeStyle = useAnimatedStyle(() => ({ opacity: progress.value }))
-  const inactiveStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }))
+  const inactiveStyle = useAnimatedStyle(() => ({ opacity: (1 - progress.value) * 0.55 }))
 
   return (
     <Animated.View style={[{ width: 24, height: 24 }, containerStyle]}>
@@ -166,7 +167,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
     const center = activeKey ? tabCenters[activeKey] : undefined
     if (typeof center !== 'number' || !bubbleInitialized.current) return
     const target = center - bubbleWidth / 2
-    bubbleLeft.value = withSpring(target, { damping: 20, stiffness: 160, mass: 0.8 })
+    bubbleLeft.value = withSpring(target, springs.snappy)
     bubbleScale.value = withSequence(withTiming(1.1, { duration: 100 }), withTiming(1, { duration: 200 }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeKey])

@@ -1,4 +1,4 @@
-export const FLOATING_TAB_BAR_HEIGHT = 68
+export const FLOATING_TAB_BAR_HEIGHT = 72
 
 export function getFloatingTabBarBottomOffset(insetBottom: number) {
   return Math.max(insetBottom, 10) + 4
