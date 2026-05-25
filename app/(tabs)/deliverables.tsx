@@ -86,10 +86,10 @@ export default function DeliverablesPage() {
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
-        <Text style={{ fontSize: 42, fontWeight: '300', color: palette.textMuted, fontFamily: typography.fontFamilyLight, letterSpacing: -1.5, lineHeight: 46 }}>
+        <Text style={{ fontSize: 42, fontWeight: '300', color: 'rgba(28,28,30,0.35)', fontFamily: typography.fontFamilyLight, letterSpacing: -1.5, lineHeight: 44 }}>
           My
         </Text>
-        <Text style={{ fontSize: 42, fontWeight: '800', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -1.5, lineHeight: 46 }}>
+        <Text style={{ fontSize: 42, fontWeight: '800', color: '#1C1C1E', fontFamily: typography.fontFamily, letterSpacing: -1.5, lineHeight: 44 }}>
           projects
         </Text>
       </Animated.View>

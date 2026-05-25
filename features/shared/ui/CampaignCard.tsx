@@ -4,8 +4,9 @@ import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { Campaign } from '@/features/core/types'
 import { useEffect, useState } from 'react'
 import { formatCampaignGoal, formatDateRange } from '@/features/core/format'
-import { glass, radii, shadows, spacing, typography } from '@/features/core/theme'
+import { radii, shadows, spacing, typography } from '@/features/core/theme'
 import { BlurView } from 'expo-blur'
+import { GlassCard } from '@/features/shared/ui/GlassCard'
 import { useTheme } from '@/features/core/useTheme'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
@@ -145,15 +146,9 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
       </View>
     </View>
   ) : (
-    <View
-      style={{
-        backgroundColor: 'transparent',
-        borderRadius: radii.card,
-        borderWidth: hasUrgentDeliverables ? 2 : 0.5,
-        borderColor: hasUrgentDeliverables ? '#EF4444' : 'rgba(255,255,255,0.9)',
-        overflow: 'hidden',
-        ...shadows.card,
-      }}
+    <GlassCard
+      radius={radii.card}
+      style={hasUrgentDeliverables ? { borderWidth: 2, borderColor: '#EF4444' } : undefined}
     >
       {/* Cover image */}
       <View style={{ height: 170, backgroundColor: palette.neutralBg }}>
@@ -201,8 +196,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
         ) : null}
       </View>
 
-      <BlurView intensity={glass.blurIntensityCard} tint="light" style={{ borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.9)' }}>
-      <View style={{ padding: spacing.lg, gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.78)' }}>
+      <View style={{ padding: 13, gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.55)', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,1)' }}>
         {/* Title + tap hint */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text
@@ -239,17 +233,25 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); handleApply() }}
             style={{
-              borderRadius: radii.button,
+              borderRadius: 14,
               overflow: 'hidden',
               marginTop: 4,
+              shadowColor: '#000',
+              shadowOpacity: 0.25,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
             }}
           >
+            <BlurView intensity={16} tint="dark" style={{ borderRadius: 14, overflow: 'hidden' }}>
             <View style={{
-              backgroundColor: applyState === 'applied' ? '#16A34A' : applyState === 'blocked' ? '#EF4444' : glass.darkButton,
+              backgroundColor: applyState === 'applied' ? 'rgba(22,163,74,0.92)' : applyState === 'blocked' ? 'rgba(239,68,68,0.92)' : 'rgba(22,22,26,0.88)',
               borderRadius: 14,
               borderWidth: 0.5,
-              borderColor: 'rgba(255,255,255,0.1)',
-              paddingVertical: 16,
+              borderColor: 'rgba(255,255,255,0.14)',
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255,255,255,0.22)',
+              paddingVertical: 15,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -278,16 +280,18 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
                 </>
               )}
             </View>
+            </BlurView>
           </Pressable>
           </Animated.View>
           </View>
         ) : null}
+      </View>
 
-        {/* Brand — bottom */}
-        <Pressable
-          onPress={(e) => { e.stopPropagation?.(); if (hasSocials) setShowBrandPopup(true) }}
-          style={{ flexDirection: 'row', gap: 10, alignItems: 'center', borderTopWidth: 1, borderColor: palette.borderSoft, paddingTop: 12, marginTop: 4 }}
-        >
+      {/* Brand — separate glass row */}
+      <Pressable
+        onPress={(e) => { e.stopPropagation?.(); if (hasSocials) setShowBrandPopup(true) }}
+        style={{ flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.45)', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.8)', paddingVertical: 10, paddingHorizontal: 13 }}
+      >
           <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={36} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
@@ -299,13 +303,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               </Text>
             ) : null}
           </View>
-          {hasSocials ? (
-            <MaterialCommunityIcons name="chevron-right" size={18} color={palette.textMuted} />
-          ) : null}
-        </Pressable>
-      </View>
-      </BlurView>
-    </View>
+        {hasSocials ? (
+          <MaterialCommunityIcons name="chevron-right" size={18} color={palette.textMuted} />
+        ) : null}
+      </Pressable>
+    </GlassCard>
   )
 
   const brandPopup = (
