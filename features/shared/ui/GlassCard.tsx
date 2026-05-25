@@ -15,24 +15,13 @@ export function GlassCard({ children, style, intensity = 28, strong = false, rad
     <BlurView
       intensity={intensity}
       tint="light"
-      style={[
-        {
-          borderRadius: radius,
-          overflow: 'hidden',
-          shadowColor: '#000',
-          shadowOpacity: 0.09,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 5,
-        },
-        style,
-      ]}
+      style={[styles.blur, { borderRadius: radius }, strong ? styles.shadowStrong : styles.shadow, style]}
     >
       <View
         style={[
           styles.inner,
           { borderRadius: radius },
-          strong ? styles.innerStrong : styles.innerDefault,
+          strong ? styles.innerStrong : null,
         ]}
       >
         {children}
@@ -42,13 +31,32 @@ export function GlassCard({ children, style, intensity = 28, strong = false, rad
 }
 
 const styles = StyleSheet.create({
+  blur: {
+    overflow: 'hidden',
+  },
   inner: {
     flex: 1,
-    borderTopWidth: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderTopWidth: 2,
     borderTopColor: 'rgba(255,255,255,1)',
     borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,1)',
   },
-  innerDefault: { backgroundColor: 'rgba(255,255,255,0.62)' },
-  innerStrong: { backgroundColor: 'rgba(255,255,255,0.72)' },
+  innerStrong: {
+    backgroundColor: 'rgba(255,255,255,0.88)',
+  },
+  shadow: {
+    shadowColor: '#6040A0',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.13,
+    shadowRadius: 28,
+    elevation: 12,
+  },
+  shadowStrong: {
+    shadowColor: '#5030A0',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.15,
+    shadowRadius: 36,
+    elevation: 16,
+  },
 })

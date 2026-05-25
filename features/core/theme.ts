@@ -152,8 +152,8 @@ export const glass = {
   blurIntensityTabBar: 80,
   blurIntensitySubtle: 40,
   // ─── v1.3 tightened glass tokens (Wallpaper + GlassCard system)
-  cardBg:           'rgba(255,255,255,0.62)',
-  cardBgStrong:     'rgba(255,255,255,0.72)',
+  cardBg:           'rgba(255,255,255,0.82)',
+  cardBgStrong:     'rgba(255,255,255,0.88)',
   cardBorder:       'rgba(255,255,255,1)',
   cardBorderStrong: 'rgba(255,255,255,1)',
   darkBg:           'rgba(28,28,30,0.84)',
@@ -163,6 +163,15 @@ export const glass = {
   blurCard:         28,
   blurButton:       12,
   blurTabBar:       50,
+  // ─── v1.4 purple-tinted shadow tokens
+  shadowColor:      '#6040A0',
+  shadowOpacity:    0.13,
+  shadowRadius:     28,
+  shadowOffsetY:    10,
+  shadowColorSm:    '#6040A0',
+  shadowOpacitySm:  0.10,
+  shadowRadiusSm:   16,
+  shadowOffsetYSm:  6,
 }
 
 export const screenGradients = {
@@ -179,11 +188,11 @@ export const gradients = {
 
 export const shadows = {
   card: {
-    shadowColor: '#000',
-    shadowOpacity: 0.09,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    shadowColor: '#6040A0',
+    shadowOpacity: 0.13,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
   },
   navbar: {
     shadowColor: '#000',
@@ -200,11 +209,11 @@ export const shadows = {
     elevation: 2,
   },
   deliverable: {
-    shadowColor: '#000',
-    shadowOpacity: 0.09,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    shadowColor: '#6040A0',
+    shadowOpacity: 0.10,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   floatingGate: {
     shadowColor: '#000',

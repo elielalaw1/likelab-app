@@ -142,7 +142,7 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
           </View>
 
           {profile.tiktokConnected && (profile.tiktokFollowers != null || profile.tiktokFollowing != null || profile.tiktokLikes != null || profile.tiktokVideoCount != null) ? (
-            <GlassCard style={{ marginTop: 8, width: '100%' }} intensity={24} radius={16}>
+            <GlassCard style={{ marginTop: 8, width: '100%' }} intensity={24} radius={16} strong>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0, paddingVertical: 12, width: '100%', justifyContent: 'center' }}>
               {[
                 { label: 'Followers', value: profile.tiktokFollowers },
@@ -170,7 +170,7 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
                       {stat.label}
                     </Text>
                   </View>
-                  {i < arr.length - 1 ? <View style={{ width: 0.5, height: 36, backgroundColor: 'rgba(255,255,255,0.6)' }} /> : null}
+                  {i < arr.length - 1 ? <View style={{ width: 0.5, height: 36, backgroundColor: 'rgba(255,255,255,0.7)' }} /> : null}
                 </View>
               ))}
             </View>

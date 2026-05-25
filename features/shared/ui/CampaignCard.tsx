@@ -202,7 +202,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
       </View>
 
       <BlurView intensity={glass.blurIntensityCard} tint="light" style={{ borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.9)' }}>
-      <View style={{ padding: spacing.lg, gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.62)' }}>
+      <View style={{ padding: spacing.lg, gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.78)' }}>
         {/* Title + tap hint */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text
