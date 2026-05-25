@@ -188,11 +188,11 @@ export const gradients = {
 
 export const shadows = {
   card: {
-    shadowColor: '#6040A0',
-    shadowOpacity: 0.13,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    shadowColor: '#3A1F7A',
+    shadowOpacity: 0.22,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 16,
   },
   navbar: {
     shadowColor: '#000',
@@ -209,11 +209,11 @@ export const shadows = {
     elevation: 2,
   },
   deliverable: {
-    shadowColor: '#6040A0',
-    shadowOpacity: 0.10,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    shadowColor: '#3A1F7A',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
   },
   floatingGate: {
     shadowColor: '#000',
