@@ -8,7 +8,7 @@ import { useTheme } from '@/features/core/useTheme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
 
-const topLogo = require('@/assets/images/toplikelablogo.png')
+const topLogo = require('@/assets/images/likelablogonew.png')
 const easterEggGif = require('@/assets/images/easter-egg.gif')
 const EASTER_EGG_TAPS = 15
 const { width, height } = Dimensions.get('window')
@@ -66,7 +66,7 @@ export function AppHeader() {
         </Pressable>
       </Modal>
       <Pressable onPress={handleLogoPress} hitSlop={8}>
-        <Image source={topLogo} style={{ width: 70, height: 70 }} resizeMode="contain" />
+        <Image source={topLogo} style={{ width: 44, height: 44 }} resizeMode="contain" />
       </Pressable>
 
       <Pressable onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
