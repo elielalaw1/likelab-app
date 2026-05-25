@@ -11,6 +11,7 @@ import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { CountUp } from '@/features/motion/springs'
+import { GlassCard } from '@/features/shared/ui/GlassCard'
 
 type Props = {
   profile: CreatorProfile
@@ -141,7 +142,8 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
           </View>
 
           {profile.tiktokConnected && (profile.tiktokFollowers != null || profile.tiktokFollowing != null || profile.tiktokLikes != null || profile.tiktokVideoCount != null) ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(15,23,42,0.07)', width: '100%', justifyContent: 'center' }}>
+            <GlassCard style={{ marginTop: 8, width: '100%' }} intensity={24} radius={16}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0, paddingVertical: 12, width: '100%', justifyContent: 'center' }}>
               {[
                 { label: 'Followers', value: profile.tiktokFollowers },
                 { label: 'Following', value: profile.tiktokFollowing },
@@ -168,10 +170,11 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
                       {stat.label}
                     </Text>
                   </View>
-                  {i < arr.length - 1 ? <View style={{ width: 0.5, height: 36, backgroundColor: 'rgba(0,0,0,0.12)' }} /> : null}
+                  {i < arr.length - 1 ? <View style={{ width: 0.5, height: 36, backgroundColor: 'rgba(255,255,255,0.6)' }} /> : null}
                 </View>
               ))}
             </View>
+            </GlassCard>
           ) : null}
           {profile.primaryCategory ? (
             <View style={{ marginTop: 2, flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>

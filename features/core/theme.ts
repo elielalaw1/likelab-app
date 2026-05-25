@@ -151,6 +151,18 @@ export const glass = {
   blurIntensityCard: 55,
   blurIntensityTabBar: 80,
   blurIntensitySubtle: 40,
+  // ─── v1.3 tightened glass tokens (Wallpaper + GlassCard system)
+  cardBg:           'rgba(255,255,255,0.58)',
+  cardBgStrong:     'rgba(255,255,255,0.68)',
+  cardBorder:       'rgba(255,255,255,0.85)',
+  cardBorderStrong: 'rgba(255,255,255,0.92)',
+  darkBg:           'rgba(28,28,30,0.84)',
+  darkBorder:       'rgba(255,255,255,0.10)',
+  tabBarBg:         'rgba(255,255,255,0.60)',
+  tabBarBorder:     'rgba(255,255,255,0.90)',
+  blurCard:         28,
+  blurButton:       12,
+  blurTabBar:       50,
 }
 
 export const screenGradients = {

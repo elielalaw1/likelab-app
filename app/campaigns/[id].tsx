@@ -555,12 +555,12 @@ export default function CampaignDetailPage() {
                   top: 9,
                   height: 60,
                   borderRadius: 10,
-                  backgroundColor: 'rgba(255,255,255,0.82)',
+                  backgroundColor: 'rgba(255,255,255,0.90)',
                   borderWidth: 0.5,
-                  borderColor: 'rgba(255,255,255,0.95)',
+                  borderColor: 'rgba(255,255,255,0.98)',
                   shadowColor: '#000',
-                  shadowOpacity: 0.08,
-                  shadowRadius: 8,
+                  shadowOpacity: 0.06,
+                  shadowRadius: 6,
                   shadowOffset: { width: 0, height: 2 },
                 },
                 tabBubbleStyle,
@@ -580,7 +580,7 @@ export default function CampaignDetailPage() {
                 }}
                 style={{ flex: 1, minHeight: 66, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}
               >
-                <MaterialCommunityIcons name={tab.icon} size={20} color={activeTab === tab.key ? glass.darkText : palette.textMuted} />
+                <MaterialCommunityIcons name={tab.icon} size={20} color={activeTab === tab.key ? '#1C1C1E' : palette.textMuted} />
                 <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: activeTab === tab.key ? '700' : '400', color: activeTab === tab.key ? glass.darkText : palette.textMuted, textAlign: 'center' }}>
                   {tab.label}
                 </Text>

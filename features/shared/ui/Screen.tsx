@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { spacing } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
+import { WallpaperBackground } from '@/features/shared/ui/WallpaperBackground'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { getFloatingTabBarSpace } from '@/features/navigation/floatingTabBar.constants'
 import { useFocusEffect } from '@react-navigation/native'
@@ -23,9 +24,10 @@ type Props = {
   scrollRef?: RefObject<ScrollView | null>
   onRefresh?: () => Promise<void>
   gradient?: GradientSpec
+  wallpaper?: boolean
 }
 
-export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient }: Props) {
+export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper }: Props) {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { reportScroll, setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
@@ -46,9 +48,11 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
     try { await onRefresh() } finally { setRefreshing(false) }
   }, [onRefresh])
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }}>
-      {gradient ? (
+  const safeBg = wallpaper ? 'transparent' : palette.bg
+
+  const inner = (
+    <SafeAreaView style={{ flex: 1, backgroundColor: safeBg }}>
+      {gradient && !wallpaper ? (
         <LinearGradient
           pointerEvents="none"
           colors={gradient.colors as never}
@@ -80,4 +84,9 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
       {overlay}
     </SafeAreaView>
   )
+
+  if (wallpaper) {
+    return <WallpaperBackground>{inner}</WallpaperBackground>
+  }
+  return inner
 }

@@ -57,7 +57,7 @@ function FilterTab({
       <Text
         numberOfLines={1}
         style={{
-          color: active ? palette.text : palette.textMuted,
+          color: active ? 'rgba(255,255,255,0.95)' : 'rgba(28,28,30,0.45)',
           fontFamily: typography.fontFamily,
           fontSize: 11,
           fontWeight: '700',
@@ -368,37 +368,17 @@ export default function ApplicationsPage() {
                 top: 5,
                 height: 34,
                 borderRadius: 16,
-                overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.86)',
-                shadowColor: 'rgba(109,40,217,1)',
-                shadowOpacity: 0.18,
-                shadowRadius: 14,
-                shadowOffset: { width: 0, height: 4 },
+                backgroundColor: 'rgba(28,28,30,0.84)',
+                borderWidth: 0.5,
+                borderColor: 'rgba(255,255,255,0.10)',
+                shadowColor: '#000',
+                shadowOpacity: 0.10,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
               },
               bubbleStyle,
             ]}
-          >
-            <BlurView tint="light" intensity={48} style={{ position: 'absolute', inset: 0 }} />
-            <LinearGradient
-              colors={['rgba(255,255,255,0.72)', 'rgba(239,233,255,0.52)', 'rgba(228,246,255,0.32)']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={{ flex: 1, borderRadius: 18 }}
-            />
-            <LinearGradient
-              colors={['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']}
-              start={{ x: 0.08, y: 0.02 }}
-              end={{ x: 0.88, y: 0.72 }}
-              style={{ position: 'absolute', inset: 0, borderRadius: 18 }}
-            />
-            <LinearGradient
-              colors={['rgba(139,92,246,0.16)', 'rgba(56,189,248,0.1)', 'rgba(255,255,255,0.02)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ position: 'absolute', inset: 0, borderRadius: 18 }}
-            />
-          </Animated.View>
+          />
           <FilterTab label="All" active={activeFilter === 'all'} onPress={() => setActiveFilter('all')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, all: { x, width } }))} />
           <FilterTab label="Accepted" active={activeFilter === 'accepted'} onPress={() => setActiveFilter('accepted')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, accepted: { x, width } }))} />
           <FilterTab label="Pending" active={activeFilter === 'pending'} onPress={() => setActiveFilter('pending')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, pending: { x, width } }))} />

@@ -38,21 +38,21 @@ export function LiquidButton({
   }
 
   const toneBorder: Record<Tone, string> = {
-    primary: 'transparent',
+    primary: 'rgba(255,255,255,0.10)',
     neutral: 'rgba(255,255,255,0.38)',
     success: 'rgba(167,243,208,0.9)',
     danger: 'rgba(254,202,202,0.9)',
   }
 
   const toneFillTop: Record<Tone, string> = {
-    primary: colors.foreground,
+    primary: 'rgba(28,28,30,0.84)',
     neutral: 'rgba(255,255,255,0.24)',
     success: 'rgba(236,253,245,0.72)',
     danger: 'rgba(254,242,242,0.72)',
   }
 
   const toneFillBottom: Record<Tone, string> = {
-    primary: colors.foreground,
+    primary: 'rgba(28,28,30,0.84)',
     neutral: 'rgba(255,255,255,0.12)',
     success: 'rgba(220,252,231,0.42)',
     danger: 'rgba(254,226,226,0.42)',
@@ -96,7 +96,9 @@ export function LiquidButton({
         style,
       ]}
     >
-      {tone === 'primary' ? null : <BlurView tint="light" intensity={42} style={{ position: 'absolute', inset: 0 }} />}
+      {tone === 'primary'
+        ? <BlurView tint="dark" intensity={12} style={{ position: 'absolute', inset: 0 }} />
+        : <BlurView tint="light" intensity={42} style={{ position: 'absolute', inset: 0 }} />}
       <LinearGradient
         colors={[toneFillTop[tone], toneFillBottom[tone]]}
         start={{ x: 0.5, y: 0 }}

@@ -96,12 +96,12 @@ function TabIcon({ focused, name }: { focused: boolean; name: string }) {
     ],
   }))
   const activeStyle = useAnimatedStyle(() => ({ opacity: progress.value }))
-  const inactiveStyle = useAnimatedStyle(() => ({ opacity: (1 - progress.value) * 0.55 }))
+  const inactiveStyle = useAnimatedStyle(() => ({ opacity: (1 - progress.value) * 0.38 }))
 
   return (
     <Animated.View style={[{ width: 24, height: 24 }, containerStyle]}>
       <Animated.View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, activeStyle]}>
-        <MaterialCommunityIcons name={entry?.active || 'circle'} size={23} color={palette.text} />
+        <MaterialCommunityIcons name={entry?.active || 'circle'} size={23} color="#1C1C1E" />
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, inactiveStyle]}>
         <MaterialCommunityIcons name={entry?.inactive || 'circle-outline'} size={22} color={palette.textMuted} />
@@ -223,12 +223,12 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
     >
       <BlurView
         tint="light"
-        intensity={glass.blurIntensityTabBar}
+        intensity={glass.blurTabBar}
         style={{ position: 'absolute', inset: 0 }}
       />
       <View
         pointerEvents="none"
-        style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.55)' }}
+        style={{ position: 'absolute', inset: 0, backgroundColor: glass.tabBarBg }}
       />
       <Animated.View
         pointerEvents="none"

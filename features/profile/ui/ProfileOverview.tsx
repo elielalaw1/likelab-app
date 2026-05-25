@@ -1,5 +1,5 @@
 import { useApplications } from '@/features/applications/hooks'
-import { radii, screenGradients, typography } from '@/features/core/theme'
+import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -61,7 +61,7 @@ export function ProfileOverview() {
   }
 
   return (
-    <Screen gradient={screenGradients.profile}>
+    <Screen wallpaper>
       <AppHeader />
 
       {profileLoading ? <ActivityIndicator color={colors.primary} /> : null}

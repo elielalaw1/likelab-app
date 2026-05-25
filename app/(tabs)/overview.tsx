@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { screenGradients, typography } from '@/features/core/theme'
+import { typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useApplyToCampaign, useCampaigns } from '@/features/campaigns/hooks'
 import { useDeliverables } from '@/features/deliverables/hooks'
@@ -73,7 +73,7 @@ export default function ProjectsPage() {
   const isGrid = viewMode === 'grid'
 
   return (
-    <Screen onRefresh={onRefresh} scrollRef={scrollRef} gradient={screenGradients.discover}>
+    <Screen onRefresh={onRefresh} scrollRef={scrollRef} wallpaper>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
@@ -102,7 +102,9 @@ export default function ProjectsPage() {
               width: 36,
               height: 36,
               borderRadius: 12,
-              backgroundColor: isGrid ? colors.primary : 'rgba(15,23,42,0.06)',
+              backgroundColor: isGrid ? 'rgba(28,28,30,0.84)' : 'rgba(255,255,255,0.50)',
+              borderWidth: 0.5,
+              borderColor: isGrid ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.80)',
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -110,7 +112,7 @@ export default function ProjectsPage() {
             <MaterialCommunityIcons
               name={isGrid ? 'view-list-outline' : 'view-grid-outline'}
               size={18}
-              color={isGrid ? '#fff' : palette.textMuted}
+              color={isGrid ? 'rgba(255,255,255,0.95)' : 'rgba(28,28,30,0.55)'}
             />
           </Pressable>
         </View>
