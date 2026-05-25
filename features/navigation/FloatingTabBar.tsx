@@ -228,7 +228,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
       />
       <View
         pointerEvents="none"
-        style={{ position: 'absolute', inset: 0, backgroundColor: glass.tabBarBg }}
+        style={{ position: 'absolute', inset: 0, backgroundColor: glass.tabBarBg, borderTopWidth: 0.5, borderTopColor: glass.tabBarBorder }}
       />
       <Animated.View
         pointerEvents="none"

@@ -15,7 +15,18 @@ export function GlassCard({ children, style, intensity = 28, strong = false, rad
     <BlurView
       intensity={intensity}
       tint="light"
-      style={[{ borderRadius: radius, overflow: 'hidden' }, style]}
+      style={[
+        {
+          borderRadius: radius,
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOpacity: 0.13,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 8,
+        },
+        style,
+      ]}
     >
       <View
         style={[
@@ -34,10 +45,10 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     borderTopWidth: 1.5,
-    borderTopColor: 'rgba(255,255,255,0.95)',
+    borderTopColor: 'rgba(255,255,255,1)',
     borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.85)',
+    borderColor: 'rgba(255,255,255,1)',
   },
-  innerDefault: { backgroundColor: 'rgba(255,255,255,0.58)' },
-  innerStrong: { backgroundColor: 'rgba(255,255,255,0.68)' },
+  innerDefault: { backgroundColor: 'rgba(255,255,255,0.82)' },
+  innerStrong: { backgroundColor: 'rgba(255,255,255,0.90)' },
 })
