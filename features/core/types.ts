@@ -58,9 +58,12 @@ export type Campaign = {
   level?: string | null
   coverImageUrl?: string | null
   brandLogoUrl?: string | null
+  brandInstagram?: string | null
+  brandTiktok?: string | null
   creatorApplicationStatus?: ApplicationStatus | null
   invitationStatus?: string | null
   preferredCreators?: string | null
+  createdAt?: string | null
 }
 
 export type CreatorProfile = {

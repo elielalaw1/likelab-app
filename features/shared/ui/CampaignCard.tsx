@@ -50,6 +50,16 @@ function canApply(campaign: Campaign): boolean {
   return !campaign.creatorApplicationStatus && !campaign.invitationStatus
 }
 
+function isNew(campaign: Campaign): boolean {
+  if (!campaign.createdAt) return false
+  const ageMs = Date.now() - new Date(campaign.createdAt).getTime()
+  return ageMs >= 0 && ageMs < 7 * 24 * 60 * 60 * 1000
+}
+
+function brandVerified(campaign: Campaign): boolean {
+  return !!(campaign.brandInstagram && campaign.brandTiktok)
+}
+
 export function CampaignCard({ campaign, onPress, onApply, badge, compact, index = 0 }: Props) {
   'use no memo'
   const { colors, palette } = useTheme()
@@ -197,6 +207,41 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
       </View>
 
       <View style={{ padding: 13, gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.55)', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,1)' }}>
+        {/* Premium meta-row */}
+        {(() => {
+          const open = canApply(campaign) && !campaign.invitationStatus
+          const inviteOnly = !!campaign.invitationStatus
+          const fresh = isNew(campaign)
+          const verified = brandVerified(campaign)
+          if (!open && !inviteOnly && !fresh && !verified) return null
+          return (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              {open ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(52,199,89,0.14)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 0.5, borderColor: 'rgba(52,199,89,0.3)' }}>
+                  <View style={{ width: 5, height: 5, borderRadius: 999, backgroundColor: '#34C759' }} />
+                  <Text style={{ color: '#1F7A38', fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '700', letterSpacing: 1.4 }}>OPEN</Text>
+                </View>
+              ) : null}
+              {inviteOnly ? (
+                <View style={{ backgroundColor: 'rgba(58,31,122,0.12)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 0.5, borderColor: 'rgba(58,31,122,0.22)' }}>
+                  <Text style={{ color: '#3A1F7A', fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '700', letterSpacing: 1.4 }}>INVITE-ONLY</Text>
+                </View>
+              ) : null}
+              {fresh ? (
+                <View style={{ backgroundColor: 'rgba(8,8,12,0.92)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 }}>
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '800', letterSpacing: 1.4 }}>NEW</Text>
+                </View>
+              ) : null}
+              {verified ? (
+                <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <MaterialCommunityIcons name="check-decagram" size={13} color="#1DA1F2" />
+                  <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '700', letterSpacing: 1.0 }}>VERIFIED</Text>
+                </View>
+              ) : null}
+            </View>
+          )
+        })()}
+
         {/* Title + tap hint */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text
