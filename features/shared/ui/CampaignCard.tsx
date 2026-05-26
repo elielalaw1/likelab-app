@@ -146,12 +146,14 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
         <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700', color: palette.text, letterSpacing: -0.2 }} numberOfLines={2}>
           {campaign.title}
         </Text>
-        <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
-          <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={14} />
-          <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '500', flex: 1 }} numberOfLines={1}>
-            {campaign.brandName || 'Brand'}
-          </Text>
-        </View>
+        {(campaign.brandName || campaign.brandLogoUrl) ? (
+          <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
+            <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={14} />
+            <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '500', flex: 1 }} numberOfLines={1}>
+              {campaign.brandName}
+            </Text>
+          </View>
+        ) : null}
         {reward ? (
           <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
             <MaterialCommunityIcons name="wallet-giftcard" size={11} color={colors.primary} />
