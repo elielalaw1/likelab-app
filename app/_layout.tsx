@@ -20,6 +20,7 @@ import * as Notifications from 'expo-notifications'
 import * as SecureStore from 'expo-secure-store'
 import { NotificationsProvider } from '@/features/notifications/hooks'
 import { TikTokAuthGuard } from '@/features/auth/TikTokAuthGuard'
+import { ReconnectAutoRoute } from '@/features/auth/ReconnectAutoRoute'
 import { ToastContainer, toast } from '@/features/shared/ui/Toast'
 import { registerForPushNotificationsAsync, savePushToken } from '@/features/notifications/push'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
@@ -215,6 +216,7 @@ export default function RootLayout() {
             <NotificationsProvider>
               <PushNotificationSetup />
               <TikTokAuthGuard />
+              <ReconnectAutoRoute />
               <View style={{ flex: 1 }}>
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />
