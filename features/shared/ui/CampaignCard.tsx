@@ -220,7 +220,8 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           const inviteOnly = !!campaign.invitationStatus
           const fresh = isNew(campaign)
           const verified = brandVerified(campaign)
-          if (!open && !inviteOnly && !fresh && !verified) return null
+          const showDays = days !== null
+          if (!open && !inviteOnly && !fresh && !verified && !showDays) return null
           return (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
               {open ? (
@@ -237,6 +238,16 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               {fresh ? (
                 <View style={{ backgroundColor: 'rgba(8,8,12,0.92)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 }}>
                   <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '800', letterSpacing: 1.4 }}>NEW</Text>
+                </View>
+              ) : null}
+              {showDays ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: days <= 3 ? 'rgba(239,68,68,0.12)' : 'rgba(28,28,30,0.06)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, borderWidth: 0.5, borderColor: days <= 3 ? 'rgba(239,68,68,0.28)' : 'rgba(28,28,30,0.08)' }}>
+                  <Text style={{ color: days <= 3 ? '#B91C1C' : palette.text, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', letterSpacing: -0.2 }}>
+                    {days === 0 ? '1' : days}
+                  </Text>
+                  <Text style={{ color: days <= 3 ? '#B91C1C' : palette.textMuted, fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '700', letterSpacing: 1.4 }}>
+                    {days === 0 ? 'LAST DAY' : days === 1 ? 'DAY LEFT' : 'DAYS LEFT'}
+                  </Text>
                 </View>
               ) : null}
               {verified ? (
@@ -268,19 +279,8 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           <MaterialCommunityIcons name="chevron-right" size={20} color={palette.textMuted} />
         </View>
 
-        {/* Apply button + days remaining on same row */}
+        {/* Apply button — full width */}
         {showApply ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 4 }}>
-            {days !== null ? (
-              <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, minWidth: 56 }}>
-                <Text style={{ color: days <= 3 ? '#EF4444' : palette.text, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', lineHeight: 20, letterSpacing: -0.4 }}>
-                  {days === 0 ? '1' : days}
-                </Text>
-                <Text style={{ color: days <= 3 ? '#EF4444' : palette.textMuted, fontFamily: typography.fontFamilyLight, fontSize: 9, fontWeight: '300', textTransform: 'uppercase', letterSpacing: 1.1, marginTop: 1 }}>
-                  {days === 0 ? 'last day' : 'days left'}
-                </Text>
-              </View>
-            ) : null}
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); handleApply() }}
             onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
@@ -339,7 +339,6 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
                 </>
               )}
           </Pressable>
-          </View>
         ) : null}
       </View>
 
