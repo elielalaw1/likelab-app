@@ -342,16 +342,15 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
         ) : null}
       </View>
 
-      {/* Brand — separate glass row, only when we actually have brand data */}
-      {(campaign.brandName || campaign.brandLogoUrl) ? (
-        <Pressable
-          onPress={(e) => { e.stopPropagation?.(); if (hasSocials) brandSheetRef.current?.present() }}
-          style={{ flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.45)', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.8)', paddingVertical: 10, paddingHorizontal: 13 }}
-        >
+      {/* Brand — separate glass row */}
+      <Pressable
+        onPress={(e) => { e.stopPropagation?.(); if (hasSocials) brandSheetRef.current?.present() }}
+        style={{ flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.45)', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.8)', paddingVertical: 10, paddingHorizontal: 13 }}
+      >
           <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={36} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
-              {campaign.brandName}
+              {campaign.brandName || 'Brand'}
             </Text>
             {hasSocials ? (
               <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '500' }}>
@@ -359,11 +358,10 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               </Text>
             ) : null}
           </View>
-          {hasSocials ? (
-            <MaterialCommunityIcons name="chevron-right" size={18} color={palette.textMuted} />
-          ) : null}
-        </Pressable>
-      ) : null}
+        {hasSocials ? (
+          <MaterialCommunityIcons name="chevron-right" size={18} color={palette.textMuted} />
+        ) : null}
+      </Pressable>
     </GlassCard>
   )
 
