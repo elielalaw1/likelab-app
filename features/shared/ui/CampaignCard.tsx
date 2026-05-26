@@ -1,13 +1,15 @@
 import { Image as ExpoImage } from 'expo-image'
-import { Linking, Modal, Pressable, Text, View } from 'react-native'
-import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Pressable, Text, View } from 'react-native'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { Campaign } from '@/features/core/types'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatCampaignGoal, formatDateRange } from '@/features/core/format'
 import { radii, shadows, spacing, typography } from '@/features/core/theme'
 import { BlurView } from 'expo-blur'
 import { GlassCard } from '@/features/shared/ui/GlassCard'
 import { haptic } from '@/features/shared/haptics'
+import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { useTheme } from '@/features/core/useTheme'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
@@ -64,7 +66,7 @@ function brandVerified(campaign: Campaign): boolean {
 export function CampaignCard({ campaign, onPress, onApply, badge, compact, index = 0 }: Props) {
   'use no memo'
   const { colors, palette } = useTheme()
-  const [showBrandPopup, setShowBrandPopup] = useState(false)
+  const brandSheetRef = useRef<BottomSheetModal>(null)
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'blocked'>('idle')
   const days = daysRemaining(campaign.endDate)
   const reward = formatReward(campaign)
@@ -100,10 +102,6 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
     }
   }
 
-  function openSocial(handle: string, platform: 'instagram' | 'tiktok') {
-    const clean = handle.replace(/^@/, '')
-    Linking.openURL(platform === 'instagram' ? `https://instagram.com/${clean}` : `https://tiktok.com/@${clean}`)
-  }
 
   const content = compact ? (
     <View
@@ -338,7 +336,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
 
       {/* Brand — separate glass row */}
       <Pressable
-        onPress={(e) => { e.stopPropagation?.(); if (hasSocials) setShowBrandPopup(true) }}
+        onPress={(e) => { e.stopPropagation?.(); if (hasSocials) brandSheetRef.current?.present() }}
         style={{ flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.45)', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.8)', paddingVertical: 10, paddingHorizontal: 13 }}
       >
           <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={36} />
@@ -359,41 +357,16 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
     </GlassCard>
   )
 
-  const brandPopup = (
-    <Modal transparent animationType="fade" visible={showBrandPopup} onRequestClose={() => setShowBrandPopup(false)}>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }} onPress={() => setShowBrandPopup(false)}>
-        <Pressable style={{ backgroundColor: '#1a1a1a', borderRadius: 20, padding: 24, width: 280, gap: 16 }} onPress={() => {}}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={36} />
-            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700', fontFamily: typography.fontFamily }}>
-              {campaign.brandName || 'Brand'}
-            </Text>
-          </View>
-          {campaign.brandInstagram ? (
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14 }}
-              onPress={() => { setShowBrandPopup(false); openSocial(campaign.brandInstagram!, 'instagram') }}
-            >
-              <MaterialCommunityIcons name="instagram" size={22} color="#E1306C" />
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                {campaign.brandInstagram}
-              </Text>
-            </Pressable>
-          ) : null}
-          {campaign.brandTiktok ? (
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14 }}
-              onPress={() => { setShowBrandPopup(false); openSocial(campaign.brandTiktok!, 'tiktok') }}
-            >
-              <FontAwesome5 name="tiktok" size={20} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                {campaign.brandTiktok}
-              </Text>
-            </Pressable>
-          ) : null}
-        </Pressable>
-      </Pressable>
-    </Modal>
+  const sheet = (
+    <BrandSheet
+      ref={brandSheetRef}
+      data={{
+        brandName: campaign.brandName,
+        brandLogoUrl: campaign.brandLogoUrl,
+        brandInstagram: campaign.brandInstagram,
+        brandTiktok: campaign.brandTiktok,
+      }}
+    />
   )
 
   const wrapped = (
@@ -402,5 +375,5 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
     </Animated.View>
   )
 
-  return <>{wrapped}{brandPopup}</>
+  return <>{wrapped}{sheet}</>
 }

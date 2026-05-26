@@ -18,6 +18,8 @@ import { useTheme } from '@/features/core/useTheme'
 import { CountUp, springs } from '@/features/motion/springs'
 import { GlassCard } from '@/features/shared/ui/GlassCard'
 import { haptic } from '@/features/shared/haptics'
+import { BrandSheet } from '@/features/shared/ui/BrandSheet'
+import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -155,7 +157,7 @@ export default function CampaignDetailPage() {
   const [deliverableInputs, setDeliverableInputs] = useState<Record<string, string>>({})
   const [leaderboard, setLeaderboard] = useState<{ rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number } | null>(null)
   const [applySuccess, setApplySuccess] = useState(false)
-  const [showBrandPopup, setShowBrandPopup] = useState(false)
+  const brandSheetRef = useRef<BottomSheetModal>(null)
   const [copiedTag, setCopiedTag] = useState<string | null>(null)
   const [tabMetrics, setTabMetrics] = useState<Record<'description' | 'brief' | 'videos', { x: number; width: number }>>({
     description: { x: 0, width: 0 },
@@ -383,50 +385,17 @@ export default function CampaignDetailPage() {
     transform: [{ scale: bubbleScale.value }],
   }))
 
-  function openSocial(handle: string, platform: 'instagram' | 'tiktok') {
-    const clean = handle.replace(/^@/, '')
-    const url = platform === 'instagram'
-      ? `https://instagram.com/${clean}`
-      : `https://tiktok.com/@${clean}`
-    Linking.openURL(url)
-  }
-
   return (
     <>
-      <Modal transparent animationType="fade" visible={showBrandPopup} onRequestClose={() => setShowBrandPopup(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }} onPress={() => setShowBrandPopup(false)}>
-          <Pressable style={{ backgroundColor: '#1a1a1a', borderRadius: 20, padding: 24, width: 280, gap: 16 }} onPress={() => {}}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <BrandAvatar logoUrl={campaign?.brandLogoUrl} brandName={campaign?.brandName} size={36} />
-              <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700', fontFamily: typography.fontFamily }}>
-                {campaign?.brandName || 'Brand'}
-              </Text>
-            </View>
-            {campaign?.brandInstagram ? (
-              <Pressable
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14 }}
-                onPress={() => { setShowBrandPopup(false); openSocial(campaign.brandInstagram!, 'instagram') }}
-              >
-                <MaterialCommunityIcons name="instagram" size={22} color="#E1306C" />
-                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                  {campaign.brandInstagram}
-                </Text>
-              </Pressable>
-            ) : null}
-            {campaign?.brandTiktok ? (
-              <Pressable
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14 }}
-                onPress={() => { setShowBrandPopup(false); openSocial(campaign.brandTiktok!, 'tiktok') }}
-              >
-                <MaterialCommunityIcons name="music-note" size={22} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                  {campaign.brandTiktok}
-                </Text>
-              </Pressable>
-            ) : null}
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BrandSheet
+        ref={brandSheetRef}
+        data={campaign ? {
+          brandName: campaign.brandName,
+          brandLogoUrl: campaign.brandLogoUrl,
+          brandInstagram: campaign.brandInstagram,
+          brandTiktok: campaign.brandTiktok,
+        } : null}
+      />
       <Screen tabAware={false} overlay={stickyBar} overlayPadding={176} scrollRef={scrollRef}>
       <AppHeader />
 
@@ -489,7 +458,7 @@ export default function CampaignDetailPage() {
                 <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 22, gap: 10 }}>
                   <Pressable
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-                    onPress={() => (campaign.brandInstagram || campaign.brandTiktok) ? setShowBrandPopup(true) : undefined}
+                    onPress={() => (campaign.brandInstagram || campaign.brandTiktok) ? brandSheetRef.current?.present() : undefined}
                     disabled={!campaign.brandInstagram && !campaign.brandTiktok}
                   >
                     <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={22} />
