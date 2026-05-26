@@ -21,7 +21,7 @@ export function StatusBadge({ status }: Props) {
     reviewing: { bg: palette.successBg, text: palette.successText, label: 'ACTIVE' },
     uploaded: { bg: palette.successBg, text: palette.successText, label: 'SUBMITTED' },
     applied: { bg: palette.warningBg, text: palette.warningText, label: 'APPLIED' },
-    pending: { bg: palette.neutralBg, text: palette.neutralText, label: 'INVITED' },
+    pending: { bg: palette.warningBg, text: palette.warningText, label: 'PENDING REVIEW' },
     submitted: { bg: palette.successBg, text: palette.successText, label: 'SUBMITTED' },
     flagged: { bg: palette.dangerBg, text: palette.dangerText, label: 'FLAGGED' },
     pending_review: { bg: palette.warningBg, text: palette.warningText, label: 'UNDER REVIEW' },

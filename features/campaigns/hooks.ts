@@ -22,7 +22,10 @@ export function useCampaign(campaignId?: string) {
     queryKey: ['campaigns', campaignId],
     queryFn: () => getCampaignById(campaignId || ''),
     enabled: Boolean(campaignId),
-    ...queryPerf,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     placeholderData: (previous) => previous,
   })
 }

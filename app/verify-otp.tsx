@@ -85,11 +85,22 @@ export default function VerifyOtpPage() {
           router.replace('/login')
           return
         }
-        if (phoneRef.current) {
-          await updateCreatorProfile({ phone: phoneRef.current }).catch(() => null)
+        const pending = pendingRef.current
+        const profileUpdate: Record<string, unknown> = {}
+        if (pending?.phone) profileUpdate.phone = pending.phone
+        if (pending?.gender) profileUpdate.gender = pending.gender
+        if (pending?.age) profileUpdate.ageRange = pending.age
+        if (pending?.country) profileUpdate.country = pending.country
+        if (pending?.primaryCategory) profileUpdate.primaryCategory = pending.primaryCategory
+        if (pending?.address) profileUpdate.address = pending.address
+        if (pending?.postalCode) profileUpdate.postalCode = pending.postalCode
+        if (pending?.county) profileUpdate.county = pending.county
+        if (pending?.city) profileUpdate.city = pending.city
+        if (Object.keys(profileUpdate).length > 0) {
+          await updateCreatorProfile(profileUpdate as Parameters<typeof updateCreatorProfile>[0]).catch(() => null)
         }
       }
-      router.replace('/(tabs)/overview')
+      router.replace('/connect-tiktok')
     } catch {
       setError('Something went wrong. Try again.')
     } finally {

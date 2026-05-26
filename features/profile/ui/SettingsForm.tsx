@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { ActivityIndicator, Alert, Image, LayoutChangeEvent, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { router } from 'expo-router'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Screen } from '@/features/shared/ui/Screen'
@@ -21,6 +21,7 @@ import { ProfileCompletionCard } from '@/features/profile/ui/ProfileCompletionCa
 import { SelectPopover } from '@/features/profile/ui/SelectPopover'
 import { CATEGORY_OPTIONS, COUNTRY_TO_PHONE_CODE, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES, findCountryByValue, formatCountyLabel } from '@/features/profile/location-data'
 import { ProfileCompletionSection, getProfileCompletion } from '@/features/profile/completion'
+import { connectTikTokAccount, disconnectTikTokAccount } from '@/features/auth/tiktok'
 
 type SectionId = 'avatar' | 'account' | 'social' | 'personal' | 'location' | 'categories' | 'shipping'
 const stripHandleInput = (value: string) => value.replace(/^@+/, '')
@@ -63,6 +64,8 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
   const updateMutation = useUpdateCreatorProfile()
   const queryClient = useQueryClient()
   const [form, setForm] = useState(asForm())
+  const [connectingTikTok, setConnectingTikTok] = useState(false)
+  const [disconnectingTikTok, setDisconnectingTikTok] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
   const [deleting, setDeleting] = useState(false)
@@ -233,6 +236,52 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
     }
   }
 
+  const handleConnectTikTok = useCallback(async () => {
+    setConnectingTikTok(true)
+    try {
+      const result = await connectTikTokAccount()
+      if (result) {
+        await queryClient.refetchQueries({ queryKey: ['creator-profile'] })
+        setShowToast('TikTok connected')
+      }
+    } catch (connectError) {
+      Alert.alert(
+        'Connection failed',
+        connectError instanceof Error ? connectError.message : 'Could not connect your TikTok account. Please try again.'
+      )
+    } finally {
+      setConnectingTikTok(false)
+    }
+  }, [queryClient])
+
+  const handleDisconnectTikTok = useCallback(() => {
+    Alert.alert(
+      'Disconnect TikTok?',
+      'You will need to reconnect TikTok before you can use campaigns and deliverables again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            setDisconnectingTikTok(true)
+            try {
+              await disconnectTikTokAccount()
+              await queryClient.refetchQueries({ queryKey: ['creator-profile'] })
+            } catch (disconnectError) {
+              Alert.alert(
+                'Disconnect failed',
+                disconnectError instanceof Error ? disconnectError.message : 'Could not disconnect your TikTok account. Please try again.'
+              )
+            } finally {
+              setDisconnectingTikTok(false)
+            }
+          },
+        },
+      ],
+    )
+  }, [queryClient])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     queryClient.clear()
@@ -400,14 +449,6 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
       <View onLayout={markSectionY('social')}>
         <SectionCard title="Social">
           <ProfileField
-            label="TikTok Handle"
-            value={form.tiktokHandle}
-            placeholder="yourtiktok"
-            prefixText="@"
-            sanitizeText={stripHandleInput}
-            onChangeText={(value) => setForm((prev) => ({ ...prev, tiktokHandle: stripHandleInput(value) }))}
-          />
-          <ProfileField
             label="Instagram Handle"
             value={form.instagramHandle}
             placeholder="yourinstagram"
@@ -415,6 +456,54 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             sanitizeText={stripHandleInput}
             onChangeText={(value) => setForm((prev) => ({ ...prev, instagramHandle: stripHandleInput(value) }))}
           />
+          <Pressable
+            onPress={handleConnectTikTok}
+            disabled={connectingTikTok || disconnectingTikTok}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              paddingVertical: 12,
+              borderRadius: radii.button,
+              backgroundColor: '#000',
+              opacity: connectingTikTok || disconnectingTikTok ? 0.6 : 1,
+            }}
+          >
+            {connectingTikTok ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <FontAwesome5 name="tiktok" size={16} color="#fff" />
+            )}
+            <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: typography.sizes.button, fontWeight: '700' }}>
+              {connectingTikTok ? 'Connecting...' : data?.tiktokConnected ? 'Reconnect TikTok' : 'Connect TikTok'}
+            </Text>
+          </Pressable>
+          {data?.tiktokConnected ? (
+            <Pressable
+              onPress={handleDisconnectTikTok}
+              disabled={connectingTikTok || disconnectingTikTok}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 12,
+                borderRadius: radii.button,
+                backgroundColor: 'transparent',
+                borderWidth: 1,
+                borderColor: '#DC2626',
+                opacity: connectingTikTok || disconnectingTikTok ? 0.6 : 1,
+              }}
+            >
+              {disconnectingTikTok ? (
+                <ActivityIndicator size="small" color="#DC2626" />
+              ) : null}
+              <Text style={{ color: '#DC2626', fontFamily: typography.fontFamily, fontSize: typography.sizes.button, fontWeight: '700' }}>
+                {disconnectingTikTok ? 'Disconnecting...' : 'Disconnect TikTok'}
+              </Text>
+            </Pressable>
+          ) : null}
         </SectionCard>
       </View>
 
@@ -607,6 +696,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
           <MaterialCommunityIcons name="open-in-new" size={16} color={palette.textMuted} />
         </Pressable>
       </SectionCard>
+
 
       <Modal visible={deleteModalOpen} transparent animationType="fade" onRequestClose={() => setDeleteModalOpen(false)}>
         <Pressable onPress={() => setDeleteModalOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(10,15,30,0.3)', justifyContent: 'center', padding: 16 }}>

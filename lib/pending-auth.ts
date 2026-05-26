@@ -1,4 +1,16 @@
-type PendingAuth = { email: string; password: string; phone?: string | null }
+type PendingAuth = {
+  email: string
+  password: string
+  phone?: string | null
+  gender?: string | null
+  age?: string | null
+  country?: string | null
+  primaryCategory?: string | null
+  address?: string | null
+  postalCode?: string | null
+  county?: string | null
+  city?: string | null
+}
 
 let _pending: PendingAuth | null = null
 

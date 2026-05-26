@@ -59,6 +59,11 @@ function toStringArray(value: unknown): string[] | null {
 }
 
 function mapCampaign(row: Row): Campaign {
+  console.log('[campaign api mapCampaign]', {
+    id: row.id,
+    raw_end_date: row.end_date,
+    raw_updated_at: row.updated_at,
+  })
   return {
     id: String(row.id || ''),
     title: textValue(row, ['name']) || 'Untitled campaign',
@@ -164,19 +169,25 @@ async function getCampaignAssets(campaignIds: string[]) {
 }
 
 async function getBrandProfiles(brandIds: string[]) {
-  if (!brandIds.length) return new Map<string, { name: string; logoUrl: string | null }>()
+  if (!brandIds.length) return new Map<string, { name: string; logoUrl: string | null; instagram: string | null; tiktok: string | null }>()
 
   const { data, error } = await supabase
     .from('brand_profiles_public')
-    .select('user_id, company_name, logo_url')
+    .select('user_id, company_name, logo_url, social_links')
     .in('user_id', brandIds)
 
   if (error) throw new Error(error.message)
 
-  const map = new Map<string, { name: string; logoUrl: string | null }>()
+  const map = new Map<string, { name: string; logoUrl: string | null; instagram: string | null; tiktok: string | null }>()
   for (const row of data || []) {
     if (row.user_id) {
-      map.set(row.user_id, { name: row.company_name || '', logoUrl: (row.logo_url as string | null) ?? null })
+      const social = (row.social_links as Record<string, string> | null) ?? {}
+      map.set(row.user_id, {
+        name: row.company_name || '',
+        logoUrl: (row.logo_url as string | null) ?? null,
+        instagram: social.instagram ?? null,
+        tiktok: social.tiktok ?? null,
+      })
     }
   }
   return map
@@ -195,6 +206,8 @@ export async function enrichCampaigns(campaigns: Campaign[]) {
       coverImageUrl: assetMap.get(campaign.id) || campaign.coverImageUrl || null,
       brandName: brand?.name || null,
       brandLogoUrl: brand?.logoUrl || null,
+      brandInstagram: brand?.instagram || null,
+      brandTiktok: brand?.tiktok || null,
     }
   })
 }

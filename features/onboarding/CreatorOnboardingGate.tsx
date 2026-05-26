@@ -23,15 +23,15 @@ export function CreatorOnboardingGate() {
   let gate: ReactNode = null
 
   // Precedence:
-  // 1) Profile incomplete => show profile gate only
-  // 2) Profile complete + pending/rejected review => show review gate
-  // 3) Approved => no gate
-  if (!isLoading && isFetched && profile && !completion.isComplete) {
+  // 1) TikTok not connected => show connect gate
+  // 2) Pending/rejected review => show review gate
+  // 3) Otherwise => no gate
+  if (!isLoading && isFetched && profile && !profile.tiktokConnected) {
     gate = (
       <CreatorProfileGate
-        percentage={completion.percentage}
-        checklist={completion.checklist}
-        onCompleteProfile={() => router.push('/settings')}
+        percentage={0}
+        checklist={[{ key: 'tiktok', label: 'Connect your TikTok account', done: false }]}
+        onCompleteProfile={() => router.push('/connect-tiktok')}
       />
     )
   } else if (!isLoading && isFetched && profile && (reviewStatus === 'pending' || reviewStatus === 'rejected')) {

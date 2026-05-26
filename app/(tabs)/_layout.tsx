@@ -3,8 +3,9 @@ import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { FloatingTabBar } from '@/features/navigation/FloatingTabBar'
 import { FloatingTabBarVisibilityProvider } from '@/features/navigation/FloatingTabBarVisibility'
 import { CreatorProfileLiveSync } from '@/features/profile/CreatorProfileLiveSync'
-import { ProfileGate } from '@/features/profile/ui/ProfileGate'
 import { ProfilePendingGate } from '@/features/profile/ui/ProfilePendingGate'
+import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
+import { useCreatorProfile } from '@/features/profile/hooks'
 import { useApplicationRealtime } from '@/features/shared/hooks/useApplicationRealtime'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import * as Notifications from 'expo-notifications'
@@ -22,6 +23,14 @@ function BadgeSync() {
   useEffect(() => {
     Notifications.setBadgeCountAsync(count).catch(() => {})
   }, [count])
+  return null
+}
+
+function TikTokGuard() {
+  const { data: profile, isFetched } = useCreatorProfile()
+  if (isFetched && profile && !profile.tiktokConnected) {
+    return <Redirect href="/connect-tiktok" />
+  }
   return null
 }
 
@@ -43,6 +52,7 @@ export default function TabsLayout() {
 
   return (
     <FloatingTabBarVisibilityProvider>
+      <TikTokGuard />
       <CreatorProfileLiveSync userId={session.user.id} />
       <RealtimeSetup userId={session.user.id} />
       <BadgeSync />
@@ -62,8 +72,8 @@ export default function TabsLayout() {
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="explore" options={{ href: null }} />
       </Tabs>
-      <ProfileGate userId={session.user.id} />
       <ProfilePendingGate userId={session.user.id} />
+      <CreatorOnboardingGate />
     </FloatingTabBarVisibilityProvider>
   )
 }
