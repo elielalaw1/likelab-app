@@ -281,13 +281,24 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
                 </Text>
               </View>
             ) : null}
-          <Animated.View style={{ flex: 1 }}>
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); handleApply() }}
+            onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
             style={{
-              borderRadius: 14,
-              overflow: 'hidden',
+              flex: 1,
               marginTop: 4,
+              minHeight: 50,
+              borderRadius: 14,
+              borderWidth: 0.5,
+              borderColor: 'rgba(255,255,255,0.14)',
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255,255,255,0.22)',
+              backgroundColor: applyState === 'applied' ? 'rgba(22,163,74,0.95)' : applyState === 'blocked' ? 'rgba(239,68,68,0.95)' : 'rgba(8,8,12,0.96)',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              overflow: 'hidden',
               shadowColor: '#000',
               shadowOpacity: 0.25,
               shadowRadius: 12,
@@ -295,23 +306,6 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               elevation: 6,
             }}
           >
-            <BlurView intensity={16} tint="dark" style={{ borderRadius: 14, overflow: 'hidden' }}>
-            <View
-              onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
-              style={{
-                backgroundColor: applyState === 'applied' ? 'rgba(22,163,74,0.92)' : applyState === 'blocked' ? 'rgba(239,68,68,0.92)' : 'rgba(8,8,12,0.96)',
-                borderRadius: 14,
-                borderWidth: 0.5,
-                borderColor: 'rgba(255,255,255,0.14)',
-                borderTopWidth: 1,
-                borderTopColor: 'rgba(255,255,255,0.22)',
-                paddingVertical: 15,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                overflow: 'hidden',
-              }}>
               {applyState === 'idle' ? (
                 <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, bottom: 0, width: 100, transform: [{ skewX: '-18deg' }] }, shimmerStyle]}>
                   <LinearGradient
@@ -344,10 +338,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
                   <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
                 </>
               )}
-            </View>
-            </BlurView>
           </Pressable>
-          </Animated.View>
           </View>
         ) : null}
       </View>
