@@ -245,7 +245,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           >
             <BlurView intensity={16} tint="dark" style={{ borderRadius: 14, overflow: 'hidden' }}>
             <View style={{
-              backgroundColor: applyState === 'applied' ? 'rgba(22,163,74,0.92)' : applyState === 'blocked' ? 'rgba(239,68,68,0.92)' : 'rgba(22,22,26,0.88)',
+              backgroundColor: applyState === 'applied' ? 'rgba(22,163,74,0.92)' : applyState === 'blocked' ? 'rgba(239,68,68,0.92)' : 'rgba(8,8,12,0.96)',
               borderRadius: 14,
               borderWidth: 0.5,
               borderColor: 'rgba(255,255,255,0.14)',

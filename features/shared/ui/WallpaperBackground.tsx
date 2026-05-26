@@ -2,8 +2,8 @@ import { ReactNode } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 
-const BASE = '#F7F6FC'
-const TINT = 'rgba(96,64,160,0.05)'
+const BASE = '#EFEBF7'
+const TINT = 'rgba(58,31,122,0.10)'
 const CLEAR = 'rgba(96,64,160,0)'
 
 export function WallpaperBackground({ children }: { children: ReactNode }) {

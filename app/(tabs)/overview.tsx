@@ -102,7 +102,7 @@ export default function ProjectsPage() {
               width: 36,
               height: 36,
               borderRadius: 12,
-              backgroundColor: isGrid ? 'rgba(22,22,26,0.88)' : 'rgba(255,255,255,0.60)',
+              backgroundColor: isGrid ? 'rgba(8,8,12,0.96)' : 'rgba(255,255,255,0.60)',
               borderWidth: 0.5,
               borderColor: isGrid ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,1)',
               shadowColor: isGrid ? '#000' : '#6040A0',

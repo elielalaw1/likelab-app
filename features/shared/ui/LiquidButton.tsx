@@ -45,14 +45,14 @@ export function LiquidButton({
   }
 
   const toneFillTop: Record<Tone, string> = {
-    primary: 'rgba(28,28,30,0.84)',
+    primary: 'rgba(8,8,12,0.96)',
     neutral: 'rgba(255,255,255,0.24)',
     success: 'rgba(236,253,245,0.72)',
     danger: 'rgba(254,242,242,0.72)',
   }
 
   const toneFillBottom: Record<Tone, string> = {
-    primary: 'rgba(28,28,30,0.84)',
+    primary: 'rgba(8,8,12,0.96)',
     neutral: 'rgba(255,255,255,0.12)',
     success: 'rgba(220,252,231,0.42)',
     danger: 'rgba(254,226,226,0.42)',

@@ -368,7 +368,7 @@ export default function ApplicationsPage() {
                 top: 5,
                 height: 34,
                 borderRadius: 16,
-                backgroundColor: 'rgba(22,22,26,0.88)',
+                backgroundColor: 'rgba(8,8,12,0.96)',
                 borderWidth: 0.5,
                 borderColor: 'rgba(255,255,255,0.12)',
                 shadowColor: '#000',
