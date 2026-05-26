@@ -17,6 +17,7 @@ import { glass, radii, shadows, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { CountUp, springs } from '@/features/motion/springs'
 import { GlassCard } from '@/features/shared/ui/GlassCard'
+import { haptic } from '@/features/shared/haptics'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -571,7 +572,7 @@ export default function CampaignDetailPage() {
             ] as const).map((tab) => (
               <Pressable
                 key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
+                onPress={() => { haptic.selection(); setActiveTab(tab.key) }}
                 onLayout={(event) => {
                   const { x, width } = event.nativeEvent.layout
                   setTabMetrics((prev) => (prev[tab.key].x === x && prev[tab.key].width === width ? prev : { ...prev, [tab.key]: { x, width } }))

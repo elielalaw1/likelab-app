@@ -2,6 +2,7 @@ import { useAcceptInvitation, useApplications, useDeclineInvitation } from '@/fe
 import { campaignRouteParams } from '@/features/campaigns/navigation'
 import { shadows, typography } from '@/features/core/theme'
 import { springs } from '@/features/motion/springs'
+import { haptic } from '@/features/shared/haptics'
 import { useTheme } from '@/features/core/useTheme'
 import { CreatorInvitation } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
@@ -42,7 +43,7 @@ function FilterTab({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => { haptic.selection(); onPress() }}
       onLayout={(event) => onLayout(event.nativeEvent.layout.x, event.nativeEvent.layout.width)}
       style={{
         minWidth: 82,

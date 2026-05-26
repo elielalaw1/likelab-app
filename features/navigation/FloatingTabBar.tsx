@@ -1,6 +1,7 @@
 import { useTheme } from '@/features/core/useTheme'
 import { glass } from '@/features/core/theme'
 import { springs } from '@/features/motion/springs'
+import { haptic } from '@/features/shared/haptics'
 import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
@@ -272,6 +273,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           }
 
           if (!focused && !event.defaultPrevented) {
+            haptic.selection()
             navigation.navigate(route.name, route.params)
           }
         }

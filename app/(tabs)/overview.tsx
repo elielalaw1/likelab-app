@@ -16,6 +16,7 @@ import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { useQueryClient } from '@tanstack/react-query'
+import { haptic } from '@/features/shared/haptics'
 
 
 export default function ProjectsPage() {
@@ -97,7 +98,7 @@ export default function ProjectsPage() {
       {browsable.length > 0 && (
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
           <Pressable
-            onPress={() => setViewMode((v) => (v === 'list' ? 'grid' : 'list'))}
+            onPress={() => { haptic.selection(); setViewMode((v) => (v === 'list' ? 'grid' : 'list')) }}
             style={{
               width: 36,
               height: 36,

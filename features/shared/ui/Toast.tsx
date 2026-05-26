@@ -4,6 +4,7 @@ import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { typography } from '@/features/core/theme'
+import { haptic } from '@/features/shared/haptics'
 import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
 
 type ToastType = 'success' | 'error' | 'info'
@@ -12,6 +13,9 @@ type ToastItem = { id: number; type: ToastType; message: string }
 let _setToasts: React.Dispatch<React.SetStateAction<ToastItem[]>> | null = null
 
 function emit(type: ToastType, message: string) {
+  if (type === 'success') haptic.success()
+  else if (type === 'error') haptic.error()
+  else haptic.light()
   _setToasts?.((prev) => [...prev.slice(-2), { id: Date.now(), type, message }])
 }
 

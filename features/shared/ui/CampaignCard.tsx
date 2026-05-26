@@ -7,6 +7,7 @@ import { formatCampaignGoal, formatDateRange } from '@/features/core/format'
 import { radii, shadows, spacing, typography } from '@/features/core/theme'
 import { BlurView } from 'expo-blur'
 import { GlassCard } from '@/features/shared/ui/GlassCard'
+import { haptic } from '@/features/shared/haptics'
 import { useTheme } from '@/features/core/useTheme'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
@@ -86,11 +87,14 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
 
   function handleApply() {
     if (!onApply) return
+    haptic.medium()
     const result = onApply()
     if (result === false) {
+      haptic.warning()
       setApplyState('blocked')
       setTimeout(() => setApplyState('idle'), 2500)
     } else {
+      haptic.success()
       setApplyState('applied')
       setTimeout(() => setApplyState('idle'), 2500)
     }
