@@ -13,7 +13,8 @@ import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { useTheme } from '@/features/core/useTheme'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, ReduceMotion } from 'react-native-reanimated'
+import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, ReduceMotion } from 'react-native-reanimated'
+import { LinearGradient } from 'expo-linear-gradient'
 
 type Props = {
   campaign: Campaign
@@ -74,18 +75,22 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
   const hasSocials = !!(campaign.brandInstagram || campaign.brandTiktok)
   const hasUrgentDeliverables = !!badge && badge > 0
 
-  const pulse = useSharedValue(1)
+  const shimmer = useSharedValue(0)
+  const [btnWidth, setBtnWidth] = useState(0)
   useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(0.7, { duration: 900, easing: Easing.inOut(Easing.ease), reduceMotion: ReduceMotion.Never }),
+    shimmer.value = withRepeat(
+      withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin), reduceMotion: ReduceMotion.Never }),
       -1,
-      true
+      false,
     )
-  }, [])
+  }, [shimmer])
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    opacity: pulse.value,
-  }))
+  const shimmerStyle = useAnimatedStyle(() => {
+    const distance = btnWidth + 120
+    return {
+      transform: [{ translateX: interpolate(shimmer.value, [0, 1], [-120, distance]) }],
+    }
+  })
 
   function handleApply() {
     if (!onApply) return
@@ -276,7 +281,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
                 </Text>
               </View>
             ) : null}
-          <Animated.View style={[{ flex: 1 }, applyState === 'idle' ? pulseStyle : undefined]}>
+          <Animated.View style={{ flex: 1 }}>
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); handleApply() }}
             style={{
@@ -291,19 +296,32 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
             }}
           >
             <BlurView intensity={16} tint="dark" style={{ borderRadius: 14, overflow: 'hidden' }}>
-            <View style={{
-              backgroundColor: applyState === 'applied' ? 'rgba(22,163,74,0.92)' : applyState === 'blocked' ? 'rgba(239,68,68,0.92)' : 'rgba(8,8,12,0.96)',
-              borderRadius: 14,
-              borderWidth: 0.5,
-              borderColor: 'rgba(255,255,255,0.14)',
-              borderTopWidth: 1,
-              borderTopColor: 'rgba(255,255,255,0.22)',
-              paddingVertical: 15,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}>
+            <View
+              onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
+              style={{
+                backgroundColor: applyState === 'applied' ? 'rgba(22,163,74,0.92)' : applyState === 'blocked' ? 'rgba(239,68,68,0.92)' : 'rgba(8,8,12,0.96)',
+                borderRadius: 14,
+                borderWidth: 0.5,
+                borderColor: 'rgba(255,255,255,0.14)',
+                borderTopWidth: 1,
+                borderTopColor: 'rgba(255,255,255,0.22)',
+                paddingVertical: 15,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                overflow: 'hidden',
+              }}>
+              {applyState === 'idle' ? (
+                <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, bottom: 0, width: 100, transform: [{ skewX: '-18deg' }] }, shimmerStyle]}>
+                  <LinearGradient
+                    colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={{ flex: 1 }}
+                  />
+                </Animated.View>
+              ) : null}
               {applyState === 'applied' ? (
                 <>
                   <MaterialCommunityIcons name="check-circle-outline" size={18} color="#fff" />
