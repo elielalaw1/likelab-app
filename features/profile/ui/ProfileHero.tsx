@@ -12,6 +12,8 @@ import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { CountUp } from '@/features/motion/springs'
 import { GlassCard } from '@/features/shared/ui/GlassCard'
+import { haptic } from '@/features/shared/haptics'
+import { router } from 'expo-router'
 
 type Props = {
   profile: CreatorProfile
@@ -104,6 +106,39 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
             <Text style={{ fontFamily: typography.fontFamily, color: palette.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 18, marginTop: 2 }}>
               {profile.tiktokBio}
             </Text>
+          ) : null}
+
+          {/* Reconnect prompt: TikTok connected with old scopes (no clean username) */}
+          {profile.tiktokConnected && !profile.tiktokUsername && (!profile.tiktokHandle || /^https?:\/\//i.test(profile.tiktokHandle)) ? (
+            <Pressable
+              onPress={() => { haptic.light(); router.push('/connect-tiktok') }}
+              style={{
+                marginTop: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: 14,
+                backgroundColor: 'rgba(251,191,36,0.14)',
+                borderWidth: 0.5,
+                borderColor: 'rgba(251,191,36,0.32)',
+                width: '100%',
+              }}
+            >
+              <View style={{ width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(251,191,36,0.18)' }}>
+                <MaterialCommunityIcons name="refresh" size={16} color="#92400E" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700', color: '#78350F', letterSpacing: -0.1 }}>
+                  Get your @username
+                </Text>
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '500', color: '#92400E', marginTop: 1 }}>
+                  Reconnect TikTok to unlock your handle and verified mark
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={18} color="#92400E" />
+            </Pressable>
           ) : null}
 
           <View style={{ gap: 6, alignItems: 'center', marginTop: 2, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
