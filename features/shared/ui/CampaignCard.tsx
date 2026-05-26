@@ -200,7 +200,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               maxWidth: 220,
             }}>
               <MaterialCommunityIcons name="wallet-giftcard" size={13} color="#FFD700" />
-              <Text numberOfLines={1} style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '800', flexShrink: 1 }}>
+              <Text numberOfLines={1} style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', flexShrink: 1 }}>
                 {reward}
               </Text>
             </View>
@@ -249,11 +249,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           <Text
             style={{
               fontFamily: typography.fontFamily,
-              fontSize: 17,
-              lineHeight: 22,
+              fontSize: 15,
+              lineHeight: 19,
               fontWeight: '700',
               color: palette.text,
-              letterSpacing: -0.3,
+              letterSpacing: -0.25,
               flex: 1,
             }}
             numberOfLines={2}
@@ -268,10 +268,10 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 4 }}>
             {days !== null ? (
               <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, minWidth: 56 }}>
-                <Text style={{ color: days <= 3 ? '#EF4444' : palette.text, fontFamily: typography.fontFamily, fontSize: 22, fontWeight: '800', lineHeight: 24, letterSpacing: -0.5 }}>
+                <Text style={{ color: days <= 3 ? '#EF4444' : palette.text, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', lineHeight: 20, letterSpacing: -0.4 }}>
                   {days === 0 ? '1' : days}
                 </Text>
-                <Text style={{ color: days <= 3 ? '#EF4444' : palette.textMuted, fontFamily: typography.fontFamilyLight, fontSize: 10, fontWeight: '300', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 2 }}>
+                <Text style={{ color: days <= 3 ? '#EF4444' : palette.textMuted, fontFamily: typography.fontFamilyLight, fontSize: 9, fontWeight: '300', textTransform: 'uppercase', letterSpacing: 1.1, marginTop: 1 }}>
                   {days === 0 ? 'last day' : 'days left'}
                 </Text>
               </View>
@@ -307,20 +307,20 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               {applyState === 'applied' ? (
                 <>
                   <MaterialCommunityIcons name="check-circle-outline" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800' }}>
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>
                     Applied!
                   </Text>
                 </>
               ) : applyState === 'blocked' ? (
                 <>
                   <MaterialCommunityIcons name="clock-alert-outline" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800' }}>
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>
                     Awaiting approval
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800' }}>
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>
                     Apply Now
                   </Text>
                   <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
@@ -341,11 +341,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
       >
           <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={36} />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
+            <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
               {campaign.brandName || 'Brand'}
             </Text>
             {hasSocials ? (
-              <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500' }}>
+              <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '500' }}>
                 View socials →
               </Text>
             ) : null}
