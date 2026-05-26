@@ -118,12 +118,18 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
                 </Text>
               </Pressable>
             ) : null}
-            {(profile.tiktokHandle || profile.tiktokConnected) ? (() => {
+            {(profile.tiktokHandle || profile.tiktokUsername || profile.tiktokConnected) ? (() => {
+              const cleanUsername = profile.tiktokUsername?.replace(/^@+/, '') ?? ''
               const rawHandle = profile.tiktokHandle?.replace(/^@+/, '') ?? ''
               const handleIsUrl = /^https?:\/\//i.test(rawHandle)
-              const targetUrl = profile.tiktokProfileUrl
-                ?? (handleIsUrl ? rawHandle : rawHandle ? `https://tiktok.com/@${rawHandle}` : undefined)
-              const label = !handleIsUrl && rawHandle ? `@${rawHandle}` : 'View on TikTok'
+              const effectiveHandle = cleanUsername || (handleIsUrl ? '' : rawHandle)
+              const profileUrlIsClean = profile.tiktokProfileUrl && !/vm\.tiktok\.com/i.test(profile.tiktokProfileUrl)
+              const targetUrl = profileUrlIsClean
+                ? profile.tiktokProfileUrl
+                : effectiveHandle
+                  ? `https://tiktok.com/@${effectiveHandle}`
+                  : (handleIsUrl ? rawHandle : profile.tiktokProfileUrl ?? undefined)
+              const label = effectiveHandle ? `@${effectiveHandle}` : 'View on TikTok'
               return (
                 <Pressable
                   onPress={() => targetUrl ? Linking.openURL(targetUrl).catch(() => {}) : undefined}

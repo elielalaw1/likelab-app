@@ -90,6 +90,15 @@ export type CreatorProfile = {
   tiktokFollowers?: string | null
   tiktokLikes?: string | null
   tiktokViews?: string | null
+  tiktokConnected?: boolean | null
+  tiktokOpenId?: string | null
+  tiktokProfileUrl?: string | null
+  tiktokBio?: string | null
+  tiktokVerified?: boolean | null
+  tiktokVideoCount?: string | null
+  tiktokFollowing?: string | null
+  tiktokUsername?: string | null
+  tiktokDisplayName?: string | null
 }
 
 export type CreatorApplication = {
