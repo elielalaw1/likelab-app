@@ -182,14 +182,13 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
             })() : null}
           </View>
 
-          {profile.tiktokConnected && (profile.tiktokFollowers != null || profile.tiktokFollowing != null || profile.tiktokLikes != null || profile.tiktokVideoCount != null) ? (
+          {profile.tiktokConnected && (profile.tiktokFollowers != null || profile.tiktokFollowing != null || profile.tiktokLikes != null) ? (
             <GlassCard style={{ marginTop: 8, width: '100%' }} intensity={24} radius={16} strong>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0, paddingVertical: 12, width: '100%', justifyContent: 'center' }}>
               {[
                 { label: 'Followers', value: profile.tiktokFollowers },
                 { label: 'Following', value: profile.tiktokFollowing },
                 { label: 'Likes', value: profile.tiktokLikes },
-                { label: 'Videos', value: profile.tiktokVideoCount },
               ].filter((s) => s.value != null).map((stat, i, arr) => (
                 <View key={stat.label} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ alignItems: 'center', gap: 4, paddingHorizontal: 16 }}>
