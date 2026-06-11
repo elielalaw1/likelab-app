@@ -90,9 +90,12 @@ export function useUploadVideo() {
         const submission = await uploadVideo({
           deliverableId: params.deliverableId,
           fileUri: compressed.uri,
-          fileName: params.fileName || compressed.fileName,
-          fileSize: params.fileSize ?? compressed.estimatedSize,
-          mimeType: params.mimeType || 'video/mp4',
+          // Use the compressor's reported mime/filename/size so the stored
+          // Content-Type matches the actual bytes (mp4 when compressed, original
+          // type on the passthrough/fallback path).
+          fileName: compressed.fileName,
+          fileSize: compressed.estimatedSize,
+          mimeType: compressed.mime,
         })
 
         setStage('processing')
