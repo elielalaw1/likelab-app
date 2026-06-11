@@ -80,7 +80,7 @@ function mapProfile(creator: Row, profile: Row, userId: string): CreatorProfile 
     tiktokFollowers: toStatString(creator['tiktok_follower_count'] || creator['followers']),
     tiktokLikes: toStatString(creator['tiktok_likes_count'] || creator['likes']),
     tiktokViews: toStatString(creator['views']),
-    tiktokConnected: Boolean(creator['tiktok_open_id']),
+    tiktokConnected: creator['tiktok_connected'] === true || Boolean(creator['tiktok_open_id']),
     tiktokOpenId: textValue(creator, ['tiktok_open_id']),
     tiktokProfileUrl: textValue(creator, ['tiktok_profile_url', 'tiktok_profile_deep_link']),
     tiktokBio: textValue(creator, ['tiktok_bio']),
