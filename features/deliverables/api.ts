@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system'
 import { supabase } from '@/lib/supabase'
 import { Deliverable, DeliverableSubmission, mapSubmissionRow } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
@@ -96,12 +97,18 @@ export async function uploadVideo(params: {
   const safeName = params.fileName.replace(/[^\w.-]+/g, '_')
   const storagePath = `${userId}/${Date.now()}_${params.deliverableId}_${safeName}`
 
-  const response = await fetch(params.fileUri)
-  const blob = await response.blob()
+  // Read the real bytes via expo-file-system. fetch(uri).blob() on a local
+  // file:// URI returns a 0-byte blob in React Native, which uploads an empty
+  // file and makes the edge function reject it ("video file is empty").
+  const fileUri = params.fileUri.startsWith('file://') ? params.fileUri : `file://${params.fileUri}`
+  const bytes = await new File(fileUri).bytes()
+  if (!bytes || bytes.byteLength === 0) {
+    throw new Error('The selected video file is empty or unreadable. Please pick the video again.')
+  }
 
   const { error: uploadError } = await supabase.storage
     .from('deliverable-videos')
-    .upload(storagePath, blob, { contentType: mimeType, upsert: true })
+    .upload(storagePath, bytes, { contentType: mimeType, upsert: true })
 
   if (uploadError) throw new Error(uploadError.message)
 
