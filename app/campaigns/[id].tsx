@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
@@ -12,6 +12,8 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, w
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
+import { CampaignPhaseBadge } from '@/features/shared/ui/CampaignPhaseBadge'
+import { PHASE_HINTS, approvalChip } from '@/features/campaigns/phase'
 import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/core/format'
 import { glass, radii, shadows, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
@@ -23,13 +25,12 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
-import { DeliverableInputRow } from '@/features/shared/ui/DeliverableInputRow'
-import { useDeliverables, useSubmitLink } from '@/features/deliverables/hooks'
+import { VideoUploadRow } from '@/features/shared/ui/VideoUploadRow'
+import { useDeliverables } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { toast } from '@/features/shared/ui/Toast'
-import { isValidTikTokUrl } from '@/lib/validate-tiktok-url'
 import * as StoreReview from 'expo-store-review'
 import * as SecureStore from 'expo-secure-store'
 
@@ -44,6 +45,9 @@ const MEDAL: Record<number, { bg: string; text: string }> = {
   2: { bg: '#f1f5f9', text: '#475569' },
   3: { bg: '#ffedd5', text: '#c2410c' },
 }
+
+// SEK prize amounts are hidden from creators — show the tier rank label only.
+const TIER_LABELS: Record<number, string> = { 1: 'Gold', 2: 'Silver', 3: 'Bronze' }
 
 function formatPlatform(platform?: string | null) {
   if (!platform) return '-'
@@ -150,11 +154,9 @@ export default function CampaignDetailPage() {
   const { data: campaignDeliverables, isLoading: loadingDeliverables } = useCampaignDeliverables(campaignId)
   const { data: allDeliverables, isLoading: loadingAllDeliverables } = useDeliverables()
   const applyMutation = useApplyToCampaign()
-  const submitLinkMutation = useSubmitLink()
   const [activeTab, setActiveTab] = useState<'description' | 'brief' | 'videos'>(
     initialTab === 'videos' ? 'videos' : initialTab === 'brief' ? 'brief' : 'description'
   )
-  const [deliverableInputs, setDeliverableInputs] = useState<Record<string, string>>({})
   const [leaderboard, setLeaderboard] = useState<{ rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number } | null>(null)
   const [applySuccess, setApplySuccess] = useState(false)
   const brandSheetRef = useRef<BottomSheetModal>(null)
@@ -202,26 +204,6 @@ export default function CampaignDetailPage() {
       }).catch(() => {})
     } catch (applyError) {
       toast.error(applyError instanceof Error ? applyError.message : 'Could not apply')
-    }
-  }
-
-  const submitCampaignDeliverable = async (deliverableId: string) => {
-    const value = (deliverableInputs[deliverableId] || '').trim()
-    if (!value) {
-      toast.error('Please paste a TikTok URL first.')
-      return
-    }
-    if (!isValidTikTokUrl(value)) {
-      Alert.alert('Invalid URL', 'Please enter a valid TikTok video link.')
-      return
-    }
-
-    try {
-      await submitLinkMutation.mutateAsync({ deliverableId, url: value })
-      toast.success('Deliverable submitted!')
-      setDeliverableInputs((prev) => ({ ...prev, [deliverableId]: '' }))
-    } catch (submitError) {
-      toast.error(submitError instanceof Error ? submitError.message : 'Could not submit deliverable')
     }
   }
 
@@ -444,7 +426,10 @@ export default function CampaignDetailPage() {
 
                 {/* Top row: status badge + reward pill */}
                 <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <StatusBadge status={campaign.creatorApplicationStatus || campaign.status} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+                    <StatusBadge status={campaign.creatorApplicationStatus || campaign.status} />
+                    {campaign.phase ? <CampaignPhaseBadge phase={campaign.phase} /> : null}
+                  </View>
                   {campaign.rewardType ? (
                     <View style={{ backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' }}>
                       <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: typography.fontFamily }}>
@@ -558,6 +543,11 @@ export default function CampaignDetailPage() {
 
           {activeTab === 'description' && (
             <>
+              {campaign.phase ? (
+                <Text style={{ fontSize: 14, color: palette.textMuted, lineHeight: 20, fontFamily: typography.fontFamily }}>
+                  {PHASE_HINTS[campaign.phase]}
+                </Text>
+              ) : null}
               {campaign.campaignGoal ? (
                 <Section icon="target" title="Campaign Goal" tint="rgba(139,92,246,0.14)">
                   <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
@@ -788,7 +778,7 @@ export default function CampaignDetailPage() {
               {currentApplicationStatus === 'accepted' && (campaign.prizeDistribution || []).length > 0 ? (
                 <Section icon="trophy-outline" title="Prize Distribution" tint="rgba(251,191,36,0.16)" borderColor="rgba(253,230,138,0.8)">
                   <View style={{ gap: 10 }}>
-                    {campaign.prizeDistribution?.map((amount, i) => {
+                    {campaign.prizeDistribution?.map((_amount, i) => {
                       const medal = MEDAL[i + 1] || { bg: palette.cardBg, text: palette.textMuted }
                       return (
                         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -807,7 +797,7 @@ export default function CampaignDetailPage() {
                             </Text>
                           </View>
                           <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700', color: palette.text }}>
-                            {amount.toLocaleString('sv-SE')} SEK
+                            {TIER_LABELS[i + 1] || `Tier ${i + 1}`}
                           </Text>
                         </View>
                       )
@@ -870,7 +860,19 @@ export default function CampaignDetailPage() {
                       <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text, fontFamily: typography.fontFamily }}>
                         {`${formatPlatform(item.platform || 'tiktok')} ${item.type ? `- ${formatPlatform(item.type)}` : ''}`}
                       </Text>
-                      <StatusBadge status={item.status} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {(() => {
+                          const chip = approvalChip(campaign?.phase, item.approvalStatus, item.readyForPosting)
+                          return chip ? (
+                            <View style={{ borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: chip.bg }}>
+                              <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: chip.text }}>
+                                {chip.label}
+                              </Text>
+                            </View>
+                          ) : null
+                        })()}
+                        <StatusBadge status={item.status} />
+                      </View>
                     </View>
                     {item.notes ? (
                       <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 20, fontFamily: typography.fontFamily }}>{item.notes}</Text>
@@ -893,14 +895,11 @@ export default function CampaignDetailPage() {
                       </View>
                     ) : null}
                     {canSubmitDeliverable(item.status) ? (
-                      <DeliverableInputRow
-                        value={deliverableInputs[item.id] ?? item.url ?? ''}
-                        onChangeText={(text) => setDeliverableInputs((prev) => ({ ...prev, [item.id]: text }))}
-                        onSubmit={() => submitCampaignDeliverable(item.id)}
-                        loading={submitLinkMutation.isPending}
-                        submitLabel={item.status === 'revision_requested' ? 'Re-submit' : 'Submit'}
+                      <VideoUploadRow
+                        deliverableId={item.id}
+                        submitLabel={item.status === 'revision_requested' ? 'Re-upload video' : 'Upload video'}
                       />
-                    ) : item.url ? (
+                    ) : item.url && /^https?:\/\//i.test(item.url) ? (
                       <Pressable
                         onPress={() => Linking.openURL(item.url || '').catch(() => undefined)}
                         style={{
@@ -918,6 +917,13 @@ export default function CampaignDetailPage() {
                           {item.url}
                         </Text>
                       </Pressable>
+                    ) : item.url ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <MaterialCommunityIcons name="check-circle" size={18} color="#0F9F6E" />
+                        <Text style={{ color: '#0F9F6E', fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily }}>
+                          Video submitted
+                        </Text>
+                      </View>
                     ) : (
                       <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: typography.fontFamily }}>No URL submitted yet.</Text>
                     )}

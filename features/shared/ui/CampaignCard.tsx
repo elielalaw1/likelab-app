@@ -12,6 +12,7 @@ import { haptic } from '@/features/shared/haptics'
 import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { useTheme } from '@/features/core/useTheme'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
+import { CampaignPhaseBadge } from '@/features/shared/ui/CampaignPhaseBadge'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, ReduceMotion } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -37,16 +38,11 @@ function daysRemaining(endDate?: string | null): number | null {
   return days > 0 ? days : 0
 }
 
-const MONETARY_REWARD_TYPES = ['cash', 'commission', 'voucher', 'gift card']
-
 function formatReward(campaign: Campaign): string | null {
-  const type = campaign.rewardType || ''
-  const isMonetary = MONETARY_REWARD_TYPES.some((t) => type.toLowerCase().includes(t))
-
-  if (isMonetary && campaign.rewardAmount) return `${campaign.rewardAmount} ${type}`
-  if (isMonetary && campaign.rewardValue) return `${campaign.rewardValue} ${type}`
+  // SEK reward amounts are hidden from creators — surface the reward type or
+  // the brand's description, never the kronor figure.
   if (campaign.rewardDescription) return campaign.rewardDescription
-  if (type) return type
+  if (campaign.rewardType) return campaign.rewardType
   return null
 }
 
@@ -139,6 +135,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', fontFamily: 'System' }}>{badge}</Text>
             </View>
           ) : null}
+          {campaign.phase ? <CampaignPhaseBadge phase={campaign.phase} /> : null}
           <StatusBadge status={creatorStatus(campaign) || undefined} />
         </View>
       </View>
@@ -189,6 +186,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: 'System' }}>{badge}</Text>
             </View>
           ) : null}
+          {campaign.phase ? <CampaignPhaseBadge phase={campaign.phase} /> : null}
           <StatusBadge status={creatorStatus(campaign) || undefined} />
         </View>
         {/* Reward pill — bottom of image */}

@@ -132,7 +132,7 @@ export async function getAcceptedApplicationCampaigns(limit = 3) {
 
   const { data: deliverableRows, error: deliverableError } = await supabase
     .from('deliverables')
-    .select('campaign_id')
+    .select('campaign_id, approval_status, ready_for_posting')
     .eq('creator_id', userId)
 
   if (deliverableError) throw new Error(deliverableError.message)

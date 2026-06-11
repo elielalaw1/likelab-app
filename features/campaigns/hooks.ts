@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { applyToCampaign, getCampaignById, getCampaignDeliverables, getCampaigns } from '@/features/campaigns/api'
+import { supabase } from '@/lib/supabase'
 
 const queryPerf = {
   staleTime: 6 * 60 * 60 * 1000,
@@ -18,7 +20,9 @@ export function useCampaigns() {
 }
 
 export function useCampaign(campaignId?: string) {
-  return useQuery({
+  const queryClient = useQueryClient()
+
+  const query = useQuery({
     queryKey: ['campaigns', campaignId],
     queryFn: () => getCampaignById(campaignId || ''),
     enabled: Boolean(campaignId),
@@ -28,6 +32,31 @@ export function useCampaign(campaignId?: string) {
     refetchOnWindowFocus: true,
     placeholderData: (previous) => previous,
   })
+
+  // Live phase/lifecycle updates: refetch this campaign (and the list) when the
+  // backend mutates the row. Read-only — we never write campaigns from the app.
+  useEffect(() => {
+    if (!campaignId) return
+
+    const channel = supabase
+      .channel(`campaign-${campaignId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'campaigns', filter: `id=eq.${campaignId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['campaigns', campaignId] })
+          queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+          queryClient.invalidateQueries({ queryKey: ['deliverables', 'campaign', campaignId] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [campaignId, queryClient])
+
+  return query
 }
 
 export function useCampaignDeliverables(campaignId?: string) {

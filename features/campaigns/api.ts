@@ -59,11 +59,6 @@ function toStringArray(value: unknown): string[] | null {
 }
 
 function mapCampaign(row: Row): Campaign {
-  console.log('[campaign api mapCampaign]', {
-    id: row.id,
-    raw_end_date: row.end_date,
-    raw_updated_at: row.updated_at,
-  })
   return {
     id: String(row.id || ''),
     title: textValue(row, ['name']) || 'Untitled campaign',
@@ -72,6 +67,7 @@ function mapCampaign(row: Row): Campaign {
     startDate: textValue(row, ['start_date']),
     endDate: textValue(row, ['end_date']),
     status: (textValue(row, ['status']) || 'draft') as Campaign['status'],
+    phase: (textValue(row, ['phase']) || null) as Campaign['phase'],
     requiredVideos: numberValue(row, ['required_videos']),
     rewardType: textValue(row, ['reward_type']),
     rewardValue: textValue(row, ['reward_value']),
@@ -95,7 +91,6 @@ function mapCampaign(row: Row): Campaign {
     requiredHashtags: toStringArray(row.required_hashtags),
     keyMessages: toStringArray(row.key_messages),
     prizeDistribution: toPrizeDistribution(row.prize_distribution),
-    level: textValue(row, ['campaign_level']),
   }
 }
 
@@ -334,7 +329,7 @@ export async function getCampaignDeliverables(campaignId: string): Promise<Deliv
 
   const { data, error } = await supabase
     .from('deliverables')
-    .select('id, campaign_id, status, platform, type, url, campaigns(name, brand_id)')
+    .select('id, campaign_id, status, approval_status, ready_for_posting, platform, type, url, campaigns(name, brand_id, phase)')
     .eq('creator_id', userId)
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: true })
@@ -348,7 +343,10 @@ export async function getCampaignDeliverables(campaignId: string): Promise<Deliv
       id: String(row.id || ''),
       campaignId: String(row.campaign_id || campaignId),
       campaignTitle: textValue(campaignRel || {}, ['name']) || 'Campaign',
+      campaignPhase: (textValue(campaignRel || {}, ['phase']) || null) as Deliverable['campaignPhase'],
       status: (textValue(row, ['status']) || 'pending') as Deliverable['status'],
+      approvalStatus: (textValue(row, ['approval_status']) || 'pending') as Deliverable['approvalStatus'],
+      readyForPosting: row.ready_for_posting === true,
       platform: textValue(row, ['platform']) || 'tiktok',
       type: textValue(row, ['type']),
       url: textValue(row, ['url']),

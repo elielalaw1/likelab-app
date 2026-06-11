@@ -9,7 +9,7 @@ export async function getDeliverables() {
 
   const { data, error } = await supabase
     .from('deliverables')
-    .select('id, campaign_id, status, platform, type, url, flag_reason, campaigns(name, brand_id)')
+    .select('id, campaign_id, status, approval_status, ready_for_posting, platform, type, url, flag_reason, campaigns(name, brand_id, phase)')
     .eq('creator_id', userId)
     .order('created_at', { ascending: false })
 
@@ -22,7 +22,10 @@ export async function getDeliverables() {
       id: String(row.id || ''),
       campaignId: String(row.campaign_id || ''),
       campaignTitle: textValue(campaignRel || {}, ['name']) || 'Campaign',
+      campaignPhase: (textValue(campaignRel || {}, ['phase']) || null) as Deliverable['campaignPhase'],
       status: (textValue(row, ['status']) || 'pending') as Deliverable['status'],
+      approvalStatus: (textValue(row, ['approval_status']) || 'pending') as Deliverable['approvalStatus'],
+      readyForPosting: row.ready_for_posting === true,
       platform: textValue(row, ['platform']) || 'tiktok',
       type: textValue(row, ['type']),
       url: textValue(row, ['url']),

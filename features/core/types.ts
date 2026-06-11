@@ -11,6 +11,15 @@ export type CampaignStatus =
   | 'rejected'
   | 'cancelled'
 
+export type CampaignPhase =
+  | 'brief_upload'
+  | 'application_period'
+  | 'creator_selection'
+  | 'product_sendout'
+  | 'filming_period'
+  | 'video_selection'
+  | 'posting'
+
 export type ApplicationStatus = 'applied' | 'accepted' | 'rejected' | 'withdrawn'
 
 export type DeliverableStatus =
@@ -32,6 +41,7 @@ export type Campaign = {
   startDate?: string | null
   endDate?: string | null
   status?: CampaignStatus | null
+  phase?: CampaignPhase | null
   requiredVideos?: number | null
   rewardType?: string | null
   rewardValue?: string | null
@@ -55,7 +65,6 @@ export type Campaign = {
   requiredHashtags?: string[] | null
   keyMessages?: string[] | null
   prizeDistribution?: number[] | null
-  level?: string | null
   coverImageUrl?: string | null
   brandLogoUrl?: string | null
   brandInstagram?: string | null
@@ -134,7 +143,10 @@ export type Deliverable = {
   campaignId: string
   campaignTitle: string
   campaignBrandName?: string | null
+  campaignPhase?: CampaignPhase | null
   status: DeliverableStatus
+  approvalStatus?: 'pending' | 'approved' | 'rejected'
+  readyForPosting?: boolean
   platform: string
   type?: string | null
   url?: string | null

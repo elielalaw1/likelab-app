@@ -14,6 +14,7 @@ import { useCallback, useMemo } from 'react'
 import { FlatList, Pressable, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { DeliverableStatus } from '@/features/core/types'
+import { approvalChip } from '@/features/campaigns/phase'
 import { CountUp } from '@/features/motion/springs'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
@@ -217,6 +218,18 @@ export default function DeliverablesPage() {
                       {item.platform ? `${item.platform.charAt(0).toUpperCase()}${item.platform.slice(1)}` : 'TikTok'}
                     </Text>
                   </View>
+
+                  {/* Approval chip (only while parent campaign is reviewing/posting) */}
+                  {(() => {
+                    const chip = approvalChip(item.campaignPhase, item.approvalStatus, item.readyForPosting)
+                    return chip ? (
+                      <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: chip.bg }}>
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: chip.text }}>
+                          {chip.label}
+                        </Text>
+                      </View>
+                    ) : null
+                  })()}
 
                   {/* Status pill */}
                   <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: `${cfg.color}14` }}>

@@ -18,7 +18,6 @@ import {
 import * as SplashScreen from 'expo-splash-screen'
 import * as Notifications from 'expo-notifications'
 import * as SecureStore from 'expo-secure-store'
-import { NotificationsProvider } from '@/features/notifications/hooks'
 import { TikTokAuthGuard } from '@/features/auth/TikTokAuthGuard'
 import { ReconnectAutoRoute } from '@/features/auth/ReconnectAutoRoute'
 import { ToastContainer, toast } from '@/features/shared/ui/Toast'
@@ -50,6 +49,7 @@ function resolveNotificationRoute(data: Record<string, unknown>): string | null 
     case 'campaign_invitation':
     case 'application_accepted':
     case 'campaign_deadline_reminder':
+    case 'campaign_phase_change':
       return campaignRoute
     case 'application_rejected':
       return '/(tabs)/applications'
@@ -213,22 +213,20 @@ export default function RootLayout() {
       <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
           <BottomSheetModalProvider>
-            <NotificationsProvider>
-              <PushNotificationSetup />
-              <TikTokAuthGuard />
-              <ReconnectAutoRoute />
-              <View style={{ flex: 1 }}>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="campaigns/[id]" />
-                  <Stack.Screen name="settings" />
-                  <Stack.Screen name="reset-password" />
-                  <Stack.Screen name="forgot-password" />
-                  <Stack.Screen name="verify-otp" />
-                </Stack>
-                <ToastContainer />
-              </View>
-            </NotificationsProvider>
+            <PushNotificationSetup />
+            <TikTokAuthGuard />
+            <ReconnectAutoRoute />
+            <View style={{ flex: 1 }}>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="campaigns/[id]" />
+                <Stack.Screen name="settings" />
+                <Stack.Screen name="reset-password" />
+                <Stack.Screen name="forgot-password" />
+                <Stack.Screen name="verify-otp" />
+              </Stack>
+              <ToastContainer />
+            </View>
           </BottomSheetModalProvider>
         </QueryClientProvider>
       </KeyboardProvider>
