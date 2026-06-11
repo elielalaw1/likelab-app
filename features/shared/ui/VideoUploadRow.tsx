@@ -27,8 +27,11 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
     if (submission?.status === 'submitted') {
       queryClient.invalidateQueries({ queryKey: ['deliverables'] })
       queryClient.invalidateQueries({ queryKey: ['deliverables', 'campaign'] })
+    } else if (submission?.status === 'failed') {
+      // Keep the raw server error in the dev logs; the creator sees a friendly message.
+      console.warn('[VideoUploadRow] server processing failed:', submission?.errorMessage)
     }
-  }, [submission?.status, queryClient])
+  }, [submission?.status, submission?.errorMessage, queryClient])
 
   const serverStatus = submission?.status
   const isDone = serverStatus === 'submitted'
@@ -108,7 +111,7 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
     <View style={{ gap: 8 }}>
       {isFailed ? (
         <Text style={{ color: palette.dangerText, fontSize: 12, fontFamily: typography.fontFamily }}>
-          {error || submission?.errorMessage || 'Upload failed. Please try again.'}
+          {error || 'Something went wrong while processing your video. Please try uploading again.'}
         </Text>
       ) : null}
       <LiquidButton
