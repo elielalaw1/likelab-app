@@ -58,7 +58,13 @@ export default function ProjectsPage() {
 
   const accepted = useMemo(() => (data || []).filter((c) => c.creatorApplicationStatus === 'accepted'), [data])
   const browsable = useMemo(
-    () => (data || []).filter((c) => c.creatorApplicationStatus !== 'accepted' && c.creatorApplicationStatus !== 'rejected'),
+    () =>
+      (data || []).filter(
+        (c) =>
+          c.creatorApplicationStatus !== 'accepted' &&
+          c.creatorApplicationStatus !== 'rejected' &&
+          c.status === 'published'
+      ),
     [data]
   )
 

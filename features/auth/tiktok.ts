@@ -63,7 +63,7 @@ export async function authorizeTikTok(): Promise<TikTokAuthorizationResult | nul
     state,
   })
 
-  const authUrl = `https://www.tiktok.com/v2/auth/authorize?${params.toString()}`
+  const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
 
   const result = await WebBrowser.openAuthSessionAsync(authUrl, TIKTOK_APP_RETURN_URI)
 

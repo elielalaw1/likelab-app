@@ -11,7 +11,9 @@ import { campaignRouteParams } from '@/features/campaigns/navigation'
 
 export default function CampaignsPage() {
   const { data, isLoading, error } = useCampaigns()
-  const visibleCampaigns = (data || []).filter((item) => item.creatorApplicationStatus !== 'accepted')
+  const visibleCampaigns = (data || []).filter(
+    (item) => item.creatorApplicationStatus !== 'accepted' && item.status === 'published'
+  )
 
   return (
     <Screen>

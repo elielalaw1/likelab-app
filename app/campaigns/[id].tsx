@@ -12,8 +12,7 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, w
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
-import { CampaignPhaseBadge } from '@/features/shared/ui/CampaignPhaseBadge'
-import { PHASE_HINTS, approvalChip } from '@/features/campaigns/phase'
+import { approvalChip } from '@/features/campaigns/phase'
 import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/core/format'
 import { glass, radii, shadows, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
@@ -25,7 +24,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
-import { VideoUploadRow } from '@/features/shared/ui/VideoUploadRow'
+import { LinkSubmitRow } from '@/features/shared/ui/LinkSubmitRow'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
@@ -424,21 +423,6 @@ export default function CampaignDetailPage() {
                   style={{ position: 'absolute', inset: 0 }}
                 />
 
-                {/* Top row: status badge + reward pill */}
-                <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
-                    <StatusBadge status={campaign.creatorApplicationStatus || campaign.status} />
-                    {campaign.phase ? <CampaignPhaseBadge phase={campaign.phase} /> : null}
-                  </View>
-                  {campaign.rewardType ? (
-                    <View style={{ backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' }}>
-                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: typography.fontFamily }}>
-                        {campaign.rewardType}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-
                 {/* Bottom content */}
                 <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 22, gap: 10 }}>
                   <Pressable
@@ -543,11 +527,6 @@ export default function CampaignDetailPage() {
 
           {activeTab === 'description' && (
             <>
-              {campaign.phase ? (
-                <Text style={{ fontSize: 14, color: palette.textMuted, lineHeight: 20, fontFamily: typography.fontFamily }}>
-                  {PHASE_HINTS[campaign.phase]}
-                </Text>
-              ) : null}
               {campaign.campaignGoal ? (
                 <Section icon="target" title="Campaign Goal" tint="rgba(139,92,246,0.14)">
                   <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
@@ -895,9 +874,9 @@ export default function CampaignDetailPage() {
                       </View>
                     ) : null}
                     {canSubmitDeliverable(item.status) ? (
-                      <VideoUploadRow
+                      <LinkSubmitRow
                         deliverableId={item.id}
-                        submitLabel={item.status === 'revision_requested' ? 'Re-upload video' : 'Upload video'}
+                        submitLabel={item.status === 'revision_requested' ? 'Re-submit link' : 'Submit link'}
                       />
                     ) : item.url && /^https?:\/\//i.test(item.url) ? (
                       <Pressable

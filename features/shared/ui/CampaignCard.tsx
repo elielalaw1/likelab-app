@@ -11,8 +11,6 @@ import { GlassCard } from '@/features/shared/ui/GlassCard'
 import { haptic } from '@/features/shared/haptics'
 import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { useTheme } from '@/features/core/useTheme'
-import { StatusBadge } from '@/features/shared/ui/StatusBadge'
-import { CampaignPhaseBadge } from '@/features/shared/ui/CampaignPhaseBadge'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, ReduceMotion } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -26,24 +24,11 @@ type Props = {
   index?: number
 }
 
-function creatorStatus(campaign: Campaign) {
-  if (campaign.creatorApplicationStatus === 'accepted') return 'accepted'
-  return campaign.creatorApplicationStatus || campaign.invitationStatus || campaign.status
-}
-
 function daysRemaining(endDate?: string | null): number | null {
   if (!endDate) return null
   const diff = new Date(endDate).getTime() - Date.now()
   const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
   return days > 0 ? days : 0
-}
-
-function formatReward(campaign: Campaign): string | null {
-  // SEK reward amounts are hidden from creators — surface the reward type or
-  // the brand's description, never the kronor figure.
-  if (campaign.rewardDescription) return campaign.rewardDescription
-  if (campaign.rewardType) return campaign.rewardType
-  return null
 }
 
 function canApply(campaign: Campaign): boolean {
@@ -66,7 +51,6 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
   const brandSheetRef = useRef<BottomSheetModal>(null)
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'blocked'>('idle')
   const days = daysRemaining(campaign.endDate)
-  const reward = formatReward(campaign)
   const showApply = canApply(campaign) && !!onApply
   const hasSocials = !!(campaign.brandInstagram || campaign.brandTiktok)
   const hasUrgentDeliverables = !!badge && badge > 0
@@ -135,8 +119,6 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', fontFamily: 'System' }}>{badge}</Text>
             </View>
           ) : null}
-          {campaign.phase ? <CampaignPhaseBadge phase={campaign.phase} /> : null}
-          <StatusBadge status={creatorStatus(campaign) || undefined} />
         </View>
       </View>
       <View style={{ padding: 10, gap: 4 }}>
@@ -149,14 +131,6 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
             {campaign.brandName || 'Brand'}
           </Text>
         </View>
-        {reward ? (
-          <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
-            <MaterialCommunityIcons name="wallet-giftcard" size={11} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>
-              {reward}
-            </Text>
-          </View>
-        ) : null}
       </View>
     </View>
   ) : (
@@ -186,29 +160,8 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: 'System' }}>{badge}</Text>
             </View>
           ) : null}
-          {campaign.phase ? <CampaignPhaseBadge phase={campaign.phase} /> : null}
-          <StatusBadge status={creatorStatus(campaign) || undefined} />
         </View>
         {/* Reward pill — bottom of image */}
-        {reward ? (
-          <View style={{ position: 'absolute', left: 10, bottom: 10 }}>
-            <View style={{
-              backgroundColor: '#11192F',
-              borderRadius: 20,
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              maxWidth: 220,
-            }}>
-              <MaterialCommunityIcons name="wallet-giftcard" size={13} color="#FFD700" />
-              <Text numberOfLines={1} style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', flexShrink: 1 }}>
-                {reward}
-              </Text>
-            </View>
-          </View>
-        ) : null}
       </View>
 
       <View style={{ padding: 13, gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.55)', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,1)' }}>
