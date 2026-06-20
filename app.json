@@ -63,7 +63,9 @@
           "color": "#ffffff"
         }
       ],
-      "react-native-compressor"
+      "react-native-compressor",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
