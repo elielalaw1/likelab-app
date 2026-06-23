@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { radii, typography } from '@/features/core/theme'
+import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 
@@ -122,17 +122,13 @@ export function CreatorPendingGate({ state }: Props) {
     <>
       <View
         style={{
-          borderRadius: 18,
-          borderWidth: 1,
-          borderColor: palette.borderColor,
-          backgroundColor: palette.sectionBg,
+          borderRadius: 20,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: redesign.color.hairlineStrong,
+          backgroundColor: redesign.color.card,
           paddingHorizontal: 14,
           paddingVertical: 12,
-          shadowColor: '#000',
-          shadowOpacity: 0.15,
-          shadowRadius: 20,
-          shadowOffset: { width: 0, height: 8 },
-          elevation: 4,
+          ...redesign.shadow.card,
           gap: 10,
         }}
       >
@@ -140,14 +136,14 @@ export function CreatorPendingGate({ state }: Props) {
           onPress={() => setExpanded((prev) => !prev)}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: rejected ? 'flex-start' : 'center' }}
         >
-          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: iconBg, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name={rejected ? 'close-circle-outline' : 'progress-clock'} size={14} color={iconColor} />
+          <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: iconBg, alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name={rejected ? 'close-circle-outline' : 'progress-clock'} size={15} color={iconColor} />
           </View>
           <View style={{ flex: rejected ? 1 : undefined, alignItems: rejected ? 'flex-start' : 'center' }}>
-            <Text style={{ color: palette.text, fontWeight: '700', fontSize: 14, fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{title}</Text>
-            <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{subtitle}</Text>
+            <Text style={{ color: redesign.color.ink, fontWeight: '800', fontSize: 14, letterSpacing: -0.2, fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{title}</Text>
+            <Text style={{ color: redesign.color.muted, fontSize: 12, fontWeight: '500', fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{subtitle}</Text>
           </View>
-          <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={palette.textMuted} />
+          <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={redesign.color.faint} />
         </Pressable>
 
         {expanded ? (

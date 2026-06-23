@@ -1,18 +1,17 @@
 import { useState } from 'react'
-import { Alert, Image, ImageBackground, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { AuthInput } from '@/features/auth/components/AuthInput'
 import { signupCreator } from '@/features/auth/api'
 import { setPendingAuth } from '@/lib/pending-auth'
-import { authColors } from '@/features/auth/theme'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { designBackground, designSignupWordmark } from '@/design/assets'
+import { designSignupWordmark } from '@/design/assets'
 import { SelectPopover } from '@/features/profile/ui/SelectPopover'
 import { CountrySelect } from '@/features/profile/ui/CountrySelect'
 import { CATEGORY_OPTIONS, GENDER_OPTIONS, COUNTRY_TO_PHONE_CODE, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES, findCountryByValue, formatCountyLabel } from '@/features/profile/location-data'
-import { radii, typography } from '@/features/core/theme'
+import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { updateCreatorProfile } from '@/features/profile/api'
 import { useMemo } from 'react'
@@ -24,17 +23,17 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
     const completed = step < currentStep
     const active = step === currentStep
     return (
-      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: completed || active ? '#11192F' : 'rgba(248,250,255,0.98)', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: completed || active ? redesign.color.ink : redesign.color.card, borderWidth: completed || active ? 0 : StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center' }}>
         {completed ? (
           <MaterialCommunityIcons name="check" size={16} color="#fff" />
         ) : (
-          <Text style={{ color: active ? '#fff' : '#64748B', fontSize: 13, fontWeight: '700', fontFamily: 'Montserrat' }}>{step}</Text>
+          <Text style={{ color: active ? '#fff' : redesign.color.faint, fontSize: 13, fontWeight: '800', fontFamily: typography.fontFamily }}>{step}</Text>
         )}
       </View>
     )
   }
   const line = (filled: boolean) => (
-    <View style={{ width: 32, height: 2, borderRadius: 999, backgroundColor: filled ? '#11192F' : 'rgba(255,255,255,0.92)', marginHorizontal: 6 }} />
+    <View style={{ width: 32, height: 2, borderRadius: 999, backgroundColor: filled ? redesign.color.ink : redesign.color.hairlineStrong, marginHorizontal: 6 }} />
   )
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
@@ -48,14 +47,13 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
 
 const navButtons = (onBack: () => void, onNext: () => void, nextLabel = 'Next', disabled = false) => (
   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-    <Pressable onPress={onBack} style={{ height: 50, minWidth: 82, borderRadius: 14, borderWidth: 1, borderColor: authColors.border, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-      <MaterialCommunityIcons name="arrow-left" size={16} color={authColors.muted} />
-      <Text style={{ fontSize: 15, color: authColors.muted, fontWeight: '600', fontFamily: authColors.typography.fontFamily }}>Back</Text>
+    <Pressable onPress={onBack} style={{ height: 50, minWidth: 88, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: redesign.color.card }}>
+      <MaterialCommunityIcons name="arrow-left" size={16} color={redesign.color.muted} />
+      <Text style={{ fontSize: 15, color: redesign.color.muted, fontWeight: '700', fontFamily: typography.fontFamily }}>Back</Text>
     </Pressable>
-    <Pressable onPress={onNext} disabled={disabled} style={{ height: 50, minWidth: 130, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1.5, borderColor: '#C9D2FF', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, overflow: 'hidden', opacity: disabled ? 0.7 : 1 }}>
-      <LinearGradient colors={['rgba(247,244,255,0.95)', 'rgba(236,244,255,0.95)']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: 'absolute', inset: 0 }} />
-      <Text style={{ fontSize: 15, color: '#101525', fontWeight: '700', fontFamily: authColors.typography.fontFamily }}>{nextLabel}</Text>
-      <MaterialCommunityIcons name="arrow-right" size={18} color="#101525" />
+    <Pressable onPress={onNext} disabled={disabled} style={{ height: 50, minWidth: 140, paddingHorizontal: 18, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: disabled ? 0.55 : 1 }}>
+      <Text style={{ fontSize: 15, color: '#fff', fontWeight: '800', fontFamily: typography.fontFamily }}>{nextLabel}</Text>
+      <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
     </Pressable>
   </View>
 )
@@ -156,17 +154,22 @@ export default function SignupPage() {
     }
   }
 
-  const cardStyle = { backgroundColor: '#fff', borderWidth: 1, borderColor: '#D7DFEE', borderRadius: 18, paddingHorizontal: 18, paddingVertical: 16, gap: 14 } as const
+  const cardStyle = { backgroundColor: redesign.color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 18, gap: 14, ...redesign.shadow.card } as const
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F6F2' }}>
-      <ImageBackground source={designBackground} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} resizeMode="cover" />
-      <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
+    <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.2, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
+      />
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <SafeAreaView style={{ flex: 1 }}>
         <View style={{ alignItems: 'center', paddingTop: 14, paddingBottom: 10, paddingHorizontal: 18 }}>
           <Image source={designSignupWordmark} style={{ width: 156, height: 44, marginBottom: 8 }} resizeMode="contain" />
-          <Text style={{ textAlign: 'center', fontSize: 22, lineHeight: 26, fontWeight: '800', color: '#060B1F', fontFamily: 'Montserrat', letterSpacing: -0.6, marginBottom: 10 }}>
+          <Text style={{ textAlign: 'center', fontSize: 22, lineHeight: 26, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -0.6, marginBottom: 10 }}>
             Create your creator account
           </Text>
           <StepIndicator currentStep={step} />
@@ -183,11 +186,11 @@ export default function SignupPage() {
               <AuthInput label="INSTAGRAM HANDLE" value={instagramHandle} onChangeText={(v) => setInstagramHandle(v.replace(/^@+/, ''))} placeholder="yourinstagram" prefixText="@" sanitizeText={(v) => v.replace(/^@+/, '')} />
               <AuthInput label="PASSWORD *" value={password} onChangeText={setPassword} placeholder="Min 8 characters" secureTextEntry showToggle />
               <AuthInput label="CONFIRM PASSWORD *" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat password" secureTextEntry showToggle />
-              <Text style={{ color: '#687C9E', fontSize: 11, fontFamily: 'Montserrat', textAlign: 'center', lineHeight: 17, marginTop: 4 }}>
+              <Text style={{ color: redesign.color.muted, fontSize: 11, fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 17, marginTop: 4 }}>
                 {'By continuing, you agree to our '}
-                <Text onPress={() => Linking.openURL('https://likelab.io/terms-of-service')} style={{ color: '#101525', textDecorationLine: 'underline' }}>Terms of Service</Text>
+                <Text onPress={() => Linking.openURL('https://likelab.io/terms-of-service')} style={{ color: redesign.color.ink, textDecorationLine: 'underline' }}>Terms of Service</Text>
                 {' and '}
-                <Text onPress={() => Linking.openURL('https://likelab.io/privacy-policy')} style={{ color: '#101525', textDecorationLine: 'underline' }}>Privacy Policy</Text>.
+                <Text onPress={() => Linking.openURL('https://likelab.io/privacy-policy')} style={{ color: redesign.color.ink, textDecorationLine: 'underline' }}>Privacy Policy</Text>.
               </Text>
               {navButtons(() => router.back(), goNextFromStep1)}
             </View>
@@ -196,7 +199,7 @@ export default function SignupPage() {
           {/* Step 2 — Personal info */}
           {step === 2 ? (
             <View style={cardStyle}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#060B1F', fontFamily: 'Montserrat', marginBottom: 2 }}>About you</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#060B1F', fontFamily: typography.fontFamily, marginBottom: 2 }}>About you</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <View style={{ flex: 1 }}>
                   <SelectPopover label="Gender *" value={gender} placeholder="Select" options={GENDER_OPTIONS} onSelect={setGender} />
@@ -240,8 +243,8 @@ export default function SignupPage() {
           {/* Step 3 — Shipping address */}
           {step === 3 ? (
             <View style={cardStyle}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#060B1F', fontFamily: 'Montserrat', marginBottom: 2 }}>Shipping address</Text>
-              <Text style={{ color: '#687C9E', fontSize: 13, fontFamily: 'Montserrat', lineHeight: 18, marginBottom: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#060B1F', fontFamily: typography.fontFamily, marginBottom: 2 }}>Shipping address</Text>
+              <Text style={{ color: redesign.color.muted, fontSize: 13, fontFamily: typography.fontFamily, lineHeight: 18, marginBottom: 4 }}>
                 Used to send physical products from campaign brands.
               </Text>
               <AuthInput label="STREET ADDRESS *" value={address} onChangeText={setAddress} placeholder="123 Main Street" autoCapitalize="words" />
@@ -253,8 +256,8 @@ export default function SignupPage() {
           {/* Step 4 — Review */}
           {step === 4 ? (
             <View style={cardStyle}>
-              <View style={{ backgroundColor: 'rgba(248,250,255,0.92)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: 'rgba(234,239,248,0.95)', gap: 4 }}>
-                <Text style={{ color: '#101525', fontSize: 14, fontWeight: '700', fontFamily: 'Montserrat', marginBottom: 4 }}>Your account</Text>
+              <View style={{ backgroundColor: 'redesign.color.bg', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: 'redesign.color.hairlineStrong', gap: 4 }}>
+                <Text style={{ color: redesign.color.ink, fontSize: 14, fontWeight: '700', fontFamily: typography.fontFamily, marginBottom: 4 }}>Your account</Text>
                 {([
                   ['Name', displayName],
                   ['Email', email],
@@ -269,34 +272,33 @@ export default function SignupPage() {
                   ['Address', address],
                   ['Postal code', postalCode],
                 ] as ([string, string] | null)[]).filter((row): row is [string, string] => row !== null).map(([label, value]) => (
-                  <Text key={label} style={{ color: '#687C9E', fontSize: 13, fontFamily: 'Montserrat', lineHeight: 20 }}>
-                    <Text style={{ color: '#101525', fontWeight: '600' }}>{label}: </Text>{value}
+                  <Text key={label} style={{ color: redesign.color.muted, fontSize: 13, fontFamily: typography.fontFamily, lineHeight: 20 }}>
+                    <Text style={{ color: redesign.color.ink, fontWeight: '600' }}>{label}: </Text>{value}
                   </Text>
                 ))}
               </View>
 
-              <View style={{ backgroundColor: 'rgba(248,250,255,0.92)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: 'rgba(234,239,248,0.95)' }}>
-                <Text style={{ color: '#687C9E', fontSize: 13, lineHeight: 18, fontFamily: 'Montserrat' }}>
+              <View style={{ backgroundColor: 'redesign.color.bg', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: 'redesign.color.hairlineStrong' }}>
+                <Text style={{ color: redesign.color.muted, fontSize: 13, lineHeight: 18, fontFamily: typography.fontFamily }}>
                   After creating your account you will connect your TikTok to automatically import your profile picture and stats.
                 </Text>
               </View>
 
-              <Text style={{ color: authColors.muted, fontSize: 11, lineHeight: 16, fontFamily: authColors.typography.fontFamily, textAlign: 'center' }}>
+              <Text style={{ color: redesign.color.muted, fontSize: 11, lineHeight: 16, fontFamily: typography.fontFamily, textAlign: 'center' }}>
                 {'By creating an account, you agree to our '}
-                <Text onPress={() => Linking.openURL('https://likelab.io/terms-of-service')} style={{ color: '#101525', textDecorationLine: 'underline' }}>Terms of Service</Text>
+                <Text onPress={() => Linking.openURL('https://likelab.io/terms-of-service')} style={{ color: redesign.color.ink, textDecorationLine: 'underline' }}>Terms of Service</Text>
                 {' and '}
-                <Text onPress={() => Linking.openURL('https://likelab.io/privacy-policy')} style={{ color: '#101525', textDecorationLine: 'underline' }}>Privacy Policy</Text>.
+                <Text onPress={() => Linking.openURL('https://likelab.io/privacy-policy')} style={{ color: redesign.color.ink, textDecorationLine: 'underline' }}>Privacy Policy</Text>.
               </Text>
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Pressable onPress={() => setStep(3)} style={{ height: 50, minWidth: 82, borderRadius: 14, borderWidth: 1, borderColor: authColors.border, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-                  <MaterialCommunityIcons name="arrow-left" size={16} color={authColors.muted} />
-                  <Text style={{ fontSize: 15, color: authColors.muted, fontWeight: '600', fontFamily: authColors.typography.fontFamily }}>Back</Text>
+                <Pressable onPress={() => setStep(3)} style={{ height: 50, minWidth: 88, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: redesign.color.card }}>
+                  <MaterialCommunityIcons name="arrow-left" size={16} color={redesign.color.muted} />
+                  <Text style={{ fontSize: 15, color: redesign.color.muted, fontWeight: '700', fontFamily: typography.fontFamily }}>Back</Text>
                 </Pressable>
-                <Pressable onPress={handleCreateAccount} disabled={createLoading} style={{ height: 50, minWidth: 170, paddingHorizontal: 22, borderRadius: 20, borderWidth: 1.5, borderColor: '#C9D2FF', alignItems: 'center', justifyContent: 'center', opacity: createLoading ? 0.7 : 1, overflow: 'hidden', flexDirection: 'row' }}>
-                  <LinearGradient colors={['rgba(247,244,255,0.95)', 'rgba(236,244,255,0.95)']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: 'absolute', inset: 0 }} />
-                  <Text style={{ fontSize: 15, color: '#101525', fontWeight: '700', fontFamily: authColors.typography.fontFamily }}>
-                    {createLoading ? 'Creating account...' : 'Create account'}
+                <Pressable onPress={handleCreateAccount} disabled={createLoading} style={{ height: 50, minWidth: 180, paddingHorizontal: 22, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', opacity: createLoading ? 0.55 : 1, flexDirection: 'row' }}>
+                  <Text style={{ fontSize: 15, color: '#fff', fontWeight: '800', fontFamily: typography.fontFamily }}>
+                    {createLoading ? 'Creating account…' : 'Create account'}
                   </Text>
                 </Pressable>
               </View>

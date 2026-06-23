@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { ActivityIndicator, Alert, Image, LayoutChangeEvent, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Alert, Image, LayoutChangeEvent, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { router } from 'expo-router'
@@ -11,7 +12,7 @@ import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { ProfileField } from '@/features/shared/ui/ProfileField'
-import { radii, spacing, typography } from '@/features/core/theme'
+import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useCreatorProfile, useUpdateCreatorProfile } from '@/features/profile/hooks'
 import { CreatorProfile } from '@/features/core/types'
@@ -22,6 +23,7 @@ import { SelectPopover } from '@/features/profile/ui/SelectPopover'
 import { CATEGORY_OPTIONS, COUNTRY_TO_PHONE_CODE, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES, findCountryByValue, formatCountyLabel } from '@/features/profile/location-data'
 import { ProfileCompletionSection, getProfileCompletion } from '@/features/profile/completion'
 import { connectTikTokAccount, disconnectTikTokAccount } from '@/features/auth/tiktok'
+import { replayTutorial } from '@/features/onboarding/tutorialControl'
 
 type SectionId = 'avatar' | 'account' | 'social' | 'personal' | 'location' | 'categories' | 'shipping'
 const stripHandleInput = (value: string) => value.replace(/^@+/, '')
@@ -58,8 +60,27 @@ type Props = {
   onboarding?: string
 }
 
+function SectionHeader({ children, tint }: { children: string; tint?: string }) {
+  return (
+    <Text
+      style={{
+        marginLeft: 4,
+        color: tint || redesign.color.faint,
+        fontFamily: typography.fontFamily,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+      }}
+    >
+      {children}
+    </Text>
+  )
+}
+
 export function SettingsForm({ focusSection, onboarding }: Props) {
-  const { colors, palette } = useTheme()
+  const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
   const { data, isLoading, error } = useCreatorProfile()
   const updateMutation = useUpdateCreatorProfile()
   const queryClient = useQueryClient()
@@ -132,8 +153,14 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
     sectionYRef.current[id] = event.nativeEvent.layout.y
   }
 
+  // Avatar lives inside the Account card now — scroll there for the avatar item.
+  const SECTION_ALIAS: Record<SectionId, SectionId> = {
+    avatar: 'account', account: 'account', social: 'social',
+    personal: 'personal', categories: 'personal',
+    location: 'location', shipping: 'location',
+  }
   const scrollToSection = (id: SectionId) => {
-    const y = Math.max(0, (sectionYRef.current[id] || 0) - 8)
+    const y = Math.max(0, (sectionYRef.current[SECTION_ALIAS[id]] || 0) - 8)
     scrollRef.current?.scrollTo({ y, animated: true })
   }
 
@@ -327,36 +354,49 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
     }
   }
 
+  const stickySave = (
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: -insets.bottom }}>
+      <View
+        style={{
+          backgroundColor: redesign.color.bg,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: redesign.color.hairlineStrong,
+          paddingHorizontal: 16,
+          paddingTop: 12,
+          paddingBottom: insets.bottom + 12,
+          ...redesign.shadow.stickyUp,
+        }}
+      >
+        <LiquidButton
+          label={updateMutation.isPending ? 'Saving…' : 'Save changes'}
+          onPress={handleSave}
+          disabled={updateMutation.isPending}
+          minHeight={52}
+        />
+      </View>
+    </View>
+  )
+
   return (
-    <Screen scrollRef={scrollRef}>
+    <Screen scrollRef={scrollRef} bgColor={redesign.color.bg} overlay={stickySave} overlayPadding={96} contentGap={16}>
       <AppHeader />
 
       <Pressable
         onPress={() => router.push('/(tabs)/profile')}
-        style={{
-          alignSelf: 'flex-start',
-          minHeight: 36,
-          paddingHorizontal: 10,
-          borderRadius: radii.input,
-          borderWidth: 1,
-          borderColor: palette.borderColor,
-          backgroundColor: palette.inputBg,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-        }}
+        style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}
+        hitSlop={8}
       >
-        <MaterialCommunityIcons name="arrow-left" size={16} color={palette.text} />
-        <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600' }}>
-          Back to Profile
+        <MaterialCommunityIcons name="chevron-left" size={18} color={redesign.color.muted} />
+        <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600' }}>
+          Profile
         </Text>
       </Pressable>
 
-      <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 2 }}>
-        <Text style={{ fontSize: typography.sizes.pageTitle, fontWeight: '700', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -0.32 }}>
+      <Animated.View entering={FadeInDown.duration(250)}>
+        <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>
           Settings
         </Text>
-        <Text style={{ color: palette.textMuted, fontSize: typography.sizes.subtitle, fontFamily: typography.fontFamily }}>
+        <Text style={{ color: redesign.color.muted, fontSize: 14.5, fontWeight: '500', fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
           Manage your creator account and profile details
         </Text>
       </Animated.View>
@@ -367,8 +407,8 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
           style={{
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: palette.borderColor,
-            backgroundColor: palette.inputBg,
+            borderColor: redesign.color.hairlineStrong,
+            backgroundColor: redesign.color.card,
             paddingHorizontal: 12,
             paddingVertical: 10,
             flexDirection: 'row',
@@ -376,20 +416,20 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600' }}>{showToast}</Text>
-          <MaterialCommunityIcons name="close" size={18} color={palette.textMuted} />
+          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600' }}>{showToast}</Text>
+          <MaterialCommunityIcons name="close" size={18} color={redesign.color.muted} />
         </Pressable>
       ) : null}
 
-      {isLoading ? <ActivityIndicator color={colors.primary} /> : null}
-      {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load your profile right now.</Text> : null}
+      {isLoading ? <ActivityIndicator color={redesign.color.purple} /> : null}
+      {error ? <Text style={{ color: redesign.color.muted, fontSize: 12 }}>Could not load your profile right now.</Text> : null}
 
       {onboarding === '1' ? (
         <SectionCard>
-          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '700' }}>
+          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '700' }}>
             Complete Your Profile
           </Text>
-          <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 14, lineHeight: 20 }}>
+          <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 14, lineHeight: 20 }}>
             This is now the main onboarding flow. Fill in the missing sections below and save your changes to unlock the app.
           </Text>
         </SectionCard>
@@ -403,10 +443,11 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         />
       ) : null}
 
-      <View onLayout={markSectionY('avatar')}>
+      <View onLayout={markSectionY('account')} style={{ gap: 8 }}>
+        <SectionHeader>Account</SectionHeader>
         <SectionCard>
           <Pressable onPress={handlePickAvatar} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 80, height: 80, borderRadius: 40, overflow: 'hidden', borderWidth: 1, borderColor: palette.borderColor }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: redesign.color.hairlineStrong }}>
               <Image
                 source={{
                   uri:
@@ -416,21 +457,17 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
                 style={{ width: '100%', height: '100%' }}
               />
               <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(10,15,30,0.24)', alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialCommunityIcons name="camera-outline" size={20} color="#fff" />
+                <MaterialCommunityIcons name="camera-outline" size={18} color="#fff" />
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 20, fontWeight: '600', color: palette.text, fontFamily: typography.fontFamily }}>Profile Photo</Text>
-              <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 13 }}>
-                {avatarUploading ? 'Uploading...' : 'Click to change'}
+              <Text style={{ fontSize: 15, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2, fontFamily: typography.fontFamily }}>Profile photo</Text>
+              <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500' }}>
+                {avatarUploading ? 'Uploading…' : 'Tap to change'}
               </Text>
             </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
           </Pressable>
-        </SectionCard>
-      </View>
-
-      <View onLayout={markSectionY('account')}>
-        <SectionCard title="Account">
           <ProfileField label="Email" value={data?.email || ''} editable={false} keyboardType="email-address" />
           <ProfileField
             label="Display Name"
@@ -446,8 +483,9 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         </SectionCard>
       </View>
 
-      <View onLayout={markSectionY('social')}>
-        <SectionCard title="Social">
+      <View onLayout={markSectionY('social')} style={{ gap: 8 }}>
+        <SectionHeader>Social</SectionHeader>
+        <SectionCard>
           <ProfileField
             label="Instagram Handle"
             value={form.instagramHandle}
@@ -507,8 +545,9 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         </SectionCard>
       </View>
 
-      <View onLayout={markSectionY('personal')}>
-        <SectionCard title="Personal">
+      <View onLayout={markSectionY('personal')} style={{ gap: 8 }}>
+        <SectionHeader>About you</SectionHeader>
+        <SectionCard>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1 }}>
               <SelectPopover
@@ -519,44 +558,41 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
                 onSelect={(value) => setForm((prev) => ({ ...prev, gender: value }))}
               />
             </View>
-            <View style={{ flex: 1, gap: 8 }}>
-              <Text
-                style={{
-                  color: palette.textMuted,
-                  fontFamily: typography.fontFamily,
-                  fontSize: typography.sizes.formLabel,
-                  fontWeight: '600',
-                  letterSpacing: 0.88,
-                  textTransform: 'uppercase',
-                }}
-              >
-                Age
-              </Text>
-              <TextInput
+            <View style={{ flex: 1 }}>
+              <ProfileField
+                label="Age"
                 value={form.ageRange}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, ageRange: value.replace(/[^\d]/g, '') }))}
-                keyboardType="numeric"
                 placeholder="Your age"
-                placeholderTextColor={palette.textMuted}
-                style={{
-                  borderWidth: 1,
-                  borderColor: palette.borderColor,
-                  borderRadius: radii.input,
-                  height: 40,
-                  backgroundColor: palette.inputBg,
-                  paddingHorizontal: 12,
-                  fontSize: 14,
-                  color: palette.text,
-                  fontFamily: typography.fontFamily,
-                }}
+                keyboardType="numeric"
+                onChangeText={(value) => setForm((prev) => ({ ...prev, ageRange: value.replace(/[^\d]/g, '') }))}
               />
             </View>
           </View>
+          <SelectPopover
+            label="Primary Category"
+            value={form.primaryCategory}
+            placeholder="Select category"
+            options={CATEGORY_OPTIONS}
+            onSelect={(primaryCategory) =>
+              setForm((prev) => ({
+                ...prev,
+                primaryCategory,
+                secondaryCategory: prev.secondaryCategory === primaryCategory ? '' : prev.secondaryCategory,
+              }))
+            }
+          />
+          <SelectPopover
+            label="Secondary Category"
+            value={form.secondaryCategory || '__none'}
+            options={secondaryCategoryOptions}
+            onSelect={(value) => setForm((prev) => ({ ...prev, secondaryCategory: value === '__none' ? '' : value }))}
+          />
         </SectionCard>
       </View>
 
-      <View onLayout={markSectionY('location')}>
-        <SectionCard title="Location">
+      <View onLayout={markSectionY('location')} style={{ gap: 8 }}>
+        <SectionHeader>Location &amp; shipping</SectionHeader>
+        <SectionCard>
           <CountrySelect
             value={form.country}
             onSelect={(countryName, countryCode) =>
@@ -601,35 +637,9 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
               onChangeText={(value) => setForm((prev) => ({ ...prev, city: value }))}
             />
           )}
-        </SectionCard>
-      </View>
 
-      <View onLayout={markSectionY('categories')}>
-        <SectionCard title="Categories">
-          <SelectPopover
-            label="Primary Category"
-            value={form.primaryCategory}
-            placeholder="Select category"
-            options={CATEGORY_OPTIONS}
-            onSelect={(primaryCategory) =>
-              setForm((prev) => ({
-                ...prev,
-                primaryCategory,
-                secondaryCategory: prev.secondaryCategory === primaryCategory ? '' : prev.secondaryCategory,
-              }))
-            }
-          />
-          <SelectPopover
-            label="Secondary Category"
-            value={form.secondaryCategory || '__none'}
-            options={secondaryCategoryOptions}
-            onSelect={(value) => setForm((prev) => ({ ...prev, secondaryCategory: value === '__none' ? '' : value }))}
-          />
-        </SectionCard>
-      </View>
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: redesign.color.hairlineStrong, marginVertical: 2 }} />
 
-      <View onLayout={markSectionY('shipping')}>
-        <SectionCard title="Shipping Address">
           <ProfileField
             label="Street Address"
             value={form.address}
@@ -646,18 +656,10 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         </SectionCard>
       </View>
 
-      <LiquidButton
-        label={updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-        onPress={handleSave}
-        disabled={updateMutation.isPending}
-        minHeight={44}
-        borderRadius={radii.button}
-        style={{ marginTop: spacing.xs }}
-      />
-
-      <SectionCard>
-        <Text style={{ color: colors.destructive, fontWeight: '700', fontSize: 20, fontFamily: typography.fontFamily }}>Danger Zone</Text>
-        <Text style={{ color: palette.textMuted, fontSize: 14, fontFamily: typography.fontFamily, lineHeight: 20 }}>
+      <View style={{ gap: 8 }}>
+        <SectionHeader tint={colors.destructive}>Danger zone</SectionHeader>
+        <SectionCard>
+        <Text style={{ color: redesign.color.muted, fontSize: 13.5, fontFamily: typography.fontFamily, lineHeight: 20 }}>
           Permanently delete your account and all associated data. This action cannot be undone.
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -678,24 +680,45 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             style={{ flex: 1 }}
           />
         </View>
-      </SectionCard>
+        </SectionCard>
+      </View>
 
-      <SectionCard title="Legal">
+      <View style={{ gap: 8 }}>
+        <SectionHeader>Legal</SectionHeader>
+        <SectionCard>
         <Pressable
           onPress={() => Linking.openURL('https://likelab.io/privacy-policy')}
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}
         >
-          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14 }}>Privacy Policy</Text>
-          <MaterialCommunityIcons name="open-in-new" size={16} color={palette.textMuted} />
+          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '500' }}>Privacy Policy</Text>
+          <MaterialCommunityIcons name="open-in-new" size={16} color={redesign.color.muted} />
         </Pressable>
+        <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: redesign.color.hairlineStrong }} />
         <Pressable
           onPress={() => Linking.openURL('https://likelab.io/terms-of-service')}
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}
         >
-          <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14 }}>Terms of Service</Text>
-          <MaterialCommunityIcons name="open-in-new" size={16} color={palette.textMuted} />
+          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '500' }}>Terms of Service</Text>
+          <MaterialCommunityIcons name="open-in-new" size={16} color={redesign.color.muted} />
         </Pressable>
-      </SectionCard>
+        </SectionCard>
+      </View>
+
+      <View style={{ gap: 8 }}>
+        <SectionHeader>Help</SectionHeader>
+        <SectionCard>
+          <Pressable
+            onPress={() => { router.push('/(tabs)/profile'); setTimeout(() => replayTutorial(), 300) }}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <MaterialCommunityIcons name="play-circle-outline" size={20} color={redesign.color.purple} />
+              <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '500' }}>Replay tutorial</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={18} color={redesign.color.muted} />
+          </Pressable>
+        </SectionCard>
+      </View>
 
 
       <Modal visible={deleteModalOpen} transparent animationType="fade" onRequestClose={() => setDeleteModalOpen(false)}>
@@ -704,17 +727,17 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             onPress={() => undefined}
             style={{
               borderRadius: 16,
-              backgroundColor: palette.sectionBg,
+              backgroundColor: redesign.color.card,
               borderWidth: 1,
-              borderColor: palette.borderColor,
+              borderColor: redesign.color.hairlineStrong,
               padding: 16,
               gap: 12,
             }}
           >
-            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '700', fontSize: 16, color: palette.text }}>
+            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '700', fontSize: 16, color: redesign.color.ink }}>
               Confirm Account Deletion
             </Text>
-            <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: palette.textMuted }}>
+            <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: redesign.color.muted }}>
               Enter your current password to permanently delete your account.
             </Text>
             <TextInput
@@ -722,24 +745,24 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
               onChangeText={setDeletePassword}
               secureTextEntry
               placeholder="Current password"
-              placeholderTextColor={palette.textMuted}
+              placeholderTextColor={redesign.color.muted}
               style={{
                 height: 44,
                 borderWidth: 1,
-                borderColor: palette.borderColor,
+                borderColor: redesign.color.hairlineStrong,
                 borderRadius: radii.input,
                 paddingHorizontal: 12,
-                color: palette.text,
-                backgroundColor: palette.inputBg,
+                color: redesign.color.ink,
+                backgroundColor: redesign.color.card,
                 fontFamily: typography.fontFamily,
               }}
             />
             <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
               <Pressable
                 onPress={() => setDeleteModalOpen(false)}
-                style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: radii.input, borderWidth: 1, borderColor: palette.borderColor }}
+                style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: radii.input, borderWidth: 1, borderColor: redesign.color.hairlineStrong }}
               >
-                <Text style={{ fontFamily: typography.fontFamily, color: palette.text }}>Cancel</Text>
+                <Text style={{ fontFamily: typography.fontFamily, color: redesign.color.ink }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleDeleteAccount}

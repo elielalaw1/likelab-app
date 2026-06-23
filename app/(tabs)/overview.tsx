@@ -1,11 +1,11 @@
-import { Alert, FlatList, Pressable, ScrollView, Text, View } from 'react-native'
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { typography } from '@/features/core/theme'
+import { redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useApplyToCampaign, useCampaigns } from '@/features/campaigns/hooks'
 import { useDeliverables } from '@/features/deliverables/hooks'
@@ -20,7 +20,7 @@ import { haptic } from '@/features/shared/haptics'
 
 
 export default function ProjectsPage() {
-  const { colors, palette } = useTheme()
+  const { palette } = useTheme()
   const queryClient = useQueryClient()
   const { data, isLoading, error, refetch: refetchCampaigns } = useCampaigns()
   const applyMutation = useApplyToCampaign()
@@ -28,6 +28,7 @@ export default function ProjectsPage() {
   const isApproved = profile?.approved === true
   const { data: deliverables, refetch: refetchDeliverables } = useDeliverables()
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [category, setCategory] = useState<string>('all')
   const scrollRef = useRef<ScrollView>(null)
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function ProjectsPage() {
   }, [deliverables])
 
   const accepted = useMemo(() => (data || []).filter((c) => c.creatorApplicationStatus === 'accepted'), [data])
-  const browsable = useMemo(
+  const browsableAll = useMemo(
     () =>
       (data || []).filter(
         (c) =>
@@ -66,6 +67,24 @@ export default function ProjectsPage() {
           c.status === 'published'
       ),
     [data]
+  )
+  // Category chips are derived from real campaign data — "All" plus any distinct
+  // categories present. (No category field exists yet, so only "All" renders
+  // until the backend exposes one.)
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of browsableAll) {
+      const cat = (c as { category?: string | null }).category
+      if (cat) set.add(cat)
+    }
+    return ['all', ...Array.from(set)]
+  }, [browsableAll])
+  const browsable = useMemo(
+    () =>
+      category === 'all'
+        ? browsableAll
+        : browsableAll.filter((c) => (c as { category?: string | null }).category === category),
+    [browsableAll, category]
   )
 
   const browseRows = useMemo(
@@ -80,17 +99,50 @@ export default function ProjectsPage() {
   const isGrid = viewMode === 'grid'
 
   return (
-    <Screen onRefresh={onRefresh} scrollRef={scrollRef} wallpaper>
+    <Screen onRefresh={onRefresh} scrollRef={scrollRef} bgColor={redesign.color.bg}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
-        <Text style={{ fontSize: 42, fontWeight: '300', color: 'rgba(28,28,30,0.35)', fontFamily: typography.fontFamilyLight, letterSpacing: -1.5, lineHeight: 44 }}>
+        <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>
           Discover
         </Text>
-        <Text style={{ fontSize: 42, fontWeight: '800', color: '#1C1C1E', fontFamily: typography.fontFamily, letterSpacing: -1.5, lineHeight: 44 }}>
-          campaigns
+        <Text style={{ fontSize: 14.5, fontWeight: '500', color: redesign.color.muted, fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
+          Apply to campaigns. Compete. Get paid.
         </Text>
       </Animated.View>
+
+      {/* Category filter chips */}
+      {categories.length > 1 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+          style={{ marginHorizontal: -2 }}
+        >
+          {categories.map((cat) => {
+            const active = category === cat
+            const label = cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)
+            return (
+              <Pressable
+                key={cat}
+                onPress={() => { haptic.selection(); setCategory(cat) }}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 9,
+                  borderRadius: 999,
+                  backgroundColor: active ? redesign.color.ink : redesign.color.card,
+                  borderWidth: active ? 0 : StyleSheet.hairlineWidth,
+                  borderColor: redesign.color.hairlineStrong,
+                }}
+              >
+                <Text style={{ color: active ? '#fff' : redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700' }}>
+                  {label}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+      ) : null}
 
       {isLoading ? (
         <>
@@ -131,8 +183,8 @@ export default function ProjectsPage() {
       )}
 
       {browsable.length > 0 && (
-        <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
-          Available ({browsable.length})
+        <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+          Open now · {browsable.length}
         </Text>
       )}
 
@@ -182,7 +234,7 @@ export default function ProjectsPage() {
 
       {accepted.length > 0 && (
         <>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily, marginTop: browsable.length ? 4 : 0 }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily, marginTop: browsable.length ? 4 : 0 }}>
             My Active
           </Text>
           {isGrid ? (

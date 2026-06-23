@@ -25,9 +25,11 @@ type Props = {
   onRefresh?: () => Promise<void>
   gradient?: GradientSpec
   wallpaper?: boolean
+  bgColor?: string
+  contentGap?: number
 }
 
-export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper }: Props) {
+export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap }: Props) {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { reportScroll, setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
@@ -48,7 +50,7 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
     try { await onRefresh() } finally { setRefreshing(false) }
   }, [onRefresh])
 
-  const safeBg = wallpaper ? 'transparent' : palette.bg
+  const safeBg = wallpaper ? 'transparent' : (bgColor ?? palette.bg)
 
   const inner = (
     <SafeAreaView style={{ flex: 1, backgroundColor: safeBg }}>
@@ -73,13 +75,13 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
             paddingHorizontal: spacing.page,
             paddingTop: spacing.sm,
             paddingBottom: bottomPad,
-            gap: spacing.lg,
+            gap: contentGap ?? spacing.lg,
           }}
         >
           {children}
         </ScrollView>
       ) : (
-        <View style={{ flex: 1, paddingHorizontal: spacing.page, paddingBottom: bottomPad, gap: spacing.lg }}>{children}</View>
+        <View style={{ flex: 1, paddingHorizontal: spacing.page, paddingBottom: bottomPad, gap: contentGap ?? spacing.lg }}>{children}</View>
       )}
       {overlay}
     </SafeAreaView>

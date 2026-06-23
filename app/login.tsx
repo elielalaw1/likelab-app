@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Image,
-  ImageBackground,
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -16,7 +19,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { assertCreatorRole, NON_CREATOR_MESSAGE } from '@/lib/assert-creator-role'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
-import { designBackground, designWordmark } from '@/design/assets'
+import { redesign, typography } from '@/features/core/theme'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { designWordmark } from '@/design/assets'
 
 export default function LoginPage() {
   const { session, loading: sessionLoading } = useAuthSession()
@@ -70,146 +75,122 @@ export default function LoginPage() {
     }
   }
 
+  const disabled = loading || loginCooldown > 0
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F6F2' }}>
-      <ImageBackground
-        source={designBackground}
-        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-        resizeMode="cover"
-      />
+    <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
+      {/* Restrained holographic glow, top-right */}
       <LinearGradient
-        colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', inset: 0 }}
+        pointerEvents="none"
+        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.2, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
       />
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ flex: 1 }}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 32 }}>
+            <View style={{ alignItems: 'center', marginBottom: 28 }}>
+              <Image source={designWordmark} style={{ width: 240, height: 40 }} resizeMode="contain" />
+            </View>
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 32 }}>
-          <Image
-            source={designWordmark}
-            style={{ width: 320, height: 48 }}
-            resizeMode="contain"
-          />
-        </View>
-
-          <View style={{ paddingHorizontal: 20 }}>
-
-        <View
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.9)',
-            borderWidth: 1,
-            borderColor: '#D7DFEE',
-            borderRadius: 18,
-            paddingHorizontal: 18,
-            paddingVertical: 24,
-            gap: 14,
-          }}
-        >
-          <Text style={{ color: '#687C9E', fontSize: 14, fontFamily: 'Montserrat', textAlign: 'center', lineHeight: 20 }}>
-            Sign in to your LikeLab creator account
-          </Text>
-
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email"
-            placeholderTextColor="#9BABC7"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            style={{
-              borderWidth: 1,
-              borderColor: '#D7DFEE',
-              borderRadius: 12,
-              paddingHorizontal: 14,
-              paddingVertical: 13,
-              fontSize: 15,
-              fontFamily: 'Montserrat',
-              color: '#101525',
-              backgroundColor: '#FAFBFF',
-            }}
-          />
-
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: '#D7DFEE',
-              borderRadius: 12,
-              paddingHorizontal: 14,
-              backgroundColor: '#FAFBFF',
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-          >
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Password"
-              placeholderTextColor="#9BABC7"
-              secureTextEntry={!showPassword}
-              autoComplete="password"
+            <View
               style={{
-                flex: 1,
-                paddingVertical: 13,
-                fontSize: 15,
-                color: '#101525',
+                backgroundColor: redesign.color.card,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: redesign.color.hairlineStrong,
+                borderRadius: 24,
+                paddingHorizontal: 18,
+                paddingVertical: 22,
+                gap: 14,
+                ...redesign.shadow.card,
               }}
-            />
-            <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-              <MaterialCommunityIcons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color="#9BABC7"
-              />
-            </Pressable>
-          </View>
-
-          <Pressable onPress={() => router.push('/forgot-password')}>
-            <Text style={{ color: '#687C9E', fontSize: 12, fontFamily: 'Montserrat', textAlign: 'right' }}>
-              Forgot password?
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={handleLogin}
-            disabled={loading || loginCooldown > 0}
-            style={{
-              borderRadius: 14,
-              borderWidth: 1.5,
-              borderColor: '#C9D2FF',
-              overflow: 'hidden',
-              opacity: (loading || loginCooldown > 0) ? 0.72 : 1,
-            }}
-          >
-            <LinearGradient
-              colors={['rgba(240,236,255,0.92)', 'rgba(236,243,255,0.92)']}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 15 }}
             >
-              <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>
-                {loading ? 'Signing in...' : loginCooldown > 0 ? `Try again in ${loginCooldown}s` : 'Sign in'}
+              <View style={{ gap: 4, marginBottom: 2 }}>
+                <Text style={{ color: redesign.color.ink, fontSize: 20, fontWeight: '800', letterSpacing: -0.4, fontFamily: typography.fontFamily, textAlign: 'center' }}>
+                  Welcome back
+                </Text>
+                <Text style={{ color: redesign.color.muted, fontSize: 13.5, fontWeight: '500', fontFamily: typography.fontFamily, textAlign: 'center' }}>
+                  Sign in to your creator account
+                </Text>
+              </View>
+
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email"
+                placeholderTextColor={redesign.color.faint}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                style={{
+                  height: 52,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: redesign.color.hairlineStrong,
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  fontSize: 16,
+                  fontFamily: typography.fontFamily,
+                  color: redesign.color.ink,
+                  backgroundColor: redesign.color.bg,
+                }}
+              />
+
+              <View
+                style={{
+                  height: 52,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: redesign.color.hairlineStrong,
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  backgroundColor: redesign.color.bg,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Password"
+                  placeholderTextColor={redesign.color.faint}
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                  style={{ flex: 1, fontSize: 16, color: redesign.color.ink, fontFamily: showPassword ? typography.fontFamily : undefined }}
+                />
+                <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                  <MaterialCommunityIcons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={redesign.color.muted} />
+                </Pressable>
+              </View>
+
+              <Pressable onPress={() => router.push('/forgot-password')} hitSlop={6}>
+                <Text style={{ color: redesign.color.purple, fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily, textAlign: 'right' }}>
+                  Forgot password?
+                </Text>
+              </Pressable>
+
+              <LiquidButton
+                label={loading ? 'Signing in…' : loginCooldown > 0 ? `Try again in ${loginCooldown}s` : 'Sign in'}
+                onPress={disabled ? undefined : handleLogin}
+                disabled={disabled}
+                minHeight={52}
+              />
+
+              <Text style={{ color: redesign.color.muted, fontSize: 11.5, fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 17 }}>
+                {'By continuing, you agree to our '}
+                <Text onPress={() => Linking.openURL('https://likelab.io/terms-of-service')} style={{ color: redesign.color.ink, fontWeight: '700' }}>Terms of Service</Text>
+                {' and '}
+                <Text onPress={() => Linking.openURL('https://likelab.io/privacy-policy')} style={{ color: redesign.color.ink, fontWeight: '700' }}>Privacy Policy</Text>.
               </Text>
-            </LinearGradient>
-          </Pressable>
+            </View>
 
-          <Text style={{ color: '#6C7E9E', fontSize: 11, fontFamily: 'Montserrat', textAlign: 'center', lineHeight: 17 }}>
-            {'By continuing, you agree to our '}
-            <Text onPress={() => Linking.openURL('https://likelab.io/terms-of-service')} style={{ color: '#101525', textDecorationLine: 'underline' }}>Terms of Service</Text>
-            {' and '}
-            <Text onPress={() => Linking.openURL('https://likelab.io/privacy-policy')} style={{ color: '#101525', textDecorationLine: 'underline' }}>Privacy Policy</Text>
-            .
-          </Text>
-        </View>
-
-        <View style={{ marginTop: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-          <Text style={{ color: '#6C7E9E', fontSize: 15, fontFamily: 'Montserrat' }}>Don&apos;t have an account?</Text>
-          <Pressable onPress={() => router.push('/signup')}>
-            <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>Sign up</Text>
-          </Pressable>
-        </View>
-          </View>
+            <View style={{ marginTop: 22, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: redesign.color.muted, fontSize: 14.5, fontFamily: typography.fontFamily }}>Don&apos;t have an account?</Text>
+              <Pressable onPress={() => router.push('/signup')} hitSlop={6}>
+                <Text style={{ color: redesign.color.ink, fontSize: 14.5, fontWeight: '800', fontFamily: typography.fontFamily }}>Sign up</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   )

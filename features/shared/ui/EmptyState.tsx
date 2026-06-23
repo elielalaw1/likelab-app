@@ -1,7 +1,6 @@
-import { Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { typography } from '@/features/core/theme'
-import { useTheme } from '@/features/core/useTheme'
+import { redesign, typography } from '@/features/core/theme'
 
 type Props = {
   title: string
@@ -10,22 +9,29 @@ type Props = {
 }
 
 export function EmptyState({ title, subtitle, icon = 'information-outline' }: Props) {
-  const { colors, palette } = useTheme()
   return (
     <View
       style={{
-        borderWidth: 1,
-        borderColor: palette.borderSoft,
-        backgroundColor: palette.cardBg,
-        borderRadius: 20,
-        padding: 20,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: redesign.color.hairlineStrong,
+        backgroundColor: redesign.color.card,
+        borderRadius: 22,
+        paddingVertical: 30,
+        paddingHorizontal: 24,
         alignItems: 'center',
-        gap: 8,
+        gap: 10,
+        ...redesign.shadow.card,
       }}
     >
-      <MaterialCommunityIcons name={icon} size={30} color={palette.textMuted} />
-      <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600', color: palette.text }}>{title}</Text>
-      <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: palette.textMuted, textAlign: 'center' }}>{subtitle}</Text>
+      <View style={{ width: 54, height: 54, borderRadius: 17, backgroundColor: 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
+        <MaterialCommunityIcons name={icon} size={26} color={redesign.color.purple} />
+      </View>
+      <Text style={{ fontFamily: typography.fontFamily, fontSize: 15.5, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.3, textAlign: 'center' }}>
+        {title}
+      </Text>
+      <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: redesign.color.muted, textAlign: 'center', lineHeight: 19, maxWidth: 280 }}>
+        {subtitle}
+      </Text>
     </View>
   )
 }

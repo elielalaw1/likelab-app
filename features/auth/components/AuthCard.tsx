@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
-import { View } from 'react-native'
-import { GlassCard } from '@/features/shared/ui/GlassCard'
+import { StyleSheet, View } from 'react-native'
+import { redesign } from '@/features/core/theme'
 
 type Props = {
   children: ReactNode
@@ -8,10 +8,19 @@ type Props = {
 
 export function AuthCard({ children }: Props) {
   return (
-    <GlassCard radius={20}>
-      <View style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 10 }}>
-        {children}
-      </View>
-    </GlassCard>
+    <View
+      style={{
+        backgroundColor: redesign.color.card,
+        borderRadius: 22,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: redesign.color.hairlineStrong,
+        paddingHorizontal: 16,
+        paddingVertical: 18,
+        gap: 12,
+        ...redesign.shadow.card,
+      }}
+    >
+      {children}
+    </View>
   )
 }

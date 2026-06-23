@@ -1,12 +1,11 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, FlatList, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { LinearGradient } from 'expo-linear-gradient'
-import { BlurView } from 'expo-blur'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import { Screen } from '@/features/shared/ui/Screen'
@@ -14,12 +13,13 @@ import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { StatusBadge } from '@/features/shared/ui/StatusBadge'
 import { approvalChip } from '@/features/campaigns/phase'
 import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/core/format'
-import { glass, radii, shadows, typography } from '@/features/core/theme'
+import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { CountUp, springs } from '@/features/motion/springs'
-import { GlassCard } from '@/features/shared/ui/GlassCard'
 import { haptic } from '@/features/shared/haptics'
 import { BrandSheet } from '@/features/shared/ui/BrandSheet'
+import { CampaignBriefModal } from '@/features/campaigns/ui/CampaignBriefModal'
 import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
@@ -28,6 +28,7 @@ import { LinkSubmitRow } from '@/features/shared/ui/LinkSubmitRow'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { PressableScale } from '@/features/shared/ui/PressableScale'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { toast } from '@/features/shared/ui/Toast'
 import * as StoreReview from 'expo-store-review'
@@ -63,67 +64,82 @@ function canSubmitDeliverable(status: string) {
 function Section({
   icon,
   title,
+  tint,
+  accent,
   children,
 }: {
   icon: keyof typeof MaterialCommunityIcons.glyphMap
   title: string
   tint?: string
+  accent?: string
   borderColor?: string
   children: ReactNode
 }) {
-  const { palette } = useTheme()
   return (
-    <GlassCard radius={22}>
-      <View style={{ padding: 22, gap: 18 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(255,255,255,0.6)',
-              borderWidth: 0.5,
-              borderColor: 'rgba(255,255,255,0.9)',
-              shadowColor: '#6040A0',
-              shadowOpacity: 0.06,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 2 },
-            }}
-          >
-            <MaterialCommunityIcons name={icon} size={16} color={palette.text} />
-          </View>
-          <Text
-            style={{
-              color: 'rgba(28,28,30,0.35)',
-              fontFamily: typography.fontFamily,
-              fontWeight: '700',
-              fontSize: 9,
-              letterSpacing: 1.8,
-              textTransform: 'uppercase',
-            }}
-          >
-            {title}
-          </Text>
+    <View
+      style={{
+        backgroundColor: redesign.color.card,
+        borderRadius: 20,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: redesign.color.hairlineStrong,
+        padding: 14,
+        gap: 10,
+        ...redesign.shadow.card,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: tint || 'rgba(124,63,242,0.10)',
+          }}
+        >
+          <MaterialCommunityIcons name={icon} size={16} color={accent || redesign.color.purple} />
         </View>
-        {children}
+        <Text
+          style={{
+            color: redesign.color.faint,
+            fontFamily: typography.fontFamily,
+            fontWeight: '800',
+            fontSize: 10,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+          }}
+        >
+          {title}
+        </Text>
       </View>
-    </GlassCard>
+      {children}
+    </View>
   )
 }
 
 
-function Pill({ label, backgroundColor, color }: { label: string; backgroundColor: string; color: string }) {
+const SUB_LABEL = {
+  fontFamily: typography.fontFamily,
+  fontSize: 9.5,
+  fontWeight: '800' as const,
+  color: redesign.color.faint,
+  letterSpacing: 1.0,
+  textTransform: 'uppercase' as const,
+}
+
+function Chip({ label, bg, color }: { label: string; bg: string; color: string }) {
   return (
-    <View style={{ borderRadius: radii.full, paddingHorizontal: 16, paddingVertical: 10, backgroundColor }}>
+    <View style={{ borderRadius: radii.full, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: bg }}>
       <Text style={{ color, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700' }}>{label}</Text>
     </View>
   )
 }
 
+
 export default function CampaignDetailPage() {
   const { colors, palette } = useTheme()
+  const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ id: string; tab?: string }>()
   const campaignId = Array.isArray(params.id) ? params.id[0] : params.id
   const initialTab = Array.isArray(params.tab) ? params.tab[0] : params.tab
@@ -153,15 +169,18 @@ export default function CampaignDetailPage() {
   const { data: campaignDeliverables, isLoading: loadingDeliverables } = useCampaignDeliverables(campaignId)
   const { data: allDeliverables, isLoading: loadingAllDeliverables } = useDeliverables()
   const applyMutation = useApplyToCampaign()
-  const [activeTab, setActiveTab] = useState<'description' | 'brief' | 'videos'>(
-    initialTab === 'videos' ? 'videos' : initialTab === 'brief' ? 'brief' : 'description'
+  const [activeTab, setActiveTab] = useState<'brief' | 'videos'>(
+    initialTab === 'videos' ? 'videos' : 'brief'
   )
   const [leaderboard, setLeaderboard] = useState<{ rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number } | null>(null)
   const [applySuccess, setApplySuccess] = useState(false)
+  const [briefOpen, setBriefOpen] = useState(false)
+  const [activeImage, setActiveImage] = useState(0)
+  const { width: winW } = useWindowDimensions()
+  const heroWidth = winW - 32 // Screen content has 16px horizontal padding each side
   const brandSheetRef = useRef<BottomSheetModal>(null)
   const [copiedTag, setCopiedTag] = useState<string | null>(null)
-  const [tabMetrics, setTabMetrics] = useState<Record<'description' | 'brief' | 'videos', { x: number; width: number }>>({
-    description: { x: 0, width: 0 },
+  const [tabMetrics, setTabMetrics] = useState<Record<'brief' | 'videos', { x: number; width: number }>>({
     brief: { x: 0, width: 0 },
     videos: { x: 0, width: 0 },
   })
@@ -217,6 +236,9 @@ export default function CampaignDetailPage() {
   }, [allDeliverables, campaignDeliverables, campaignId])
   const primaryPlatform = campaign?.platforms?.[0] || visibleDeliverables?.[0]?.platform || 'TikTok'
   const daysLeft = getDaysLeft(campaign?.endDate)
+  const heroImages = campaign
+    ? (campaign.imageUrls?.length ? campaign.imageUrls : campaign.coverImageUrl ? [campaign.coverImageUrl] : [])
+    : []
   const ctaState = applySuccess || applyBlockedByStatus
     ? {
         label: 'Application sent',
@@ -246,47 +268,52 @@ export default function CampaignDetailPage() {
               tone: 'primary' as const,
             }
           : {
-              label: currentApplicationStatus === 'rejected' || currentApplicationStatus === 'withdrawn' ? 'Apply again' : 'Apply now',
+              label: currentApplicationStatus === 'rejected' || currentApplicationStatus === 'withdrawn' ? 'Apply again' : 'Apply to campaign',
               helper: 'Send your application directly from this campaign workspace.',
               disabled: false,
               tone: 'primary' as const,
             }
 
+  // Sticky CTA — OPAQUE bottom panel (#F4F3F0) anchored edge-to-edge into the
+  // home-indicator area. Top hairline + upward shadow. Content must never bleed
+  // through (the old translucent floating card showed scroll content behind it).
+  const showStickyHelper = ctaState.disabled && ctaState.tone !== 'success'
   const stickyBar = campaign && currentApplicationStatus !== 'accepted' ? (
     <View
       pointerEvents="box-none"
       style={{
         position: 'absolute',
-        left: 16,
-        right: 16,
-        bottom: 12,
+        left: 0,
+        right: 0,
+        bottom: -insets.bottom,
       }}
     >
       <View
         style={{
-          borderRadius: 28,
-          backgroundColor: palette.sectionBg,
-          borderWidth: 1,
-          borderColor: ctaState.tone === 'success' ? palette.successBg : palette.borderColor,
-          padding: 16,
+          backgroundColor: redesign.color.bg,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: redesign.color.hairlineStrong,
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: insets.bottom + 16,
           gap: 14,
-          ...shadows.hero,
+          ...redesign.shadow.stickyUp,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', letterSpacing: 1.05, textTransform: 'uppercase' }}>
-              Ready to apply
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+          <View style={{ gap: 4 }}>
+            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' }}>
+              Closes in
             </Text>
-            <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 }}>
-              {daysLeft == null ? 'Campaign is open now' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+            <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }}>
+              {daysLeft == null ? 'Open now' : `${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
             </Text>
           </View>
           <View style={{ alignItems: 'flex-end', gap: 4 }}>
-            <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '700', letterSpacing: 1.05, textTransform: 'uppercase' }}>
+            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' }}>
               Required videos
             </Text>
-            <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 }}>
+            <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }}>
               {campaign.requiredVideos || 0}
             </Text>
           </View>
@@ -300,20 +327,23 @@ export default function CampaignDetailPage() {
           borderRadius={20}
           tone={ctaState.tone === 'success' ? 'success' : ctaState.tone === 'secondary' ? 'neutral' : 'primary'}
           icon={ctaState.tone === 'success' ? <MaterialCommunityIcons name="check-circle" size={18} color="#0F9F6E" /> : undefined}
+          trailingIcon={ctaState.tone === 'primary' && !ctaState.disabled ? <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" /> : undefined}
         />
 
-        <View style={{ gap: 8 }}>
-          <Text style={{ color: palette.textMuted, fontSize: 12, lineHeight: 18, fontFamily: typography.fontFamily }}>
-            {ctaState.helper}
-          </Text>
-          {!profileComplete && profile?.reviewStatus === 'approved' ? (
-            <Pressable onPress={() => router.push('/settings')}>
-              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily }}>
-                Complete profile
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
+        {showStickyHelper ? (
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: redesign.color.muted, fontSize: 12, lineHeight: 18, fontFamily: typography.fontFamily }}>
+              {ctaState.helper}
+            </Text>
+            {!profileComplete && profile?.reviewStatus === 'approved' ? (
+              <Pressable onPress={() => router.push('/settings')}>
+                <Text style={{ color: redesign.color.purple, fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily }}>
+                  Complete profile
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </View>
   ) : null
@@ -327,7 +357,7 @@ export default function CampaignDetailPage() {
   }, [campaignId])
 
   useEffect(() => {
-    setActiveTab(initialTab === 'videos' ? 'videos' : initialTab === 'brief' ? 'brief' : 'description')
+    setActiveTab(initialTab === 'videos' ? 'videos' : 'brief')
   }, [initialTab])
 
   useEffect(() => {
@@ -366,8 +396,26 @@ export default function CampaignDetailPage() {
     transform: [{ scale: bubbleScale.value }],
   }))
 
+  const hasBriefDetails = !!(
+    campaign &&
+    (campaign.campaignGoal || campaign.description || campaign.preferredCreators || campaign.instructions ||
+      campaign.videoRequirements || campaign.briefGuidelines || (campaign.keyMessages || []).length ||
+      campaign.brandVoice || campaign.brandTone || campaign.targetAudience || campaign.thingsToAvoid)
+  )
+
+  const readFullBriefButton = (
+    <Pressable
+      onPress={() => { haptic.medium(); setBriefOpen(true) }}
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: radii.full, backgroundColor: 'rgba(124,63,242,0.10)' }}
+    >
+      <Text style={{ color: redesign.color.purple, fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '800' }}>Read full brief</Text>
+      <MaterialCommunityIcons name="arrow-right" size={16} color={redesign.color.purple} />
+    </Pressable>
+  )
+
   return (
     <>
+      <CampaignBriefModal visible={briefOpen} onClose={() => setBriefOpen(false)} campaign={campaign ?? null} />
       <BrandSheet
         ref={brandSheetRef}
         data={campaign ? {
@@ -377,7 +425,7 @@ export default function CampaignDetailPage() {
           brandTiktok: campaign.brandTiktok,
         } : null}
       />
-      <Screen tabAware={false} overlay={stickyBar} overlayPadding={176} scrollRef={scrollRef}>
+      <Screen tabAware={false} overlay={stickyBar} overlayPadding={150} scrollRef={scrollRef} bgColor={redesign.color.bg}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
@@ -397,169 +445,181 @@ export default function CampaignDetailPage() {
       {campaign ? (
         <>
           <Animated.View entering={FadeInDown.duration(250).delay(80)}>
-            <View style={{ borderRadius: 34, overflow: 'hidden', backgroundColor: '#0E0A1C', ...shadows.hero }}>
-              <View style={{ height: 380, backgroundColor: '#1A0F2E' }}>
-                {campaign.coverImageUrl ? (
+            <View style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#0E0A1C', ...redesign.shadow.card }}>
+              <View style={{ height: 210, backgroundColor: '#1A0F2E' }}>
+                {/* Swipeable image gallery (Tradera-style) */}
+                {heroImages.length > 1 ? (
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    scrollEventThrottle={16}
+                    onScroll={(e) => {
+                      const i = Math.round(e.nativeEvent.contentOffset.x / heroWidth)
+                      if (i !== activeImage) setActiveImage(i)
+                    }}
+                    style={{ position: 'absolute', inset: 0 }}
+                  >
+                    {heroImages.map((uri, i) => (
+                      <ExpoImage
+                        key={`${uri}-${i}`}
+                        source={{ uri }}
+                        style={{ width: heroWidth, height: 210 }}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={200}
+                      />
+                    ))}
+                  </ScrollView>
+                ) : heroImages.length === 1 ? (
                   <ExpoImage
-                    source={{ uri: campaign.coverImageUrl }}
+                    source={{ uri: heroImages[0] }}
                     style={{ position: 'absolute', inset: 0 }}
                     contentFit="cover"
                     cachePolicy="memory-disk"
                     transition={300}
                   />
                 ) : null}
-                {/* Top fade for badge readability */}
+
+                {/* Bottom scrim for text readability */}
                 <LinearGradient
-                  colors={['rgba(0,0,0,0.52)', 'transparent']}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0.5, y: 0.38 }}
-                  style={{ position: 'absolute', inset: 0 }}
-                />
-                {/* Bottom fade for text readability */}
-                <LinearGradient
-                  colors={['transparent', 'rgba(8,4,18,0.96)']}
-                  start={{ x: 0.5, y: 0.38 }}
+                  pointerEvents="none"
+                  colors={['transparent', 'rgba(8,4,18,0.94)']}
+                  start={{ x: 0.5, y: 0.3 }}
                   end={{ x: 0.5, y: 1 }}
                   style={{ position: 'absolute', inset: 0 }}
                 />
 
-                {/* Bottom content */}
-                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 22, gap: 10 }}>
-                  <Pressable
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-                    onPress={() => (campaign.brandInstagram || campaign.brandTiktok) ? brandSheetRef.current?.present() : undefined}
-                    disabled={!campaign.brandInstagram && !campaign.brandTiktok}
-                  >
-                    <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={22} />
-                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                      {campaign.brandName || 'Brand'}
+                {/* Brand chip top-left */}
+                <Pressable
+                  style={{ position: 'absolute', top: 14, left: 14, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 999, paddingLeft: 4, paddingRight: 11, paddingVertical: 4 }}
+                  onPress={() => (campaign.brandInstagram || campaign.brandTiktok) ? brandSheetRef.current?.present() : undefined}
+                  disabled={!campaign.brandInstagram && !campaign.brandTiktok}
+                >
+                  <BrandAvatar logoUrl={campaign.brandLogoUrl} brandName={campaign.brandName} size={20} />
+                  <Text style={{ color: redesign.color.ink, fontSize: 12.5, fontWeight: '700', fontFamily: typography.fontFamily, maxWidth: 150 }} numberOfLines={1}>
+                    {campaign.brandName || 'Brand'}
+                  </Text>
+                </Pressable>
+
+                {/* Image counter top-right */}
+                {heroImages.length > 1 ? (
+                  <View pointerEvents="none" style={{ position: 'absolute', top: 14, right: 14, backgroundColor: 'rgba(11,11,15,0.55)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
+                      {activeImage + 1}/{heroImages.length}
                     </Text>
-                  </Pressable>
-                  <Text style={{ color: '#fff', fontSize: 30, fontWeight: '800', lineHeight: 35, letterSpacing: -0.7, fontFamily: typography.fontFamily }}>
+                  </View>
+                ) : null}
+
+                {/* Pagination dots */}
+                {heroImages.length > 1 ? (
+                  <View pointerEvents="none" style={{ position: 'absolute', bottom: 10, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 }}>
+                    {heroImages.map((_, i) => (
+                      <View
+                        key={i}
+                        style={{ width: i === activeImage ? 16 : 6, height: 6, borderRadius: 999, backgroundColor: i === activeImage ? '#fff' : 'rgba(255,255,255,0.5)' }}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+
+                {/* Bottom content */}
+                <View pointerEvents="none" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 18, paddingTop: 18, paddingBottom: heroImages.length > 1 ? 26 : 18, gap: 8 }}>
+                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800', lineHeight: 28, letterSpacing: -0.5, fontFamily: typography.fontFamily }} numberOfLines={3}>
                     {campaign.title}
                   </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', marginTop: 2 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <MaterialCommunityIcons name="web" size={13} color="rgba(255,255,255,0.5)" />
-                      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
+                      <MaterialCommunityIcons name="web" size={13} color="rgba(255,255,255,0.55)" />
+                      <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
                         {formatPlatform(primaryPlatform)}
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <MaterialCommunityIcons name="calendar-month-outline" size={13} color="rgba(255,255,255,0.5)" />
-                      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
+                      <MaterialCommunityIcons name="calendar-month-outline" size={13} color="rgba(255,255,255,0.55)" />
+                      <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
                         {formatDateRange(campaign.startDate, campaign.endDate) || '-'}
                       </Text>
                     </View>
-                    {campaign.requiredVideos ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <MaterialCommunityIcons name="video-outline" size={13} color="rgba(255,255,255,0.5)" />
-                        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                          {campaign.requiredVideos} videos
-                        </Text>
-                      </View>
-                    ) : null}
                   </View>
                 </View>
               </View>
             </View>
           </Animated.View>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              gap: 8,
-              padding: 8,
-              borderRadius: 26,
-              borderWidth: 0.5,
-              borderColor: 'rgba(255,255,255,1)',
-              backgroundColor: 'rgba(255,255,255,0.60)',
-              shadowColor: '#6040A0',
-              shadowOpacity: 0.09,
-              shadowRadius: 14,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 8,
-              overflow: 'hidden',
-            }}
-          >
-            <BlurView tint="light" intensity={glass.blurIntensitySubtle} style={{ position: 'absolute', inset: 0 }} />
-            <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: glass.surfaceBackground }} />
+          <View style={{ flexDirection: 'row', gap: 6, padding: 5, borderRadius: 16, backgroundColor: '#ECEAE4' }}>
             <Animated.View
               pointerEvents="none"
               style={[
                 {
                   position: 'absolute',
-                  top: 9,
-                  height: 60,
-                  borderRadius: 10,
-                  backgroundColor: 'rgba(255,255,255,0.92)',
-                  borderWidth: 0.5,
-                  borderColor: 'rgba(255,255,255,1)',
-                  shadowColor: '#6040A0',
+                  top: 5,
+                  height: 42,
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  shadowColor: '#0B0B0F',
                   shadowOpacity: 0.10,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 4 },
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 3,
                 },
                 tabBubbleStyle,
               ]}
             />
             {([
-              { key: 'description', icon: 'target', label: 'Description' },
               { key: 'brief', icon: 'file-document-outline', label: 'Brief' },
-              { key: 'videos', icon: 'video-outline', label: `Videos (${campaignDeliverables?.length ?? 0}/${campaign.requiredVideos ?? 0})` },
+              { key: 'videos', icon: 'video-outline', label: `Videos ${campaignDeliverables?.length ?? 0}/${campaign.requiredVideos ?? 0}` },
             ] as const).map((tab) => (
               <Pressable
                 key={tab.key}
                 onPress={() => { haptic.selection(); setActiveTab(tab.key) }}
                 onLayout={(event) => {
                   const { x, width } = event.nativeEvent.layout
-                  setTabMetrics((prev) => (prev[tab.key].x === x && prev[tab.key].width === width ? prev : { ...prev, [tab.key]: { x, width } }))
+                  setTabMetrics((prev) => {
+                    const cur = prev[tab.key]
+                    if (cur && cur.x === x && cur.width === width) return prev
+                    return { ...prev, [tab.key]: { x, width } }
+                  })
                 }}
-                style={{ flex: 1, minHeight: 66, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                style={{ flex: 1, height: 42, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}
               >
-                <MaterialCommunityIcons name={tab.icon} size={20} color={activeTab === tab.key ? '#1C1C1E' : palette.textMuted} />
-                <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: activeTab === tab.key ? '700' : '400', color: activeTab === tab.key ? glass.darkText : palette.textMuted, textAlign: 'center' }}>
+                <MaterialCommunityIcons name={tab.icon} size={17} color={activeTab === tab.key ? redesign.color.ink : redesign.color.faint} />
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: activeTab === tab.key ? '800' : '600', color: activeTab === tab.key ? redesign.color.ink : redesign.color.muted }}>
                   {tab.label}
                 </Text>
               </Pressable>
             ))}
           </View>
 
-          {activeTab === 'description' && (
-            <>
-              {campaign.campaignGoal ? (
-                <Section icon="target" title="Campaign Goal" tint="rgba(139,92,246,0.14)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {formatCampaignGoal(campaign.campaignGoal)}
-                  </Text>
-                </Section>
-              ) : null}
-              {campaign.preferredCreators ? (
-                <Section icon="account-star-outline" title="Preferred Creators" tint="rgba(251,113,133,0.14)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.preferredCreators}
-                  </Text>
-                </Section>
-              ) : null}
-              {campaign.description ? (
-                <Section icon="text-box-outline" title="Product Description" tint="rgba(96,165,250,0.14)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.description}
-                  </Text>
-                </Section>
-              ) : null}
-            </>
-          )}
-
           {activeTab === 'brief' && (
             <>
-              {/* Stat cells row */}
+              {/* Goal + full-brief entry */}
+              {campaign.campaignGoal || campaign.description ? (
+                <Section icon="target" title="Campaign Goal" tint="rgba(124,63,242,0.12)">
+                  {campaign.campaignGoal ? (
+                    <Text style={{ fontSize: 16, color: redesign.color.ink, lineHeight: 23, fontWeight: '700', letterSpacing: -0.3, fontFamily: typography.fontFamily }}>
+                      {formatCampaignGoal(campaign.campaignGoal)}
+                    </Text>
+                  ) : null}
+                  {campaign.description ? (
+                    <Text numberOfLines={3} style={{ fontSize: 14.5, color: redesign.color.muted, lineHeight: 22, fontFamily: typography.fontFamily }}>
+                      {campaign.description}
+                    </Text>
+                  ) : null}
+                  {hasBriefDetails ? readFullBriefButton : null}
+                </Section>
+              ) : hasBriefDetails ? (
+                <Section icon="file-document-outline" title="Brief" tint="rgba(124,63,242,0.12)">
+                  {readFullBriefButton}
+                </Section>
+              ) : null}
+
+              {/* Quick facts */}
               {(() => {
                 const cells = [
-                  { label: 'Required Videos', value: campaign.requiredVideos, icon: 'video-outline' as const },
-                  { label: 'Creation Days', value: campaign.creationDays, icon: 'clock-outline' as const },
-                  { label: 'Review Days', value: campaign.reviewDays, icon: 'eye-outline' as const },
-                  { label: 'Rights (Days)', value: campaign.contentRightsDays, icon: 'shield-check-outline' as const },
+                  { label: 'Videos', value: campaign.requiredVideos },
+                  { label: 'Creation days', value: campaign.creationDays },
+                  { label: 'Review days', value: campaign.reviewDays },
                 ].filter((c) => c.value != null)
                 if (!cells.length) return null
                 return (
@@ -569,39 +629,32 @@ export default function CampaignDetailPage() {
                         key={cell.label}
                         style={{
                           flex: 1,
-                          backgroundColor: 'rgba(255,255,255,0.78)',
-                          borderRadius: 20,
+                          backgroundColor: redesign.color.card,
+                          borderRadius: 18,
                           paddingVertical: 16,
                           paddingHorizontal: 8,
                           alignItems: 'center',
-                          gap: 6,
-                          borderWidth: 0.5,
-                          borderColor: 'rgba(255,255,255,1)',
-                          borderTopWidth: 2,
-                          borderTopColor: 'rgba(255,255,255,1)',
-                          shadowColor: '#6040A0',
-                          shadowOpacity: 0.11,
-                          shadowRadius: 18,
-                          shadowOffset: { width: 0, height: 6 },
-                          elevation: 8,
+                          gap: 4,
+                          borderWidth: StyleSheet.hairlineWidth,
+                          borderColor: redesign.color.hairlineStrong,
+                          ...redesign.shadow.card,
                         }}
                       >
-                        <MaterialCommunityIcons name={cell.icon} size={16} color={glass.darkText} style={{ opacity: 0.55 }} />
                         <CountUp
                           value={Number(cell.value) || 0}
                           duration={600}
                           style={{
                             fontFamily: typography.fontFamily,
-                            fontSize: 28,
+                            fontSize: 26,
                             fontWeight: '800',
-                            color: palette.text,
+                            color: redesign.color.ink,
                             letterSpacing: -1,
                             padding: 0,
-                            minWidth: 28,
+                            minWidth: 26,
                             textAlign: 'center',
                           }}
                         />
-                        <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 10, fontWeight: '300', color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' }}>
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' }}>
                           {cell.label}
                         </Text>
                       </View>
@@ -610,124 +663,56 @@ export default function CampaignDetailPage() {
                 )
               })()}
 
-              {/* Required Disclosure */}
-              {campaign.requiredDisclosure ? (
-                <Section icon="alert-circle-outline" title="Required Disclosure" tint="rgba(251,191,36,0.16)" borderColor="rgba(253,230,138,0.8)">
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                    <Pill label={campaign.requiredDisclosure} backgroundColor="rgba(251,191,36,0.16)" color="#b45309" />
-                  </View>
-                </Section>
-              ) : null}
-
-              {/* Instructions */}
-              {campaign.instructions ? (
-                <Section icon="pencil-outline" title="Your Instructions" tint="rgba(96,165,250,0.16)" borderColor="rgba(167,243,208,0.9)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.instructions}
-                  </Text>
-                </Section>
-              ) : null}
-
-              {/* Video Requirements */}
-              {campaign.videoRequirements ? (
-                <Section icon="video-outline" title="Video Requirements" tint="rgba(251,113,133,0.14)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.videoRequirements}
-                  </Text>
-                </Section>
-              ) : null}
-
-              {/* Brief & Guidelines */}
-              {campaign.briefGuidelines ? (
-                <Section icon="file-document-outline" title="Brief & Guidelines" tint="rgba(139,92,246,0.12)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.briefGuidelines}
-                  </Text>
-                </Section>
-              ) : null}
-
-              {/* Key Messages */}
-              {(campaign.keyMessages || []).length > 0 ? (
-                <Section icon="message-text-outline" title="Key Messages" tint="rgba(45,212,191,0.14)">
-                  <View style={{ gap: 10 }}>
-                    {campaign.keyMessages?.map((msg, i) => (
-                      <View key={i} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: palette.textMuted, marginTop: 9 }} />
-                        <Text style={{ flex: 1, fontSize: 15, color: palette.text, lineHeight: 22, fontFamily: typography.fontFamily }}>
-                          {msg}
-                        </Text>
+              {/* Requirements — disclosure + platforms + hashtags in one dense card */}
+              {(campaign.requiredDisclosure || (campaign.platforms || []).length > 0 || hashtagText.length > 0) ? (
+                <Section icon="check-circle-outline" title="Requirements" tint="rgba(124,63,242,0.10)">
+                  <View style={{ gap: 14 }}>
+                    {campaign.requiredDisclosure ? (
+                      <View style={{ gap: 7 }}>
+                        <Text style={SUB_LABEL}>Disclosure</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                          <Chip label={campaign.requiredDisclosure} bg="rgba(245,199,60,0.16)" color="#B45309" />
+                        </View>
                       </View>
-                    ))}
+                    ) : null}
+
+                    {(campaign.platforms || []).length > 0 ? (
+                      <View style={{ gap: 7 }}>
+                        <Text style={SUB_LABEL}>Platforms</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                          {campaign.platforms?.map((p, i) => (
+                            <Chip key={i} label={formatPlatform(p)} bg="rgba(124,63,242,0.10)" color="#6D28D9" />
+                          ))}
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {hashtagText.length > 0 ? (
+                      <View style={{ gap: 7 }}>
+                        <Text style={SUB_LABEL}>{copiedTag ? 'Copied!' : 'Hashtags · tap to copy'}</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                          {hashtagText.map((tag, i) => (
+                            <Pressable
+                              key={`${tag}-${i}`}
+                              onPress={async () => {
+                                await Clipboard.setStringAsync(tag)
+                                setCopiedTag(tag)
+                                setTimeout(() => setCopiedTag(null), 2000)
+                              }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radii.full, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: 'rgba(124,63,242,0.10)' }}
+                            >
+                              <Text style={{ color: '#6D28D9', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700' }}>{tag}</Text>
+                              <MaterialCommunityIcons
+                                name={copiedTag === tag ? 'check' : 'content-copy'}
+                                size={12}
+                                color={copiedTag === tag ? '#16A34A' : '#6D28D9'}
+                              />
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    ) : null}
                   </View>
-                </Section>
-              ) : null}
-
-              {/* Brand Voice */}
-              {campaign.brandVoice ? (
-                <Section icon="account-voice" title="Brand Voice" tint="rgba(45,212,191,0.14)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.brandVoice}
-                  </Text>
-                </Section>
-              ) : null}
-
-              {/* Brand Tone */}
-              {campaign.brandTone ? (
-                <Section icon="tune-variant" title="Brand Tone" tint="rgba(251,113,133,0.12)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.brandTone}
-                  </Text>
-                </Section>
-              ) : null}
-
-              {/* Target Audience */}
-              {campaign.targetAudience ? (
-                <Section icon="account-group-outline" title="Target Audience" tint="rgba(96,165,250,0.14)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.targetAudience}
-                  </Text>
-                </Section>
-              ) : null}
-
-              {/* Platforms */}
-              {(campaign.platforms || []).length > 0 ? (
-                <Section icon="web" title="Platforms" tint="rgba(139,92,246,0.10)">
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                    {campaign.platforms?.map((p, i) => (
-                      <Pill key={i} label={formatPlatform(p)} backgroundColor="rgba(139,92,246,0.10)" color="#6D28D9" />
-                    ))}
-                  </View>
-                </Section>
-              ) : null}
-
-              {/* Required Hashtags */}
-              {hashtagText.length > 0 ? (
-                <Section icon="pound" title="Required Hashtags" tint="rgba(139,92,246,0.14)">
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                    {hashtagText.map((tag, i) => (
-                      <Pressable
-                        key={`${tag}-${i}`}
-                        onPress={async () => {
-                          await Clipboard.setStringAsync(tag)
-                          setCopiedTag(tag)
-                          setTimeout(() => setCopiedTag(null), 2000)
-                        }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radii.full, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(139,92,246,0.14)' }}
-                      >
-                        <Text style={{ color: '#6D28D9', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700' }}>{tag}</Text>
-                        <MaterialCommunityIcons
-                          name={copiedTag === tag ? 'check' : 'content-copy'}
-                          size={13}
-                          color={copiedTag === tag ? '#16A34A' : '#6D28D9'}
-                        />
-                      </Pressable>
-                    ))}
-                  </View>
-                  {copiedTag ? (
-                    <Text style={{ color: '#16A34A', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600' }}>Kopierad!</Text>
-                  ) : (
-                    <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12 }}>Tryck på en hashtag för att kopiera</Text>
-                  )}
                 </Section>
               ) : null}
 
@@ -741,15 +726,6 @@ export default function CampaignDetailPage() {
                       </Pressable>
                     ))}
                   </View>
-                </Section>
-              ) : null}
-
-              {/* Things to Avoid */}
-              {campaign.thingsToAvoid ? (
-                <Section icon="cancel" title="Things to Avoid" tint="rgba(239,68,68,0.10)" borderColor="rgba(254,202,202,0.9)">
-                  <Text style={{ fontSize: 16, color: palette.text, lineHeight: 24, fontFamily: typography.fontFamily }}>
-                    {campaign.thingsToAvoid}
-                  </Text>
                 </Section>
               ) : null}
 
@@ -794,30 +770,34 @@ export default function CampaignDetailPage() {
               {leaderboard ? (
                 <Animated.View entering={FadeInDown.delay(100).duration(400)}>
                   {(() => {
-                    const medal = MEDAL[leaderboard.rank] || { bg: palette.sectionBg, text: palette.textMuted }
                     const pct = leaderboard.top_views > 0 ? Math.max(4, (leaderboard.my_views / leaderboard.top_views) * 100) : 4
-                    const barColor = leaderboard.rank === 1 ? '#f59e0b' : '#6366f1'
                     return (
-                      <View style={{ borderRadius: 16, padding: 16, borderWidth: 1, borderColor: palette.borderSoft, backgroundColor: palette.cardBg, gap: 12, ...shadows.card }}>
+                      <PressableScale onPress={() => router.push(`/leaderboard/${campaignId}`)} haptic={false} style={{ borderRadius: 20, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, backgroundColor: redesign.color.card, gap: 12, ...redesign.shadow.card }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: medal.bg, alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '800', fontSize: 16, color: medal.text }}>#{leaderboard.rank}</Text>
-                          </View>
+                          <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 44, height: 44, borderRadius: 14, padding: 1.5, alignItems: 'center', justifyContent: 'center' }}>
+                            <View style={{ flex: 1, alignSelf: 'stretch', borderRadius: 12.5, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
+                              <Text style={{ fontFamily: typography.fontFamily, fontWeight: '900', fontSize: 15, color: '#fff' }}>#{leaderboard.rank}</Text>
+                            </View>
+                          </LinearGradient>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '700', fontSize: 14, color: palette.text }}>Your Position</Text>
-                            <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: palette.textMuted, marginTop: 1 }}>
+                            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '800', fontSize: 14.5, color: redesign.color.ink, letterSpacing: -0.2 }}>Your Position</Text>
+                            <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.muted, marginTop: 1 }}>
                               #{leaderboard.rank} of {leaderboard.total_creators} creators
                             </Text>
                           </View>
+                          <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
                         </View>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: palette.text, fontWeight: '600' }}>{fmtNum(leaderboard.my_views)} views</Text>
-                          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: palette.textMuted }}>Leader: {fmtNum(leaderboard.top_views)}</Text>
+                          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: redesign.color.ink, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{fmtNum(leaderboard.my_views)} views</Text>
+                          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: redesign.color.muted, fontVariant: ['tabular-nums'] }}>Leader {fmtNum(leaderboard.top_views)}</Text>
                         </View>
-                        <View style={{ height: 8, borderRadius: 4, backgroundColor: palette.borderColor, overflow: 'hidden' }}>
-                          <View style={{ height: '100%', width: `${pct}%`, backgroundColor: barColor, borderRadius: 4 }} />
+                        <View style={{ height: 8, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
+                          <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${pct}%`, borderRadius: 999 }} />
                         </View>
-                      </View>
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '800', color: redesign.color.purple, textAlign: 'center' }}>
+                          View full leaderboard →
+                        </Text>
+                      </PressableScale>
                     )
                   })()}
                 </Animated.View>

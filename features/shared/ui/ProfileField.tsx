@@ -1,6 +1,5 @@
-import { Text, TextInput, View } from 'react-native'
-import { radii, typography } from '@/features/core/theme'
-import { useTheme } from '@/features/core/useTheme'
+import { StyleSheet, Text, TextInput, View } from 'react-native'
+import { redesign, typography } from '@/features/core/theme'
 
 type Props = {
   label: string
@@ -23,18 +22,17 @@ export function ProfileField({
   prefixText,
   sanitizeText,
 }: Props) {
-  const { colors, palette } = useTheme()
   const displayValue = sanitizeText ? sanitizeText(value) : value
 
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 7 }}>
       <Text
         style={{
-          color: palette.textMuted,
+          color: redesign.color.faint,
           fontFamily: typography.fontFamily,
-          fontSize: typography.sizes.formLabel,
-          fontWeight: '600',
-          letterSpacing: 0.88,
+          fontSize: 10,
+          fontWeight: '800',
+          letterSpacing: 1.0,
           textTransform: 'uppercase',
         }}
       >
@@ -42,32 +40,32 @@ export function ProfileField({
       </Text>
       <View
         style={{
-          borderWidth: 1,
-          borderColor: palette.borderColor,
-          borderRadius: radii.input,
-          height: 40,
-          backgroundColor: editable ? palette.inputBg : palette.neutralBg,
-          paddingHorizontal: 12,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: redesign.color.hairlineStrong,
+          borderRadius: 14,
+          height: 48,
+          backgroundColor: editable ? redesign.color.card : redesign.color.bg,
+          paddingHorizontal: 14,
           flexDirection: 'row',
           alignItems: 'center',
         }}
       >
         {prefixText ? (
-          <Text style={{ color: palette.textMuted, fontSize: 14, fontFamily: typography.fontFamily, marginRight: 2 }}>{prefixText}</Text>
+          <Text style={{ color: redesign.color.muted, fontSize: 15, fontFamily: typography.fontFamily, marginRight: 2 }}>{prefixText}</Text>
         ) : null}
         <TextInput
           value={displayValue}
           onChangeText={(text) => onChangeText?.(sanitizeText ? sanitizeText(text) : text)}
           placeholder={placeholder}
-          placeholderTextColor={palette.textMuted}
+          placeholderTextColor={redesign.color.faint}
           editable={editable}
           keyboardType={keyboardType}
           autoCapitalize="none"
           autoCorrect={false}
           style={{
             flex: 1,
-            fontSize: 14,
-            color: palette.text,
+            fontSize: 16,
+            color: editable ? redesign.color.ink : redesign.color.muted,
             fontFamily: typography.fontFamily,
           }}
         />

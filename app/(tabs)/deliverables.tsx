@@ -1,4 +1,4 @@
-import { radii, shadows, spacing, typography } from '@/features/core/theme'
+import { redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
@@ -6,17 +6,15 @@ import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { Screen } from '@/features/shared/ui/Screen'
 import { SkeletonDeliverableCard } from '@/features/shared/ui/SkeletonCard'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useCallback, useMemo } from 'react'
-import { FlatList, Pressable, Text, View } from 'react-native'
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { DeliverableStatus } from '@/features/core/types'
 import { approvalChip } from '@/features/campaigns/phase'
 import { CountUp } from '@/features/motion/springs'
-import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = {
   submitted:     { label: 'In review',  color: '#6366F1', icon: 'clock-outline' },
@@ -30,7 +28,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: keyof 
 const HISTORY_STATUSES: DeliverableStatus[] = ['submitted', 'pending_review', 'uploaded', 'approved', 'published', 'flagged']
 
 export default function DeliverablesPage() {
-  const { colors, palette } = useTheme()
+  const { palette } = useTheme()
   const queryClient = useQueryClient()
   const { data, isLoading, error, refetch } = useDeliverables()
 
@@ -38,6 +36,19 @@ export default function DeliverablesPage() {
     await queryClient.invalidateQueries({ queryKey: ['deliverables'] })
     await refetch()
   }, [queryClient, refetch])
+
+  // Per-campaign totals (for the progress bar): total deliverables and how many
+  // have already been submitted (i.e. not pending / revision-requested).
+  const campaignTotals = useMemo(() => {
+    const totals = new Map<string, { total: number; submitted: number }>()
+    for (const item of data || []) {
+      const entry = totals.get(item.campaignId) || { total: 0, submitted: 0 }
+      entry.total += 1
+      if (item.status !== 'pending' && item.status !== 'revision_requested') entry.submitted += 1
+      totals.set(item.campaignId, entry)
+    }
+    return totals
+  }, [data])
 
   const needsAction = useMemo(() => {
     const actionable = (data || []).filter((item) => item.status === 'revision_requested' || item.status === 'pending')
@@ -47,6 +58,8 @@ export default function DeliverablesPage() {
       status: 'revision_requested' | 'pending'
       platform: string
       count: number
+      total: number
+      submitted: number
       flagReason?: string | null
     }>()
 
@@ -54,12 +67,15 @@ export default function DeliverablesPage() {
       const actionableStatus = item.status === 'revision_requested' ? 'revision_requested' : 'pending'
       const existing = grouped.get(item.campaignId)
       if (!existing) {
+        const totals = campaignTotals.get(item.campaignId) || { total: 1, submitted: 0 }
         grouped.set(item.campaignId, {
           campaignId: item.campaignId,
           campaignTitle: item.campaignTitle,
           status: actionableStatus,
           platform: item.platform || 'tiktok',
           count: 1,
+          total: totals.total,
+          submitted: totals.submitted,
           flagReason: item.flagReason,
         })
         continue
@@ -72,26 +88,38 @@ export default function DeliverablesPage() {
     }
 
     return Array.from(grouped.values())
-  }, [data])
+  }, [data, campaignTotals])
 
   const history = useMemo(() =>
     (data || []).filter((item) => HISTORY_STATUSES.includes(item.status as DeliverableStatus)),
     [data]
   )
 
+  // 1-based video number per campaign, in list order ("TikTok · Video 2").
+  const historyVideoNo = useMemo(() => {
+    const counts = new Map<string, number>()
+    const result = new Map<string, number>()
+    for (const item of history) {
+      const n = (counts.get(item.campaignId) || 0) + 1
+      counts.set(item.campaignId, n)
+      result.set(item.id, n)
+    }
+    return result
+  }, [history])
+
   const openCampaignVideos = (campaignId: string) =>
     router.push({ pathname: '/campaigns/[id]', params: { id: campaignId, tab: 'videos' } })
 
   return (
-    <Screen onRefresh={onRefresh} wallpaper>
+    <Screen onRefresh={onRefresh} bgColor={redesign.color.bg}>
       <AppHeader />
 
       <Animated.View entering={FadeInDown.duration(250)}>
-        <Text style={{ fontSize: 42, fontWeight: '300', color: 'rgba(28,28,30,0.35)', fontFamily: typography.fontFamilyLight, letterSpacing: -1.5, lineHeight: 44 }}>
-          My
+        <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>
+          Projects
         </Text>
-        <Text style={{ fontSize: 42, fontWeight: '800', color: '#1C1C1E', fontFamily: typography.fontFamily, letterSpacing: -1.5, lineHeight: 44 }}>
-          projects
+        <Text style={{ fontSize: 14.5, fontWeight: '500', color: redesign.color.muted, fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
+          Your active work and history
         </Text>
       </Animated.View>
 
@@ -122,18 +150,23 @@ export default function DeliverablesPage() {
         }
         renderItem={({ item, index }) => {
           const isRevision = item.status === 'revision_requested'
+          const total = Math.max(item.total, item.submitted + item.count)
+          const pct = total > 0 ? Math.round((item.submitted / total) * 100) : 0
           return (
             <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
               <Pressable onPress={() => openCampaignVideos(item.campaignId)}>
-                <View style={{ borderRadius: 26, overflow: 'hidden', borderWidth: 1, borderColor: isRevision ? 'rgba(217,119,6,0.2)' : 'rgba(15,23,42,0.07)', ...shadows.hero }}>
-                  <BlurView tint="light" intensity={60} style={{ position: 'absolute', inset: 0 }} />
+                <View style={{ borderRadius: 26, overflow: 'hidden', backgroundColor: redesign.color.ink, ...redesign.shadow.cta }}>
+                  {/* Purple radial glow in the corner */}
                   <LinearGradient
-                    colors={isRevision ? ['rgba(255,251,235,0.95)', 'rgba(255,255,255,0.88)'] : ['rgba(255,255,255,0.96)', 'rgba(248,250,252,0.88)']}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={{ position: 'absolute', inset: 0 }}
+                    colors={['rgba(124,63,242,0.55)', 'rgba(124,63,242,0)']}
+                    start={{ x: 1, y: 0 }} end={{ x: 0.35, y: 0.7 }}
+                    style={{ position: 'absolute', top: -30, right: -30, width: 220, height: 220, borderRadius: 110 }}
                   />
-                  <View style={{ padding: spacing.lg + 4, gap: 14 }}>
-                    <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 13, fontWeight: '300', color: palette.textMuted }} numberOfLines={1}>
+                  <View style={{ padding: 22, gap: 16 }}>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.4, textTransform: 'uppercase' }}>
+                      {isRevision ? 'Revision requested' : 'Active campaign'}
+                    </Text>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.5, lineHeight: 26 }} numberOfLines={2}>
                       {item.campaignTitle}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
@@ -143,35 +176,42 @@ export default function DeliverablesPage() {
                         style={{
                           fontFamily: typography.fontFamily,
                           fontSize: 48,
-                          fontWeight: '800',
-                          color: isRevision ? '#D97706' : '#0d0d1a',
+                          fontWeight: '900',
+                          color: isRevision ? redesign.color.gold : '#fff',
                           letterSpacing: -2,
-                          lineHeight: 52,
+                          lineHeight: 50,
                           padding: 0,
                           minWidth: 40,
                         }}
                       />
-                      <Text style={{ fontFamily: typography.fontFamilyLight, fontSize: 14, fontWeight: '300', color: palette.textMuted, paddingBottom: 8 }}>
-                        {item.count === 1 ? 'video to submit' : 'videos to submit'}
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.6)', paddingBottom: 6 }}>
+                        {item.count === 1 ? 'video left to submit' : 'videos left to submit'}
                       </Text>
                     </View>
-                    {isRevision ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <MaterialCommunityIcons name="alert-circle-outline" size={13} color="#D97706" />
-                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600', color: '#D97706' }}>Revision requested</Text>
+                    {/* Gradient progress bar */}
+                    <View style={{ gap: 8 }}>
+                      <View style={{ height: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+                        <LinearGradient
+                          colors={redesign.gradient.accent}
+                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                          style={{ height: '100%', width: `${Math.max(pct, 3)}%`, borderRadius: 999 }}
+                        />
                       </View>
-                    ) : null}
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontVariant: ['tabular-nums'] }}>
+                        {item.submitted} of {total} submitted
+                      </Text>
+                    </View>
                     {item.flagReason ? (
-                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: '#9A3412', lineHeight: 18 }}>{item.flagReason}</Text>
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, color: 'rgba(255,255,255,0.75)', lineHeight: 18 }}>{item.flagReason}</Text>
                     ) : null}
-                    <LiquidButton
-                      label="Open & submit"
+                    {/* White pill CTA */}
+                    <Pressable
                       onPress={() => openCampaignVideos(item.campaignId)}
-                      tone="primary"
-                      minHeight={50}
-                      borderRadius={14}
-                      icon={<MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />}
-                    />
+                      style={{ marginTop: 2, minHeight: 50, borderRadius: 999, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    >
+                      <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Open &amp; submit</Text>
+                      <MaterialCommunityIcons name="arrow-right" size={18} color={redesign.color.ink} />
+                    </Pressable>
                   </View>
                 </View>
               </Pressable>
@@ -183,11 +223,12 @@ export default function DeliverablesPage() {
       {/* History */}
       {history.length > 0 ? (
         <Animated.View entering={FadeInDown.delay(200).duration(300)} style={{ gap: 12 }}>
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.9, textTransform: 'uppercase' }}>
+          <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase' }}>
             History
           </Text>
           {history.map((item, index) => {
-            const cfg = STATUS_CONFIG[item.status] || { label: item.status, color: palette.textMuted, icon: 'circle-outline' as const }
+            const cfg = STATUS_CONFIG[item.status] || { label: item.status, color: redesign.color.muted, icon: 'circle-outline' as const }
+            const platform = item.platform ? `${item.platform.charAt(0).toUpperCase()}${item.platform.slice(1)}` : 'TikTok'
             return (
               <Animated.View key={item.id} entering={FadeInDown.delay(index * 40).duration(250)}>
                 <Pressable
@@ -196,12 +237,12 @@ export default function DeliverablesPage() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 14,
-                    backgroundColor: palette.cardBg,
-                    borderRadius: radii.card,
-                    borderWidth: 1,
-                    borderColor: palette.borderSoft,
+                    backgroundColor: redesign.color.card,
+                    borderRadius: 18,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: redesign.color.hairlineStrong,
                     padding: 14,
-                    ...shadows.card,
+                    ...redesign.shadow.card,
                   }}
                 >
                   {/* Status icon */}
@@ -211,11 +252,11 @@ export default function DeliverablesPage() {
 
                   {/* Info */}
                   <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700', color: palette.text }} numberOfLines={1}>
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }} numberOfLines={1}>
                       {item.campaignTitle}
                     </Text>
-                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, color: palette.textMuted }}>
-                      {item.platform ? `${item.platform.charAt(0).toUpperCase()}${item.platform.slice(1)}` : 'TikTok'}
+                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.muted }}>
+                      {platform} · Video {historyVideoNo.get(item.id) ?? 1}
                     </Text>
                   </View>
 

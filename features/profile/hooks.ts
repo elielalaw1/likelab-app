@@ -13,10 +13,15 @@ export function useCreatorProfile() {
     queryKey: ['creator-profile'],
     queryFn: getCreatorProfile,
     ...queryPerf,
-    // Realtime is primary. Polling is fallback while account is not approved.
+    // Realtime is primary. Polling is the fallback when realtime isn't delivering
+    // (e.g. table not enabled for realtime, or the change is made while the app sits
+    // foregrounded on a phone and the admin toggles status from a computer).
+    // Poll aggressively while awaiting approval (short-lived state where the user is
+    // actively waiting and the approval should feel instant); keep a slower poll once
+    // approved so a downgrade (approved -> pending/rejected) is still detected.
     refetchInterval: (query) => {
       const status = (query.state.data?.reviewStatus || '').toLowerCase().trim()
-      return status === 'approved' ? false : 30_000
+      return status === 'approved' ? 60_000 : 5_000
     },
     refetchIntervalInBackground: false,
     placeholderData: (previous) => previous,

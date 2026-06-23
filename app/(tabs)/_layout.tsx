@@ -3,8 +3,9 @@ import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { FloatingTabBar } from '@/features/navigation/FloatingTabBar'
 import { FloatingTabBarVisibilityProvider } from '@/features/navigation/FloatingTabBarVisibility'
 import { CreatorProfileLiveSync } from '@/features/profile/CreatorProfileLiveSync'
-import { ProfilePendingGate } from '@/features/profile/ui/ProfilePendingGate'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
+import { TutorialOverlay } from '@/features/onboarding/TutorialOverlay'
+import { WelcomePendingOverlay } from '@/features/onboarding/WelcomePendingOverlay'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { useApplicationRealtime } from '@/features/shared/hooks/useApplicationRealtime'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
@@ -72,8 +73,9 @@ export default function TabsLayout() {
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="explore" options={{ href: null }} />
       </Tabs>
-      <ProfilePendingGate userId={session.user.id} />
       <CreatorOnboardingGate />
+      <WelcomePendingOverlay />
+      <TutorialOverlay />
     </FloatingTabBarVisibilityProvider>
   )
 }

@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Animated, Easing, ImageBackground, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { connectTikTokAccount } from '@/features/auth/tiktok'
-import { designBackground } from '@/design/assets'
+import { redesign, typography } from '@/features/core/theme'
 import { useQueryClient } from '@tanstack/react-query'
 
 export default function ConnectTikTokPage() {
@@ -48,16 +48,17 @@ export default function ConnectTikTokPage() {
   }
 
   return (
-    <Animated.View style={{ flex: 1, backgroundColor: '#F7F6F2', opacity: fadeAnim }}>
-      <ImageBackground
-        source={designBackground}
-        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-        resizeMode="cover"
+    <Animated.View style={{ flex: 1, backgroundColor: redesign.color.bg, opacity: fadeAnim }}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.2, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
       />
-      <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'center', paddingHorizontal: 24 }}>
-        <View style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#D7DFEE', borderRadius: 18, paddingHorizontal: 24, paddingVertical: 32, gap: 20, alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+        <View style={{ backgroundColor: redesign.color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 32, gap: 20, alignItems: 'center', ...redesign.shadow.card }}>
           {connected ? (
             <>
               <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#0ABF53', alignItems: 'center', justifyContent: 'center' }}>
@@ -65,10 +66,10 @@ export default function ConnectTikTokPage() {
               </View>
 
               <View style={{ gap: 8, alignItems: 'center' }}>
-                <Text style={{ fontSize: 22, fontWeight: '800', color: '#060B1F', fontFamily: 'Montserrat', textAlign: 'center' }}>
+                <Text style={{ fontSize: 22, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.4, fontFamily: typography.fontFamily, textAlign: 'center' }}>
                   TikTok Connected
                 </Text>
-                <Text style={{ fontSize: 14, color: '#687C9E', fontFamily: 'Montserrat', textAlign: 'center', lineHeight: 20 }}>
+                <Text style={{ fontSize: 14, color: redesign.color.muted, fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 20 }}>
                   Your profile, stats, and avatar have been imported. You can now access campaigns and deliverables.
                 </Text>
               </View>
@@ -76,7 +77,7 @@ export default function ConnectTikTokPage() {
               <Pressable
                 onPress={handleContinue}
                 disabled={exiting}
-                style={{ width: '100%', height: 54, borderRadius: 20, backgroundColor: '#060B1F', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, opacity: exiting ? 0.7 : 1 }}
+                style={{ width: '100%', height: 54, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, opacity: exiting ? 0.7 : 1 }}
               >
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', fontFamily: 'Montserrat' }}>
                   Continue
@@ -90,10 +91,10 @@ export default function ConnectTikTokPage() {
               </View>
 
               <View style={{ gap: 8, alignItems: 'center' }}>
-                <Text style={{ fontSize: 22, fontWeight: '800', color: '#060B1F', fontFamily: 'Montserrat', textAlign: 'center' }}>
+                <Text style={{ fontSize: 22, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.4, fontFamily: typography.fontFamily, textAlign: 'center' }}>
                   Connect your TikTok
                 </Text>
-                <Text style={{ fontSize: 14, color: '#687C9E', fontFamily: 'Montserrat', textAlign: 'center', lineHeight: 20 }}>
+                <Text style={{ fontSize: 14, color: redesign.color.muted, fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 20 }}>
                   We will import your profile picture, handle, and stats automatically. No manual entry needed.
                 </Text>
               </View>

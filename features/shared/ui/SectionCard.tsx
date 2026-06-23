@@ -1,7 +1,6 @@
 import { ReactNode } from 'react'
-import { Text, View } from 'react-native'
-import { spacing, typography } from '@/features/core/theme'
-import { GlassCard } from '@/features/shared/ui/GlassCard'
+import { StyleSheet, Text, View } from 'react-native'
+import { redesign, typography } from '@/features/core/theme'
 
 type Props = {
   title?: string
@@ -10,24 +9,32 @@ type Props = {
 
 export function SectionCard({ title, children }: Props) {
   return (
-    <GlassCard>
-      <View style={{ padding: spacing.card, gap: spacing.md }}>
-        {title ? (
-          <Text
-            style={{
-              color: 'rgba(28,28,30,0.35)',
-              fontFamily: typography.fontFamily,
-              fontWeight: '700',
-              fontSize: 9,
-              letterSpacing: 1.8,
-              textTransform: 'uppercase',
-            }}
-          >
-            {title}
-          </Text>
-        ) : null}
-        {children}
-      </View>
-    </GlassCard>
+    <View
+      style={{
+        backgroundColor: redesign.color.card,
+        borderRadius: 18,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: redesign.color.hairlineStrong,
+        padding: 14,
+        gap: 10,
+        ...redesign.shadow.card,
+      }}
+    >
+      {title ? (
+        <Text
+          style={{
+            color: redesign.color.faint,
+            fontFamily: typography.fontFamily,
+            fontWeight: '800',
+            fontSize: 10,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+          }}
+        >
+          {title}
+        </Text>
+      ) : null}
+      {children}
+    </View>
   )
 }

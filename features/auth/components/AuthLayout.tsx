@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
-import { authColors } from '@/features/auth/theme'
+import { redesign } from '@/features/core/theme'
 
 type Props = {
   children: ReactNode
@@ -10,57 +10,15 @@ type Props = {
 
 export function AuthLayout({ children }: Props) {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: authColors.bg }}>
-      <View style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <LinearGradient
-          colors={['#FFFFFF', '#F7F8FF', '#FFFFFF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', inset: 0 }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            width: 300,
-            height: 300,
-            top: -72,
-            left: -80,
-            borderRadius: 999,
-            backgroundColor: 'rgba(233,85,215,0.12)',
-            shadowColor: '#E955D7',
-            shadowOpacity: 0.24,
-            shadowRadius: 42,
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            width: 340,
-            height: 340,
-            top: 60,
-            right: -120,
-            borderRadius: 999,
-            backgroundColor: 'rgba(46,227,241,0.12)',
-            shadowColor: '#2EE3F1',
-            shadowOpacity: 0.26,
-            shadowRadius: 52,
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            width: 320,
-            height: 320,
-            bottom: -90,
-            left: 20,
-            borderRadius: 999,
-            backgroundColor: 'rgba(53,27,169,0.12)',
-            shadowColor: '#351BA9',
-            shadowOpacity: 0.22,
-            shadowRadius: 58,
-          }}
-        />
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: redesign.color.bg }}>
+      {/* Single restrained holographic glow, top-right — accent only */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.2, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
+      />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ flex: 1 }}>
         <ScrollView
           keyboardShouldPersistTaps="handled"

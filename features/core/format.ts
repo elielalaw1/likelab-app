@@ -3,6 +3,28 @@ export function formatCurrencySek(value?: number | null) {
   return `${Math.round(value).toLocaleString('sv-SE')} SEK`
 }
 
+// Redesign currency: lowercase `kr` suffix with thin-space thousands separator
+// (e.g. "5 000 kr"). sv-SE locale already groups with a narrow/no-break space.
+export function formatKr(value?: number | null) {
+  if (typeof value !== 'number' || !isFinite(value)) return ''
+  return `${Math.round(value).toLocaleString('sv-SE')} kr`
+}
+
+// Creator-facing reward label — shows the reward TYPE (Cash / Experience /
+// Product …), never a SEK amount. The underlying sums (prize_distribution,
+// reward_value_sek) are deliberately not surfaced to creators here.
+export function formatRewardType(campaign: { rewardType?: string | null }): string {
+  const raw = (campaign.rewardType || '').trim()
+  if (!raw) return ''
+  const lower = raw.toLowerCase()
+  const MAP: Record<string, string> = {
+    cash: 'Cash', money: 'Cash', sek: 'Cash', fixed: 'Cash', tiered: 'Cash', payout: 'Cash',
+    product: 'Product', gift: 'Product', gifted: 'Product', gifting: 'Product', free_product: 'Product',
+    experience: 'Experience', event: 'Experience', trip: 'Experience',
+  }
+  return MAP[lower] || (lower.charAt(0).toUpperCase() + lower.slice(1))
+}
+
 export function formatCampaignGoal(value?: string | null) {
   if (!value) return ''
   return value

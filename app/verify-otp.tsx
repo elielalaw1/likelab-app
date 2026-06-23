@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -15,7 +15,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
 import { consumePendingAuth } from '@/lib/pending-auth'
 import { updateCreatorProfile } from '@/features/profile/api'
-import { designBackground } from '@/design/assets'
+import { redesign, typography } from '@/features/core/theme'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 const CODE_LENGTH = 6
 const RESEND_COOLDOWN_SECONDS = 60
@@ -132,42 +133,39 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <ImageBackground
-        source={designBackground}
-        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-        resizeMode="cover"
-      />
+    <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
       <LinearGradient
-        colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', inset: 0 }}
+        pointerEvents="none"
+        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.2, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
       />
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           behavior={Platform.select({ ios: 'padding', default: undefined })}
           style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}
         >
           <View
             style={{
-              backgroundColor: 'rgba(255,255,255,0.9)',
-              borderWidth: 1,
-              borderColor: '#D7DFEE',
-              borderRadius: 18,
+              backgroundColor: redesign.color.card,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: redesign.color.hairlineStrong,
+              borderRadius: 24,
               paddingHorizontal: 18,
               paddingVertical: 28,
               gap: 20,
+              ...redesign.shadow.card,
             }}
           >
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: '#060B1F', fontFamily: 'Montserrat', textAlign: 'center' }}>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.4, fontFamily: typography.fontFamily, textAlign: 'center' }}>
                 Verify your email
               </Text>
-              <Text style={{ fontSize: 14, color: '#687C9E', fontFamily: 'Montserrat', textAlign: 'center', lineHeight: 20 }}>
+              <Text style={{ fontSize: 14, color: redesign.color.muted, fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 20 }}>
                 {'We sent a 6-digit code to\n'}
-                <Text style={{ color: '#101525', fontWeight: '600' }}>{email}</Text>
+                <Text style={{ color: redesign.color.ink, fontWeight: '700' }}>{email}</Text>
               </Text>
             </View>
 
@@ -186,58 +184,42 @@ export default function VerifyOtpPage() {
                   style={{
                     width: 44,
                     height: 54,
-                    borderRadius: 12,
-                    borderWidth: digits[i] ? 1.5 : 1,
-                    borderColor: error ? '#E57373' : digits[i] ? '#C9D2FF' : '#D7DFEE',
-                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderRadius: 14,
+                    borderWidth: digits[i] ? 1.5 : StyleSheet.hairlineWidth,
+                    borderColor: error ? '#E11D48' : digits[i] ? redesign.color.purple : redesign.color.hairlineStrong,
+                    backgroundColor: redesign.color.bg,
                     textAlign: 'center',
                     fontSize: 22,
                     fontWeight: '700',
-                    color: '#101525',
-                    fontFamily: 'Montserrat',
+                    color: redesign.color.ink,
+                    fontFamily: typography.fontFamily,
                   }}
                 />
               ))}
             </View>
 
             {error ? (
-              <Text style={{ color: '#E57373', fontSize: 13, fontFamily: 'Montserrat', textAlign: 'center' }}>
+              <Text style={{ color: '#E11D48', fontSize: 13, fontFamily: typography.fontFamily, textAlign: 'center', fontWeight: '600' }}>
                 {error}
               </Text>
             ) : null}
 
             {/* Verify button */}
-            <Pressable
-              onPress={handleVerify}
+            <LiquidButton
+              label={verifying ? 'Verifying…' : 'Verify email'}
+              onPress={verifying || resending ? undefined : handleVerify}
               disabled={verifying || resending}
-              style={{
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: '#C9D2FF',
-                overflow: 'hidden',
-                opacity: verifying ? 0.72 : 1,
-              }}
-            >
-              <LinearGradient
-                colors={['rgba(240,236,255,0.92)', 'rgba(236,243,255,0.92)']}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 15 }}
-              >
-                <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>
-                  {verifying ? 'Verifying...' : 'Verify email'}
-                </Text>
-              </LinearGradient>
-            </Pressable>
+              minHeight={52}
+            />
 
             {/* Resend */}
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-              <Text style={{ color: '#6C7E9E', fontSize: 14, fontFamily: 'Montserrat' }}>
+              <Text style={{ color: redesign.color.muted, fontSize: 14, fontFamily: typography.fontFamily }}>
                 Didn&apos;t receive it?
               </Text>
-              <Pressable onPress={handleResend} disabled={resending || verifying || resendCooldown > 0}>
-                <Text style={{ color: '#101525', fontSize: 14, fontWeight: '700', fontFamily: 'Montserrat', opacity: (resending || resendCooldown > 0) ? 0.5 : 1 }}>
-                  {resending ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+              <Pressable onPress={handleResend} disabled={resending || verifying || resendCooldown > 0} hitSlop={6}>
+                <Text style={{ color: redesign.color.purple, fontSize: 14, fontWeight: '800', fontFamily: typography.fontFamily, opacity: (resending || resendCooldown > 0) ? 0.5 : 1 }}>
+                  {resending ? 'Sending…' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
                 </Text>
               </Pressable>
             </View>

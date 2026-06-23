@@ -1,11 +1,9 @@
 import { useAcceptInvitation, useApplications, useDeclineInvitation } from '@/features/applications/hooks'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
-import { shadows, typography } from '@/features/core/theme'
+import { redesign, typography } from '@/features/core/theme'
 import { springs } from '@/features/motion/springs'
 import { haptic } from '@/features/shared/haptics'
-import { useTheme } from '@/features/core/useTheme'
 import { CreatorInvitation } from '@/features/core/types'
-import { useDeliverables } from '@/features/deliverables/hooks'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
@@ -14,11 +12,9 @@ import { Screen } from '@/features/shared/ui/Screen'
 import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
 import { toast } from '@/features/shared/ui/Toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { BlurView } from 'expo-blur'
-import { LinearGradient } from 'expo-linear-gradient'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FlatList, Pressable, ScrollView, Text, View } from 'react-native'
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 
 type FilterKey = 'all' | 'accepted' | 'pending' | 'closed'
@@ -38,32 +34,20 @@ function FilterTab({
   onPress: () => void
   onLayout: (x: number, width: number) => void
 }) {
-  const { colors, palette } = useTheme()
-  const isClosed = label === 'Closed'
-
   return (
     <Pressable
       onPress={() => { haptic.selection(); onPress() }}
       onLayout={(event) => onLayout(event.nativeEvent.layout.x, event.nativeEvent.layout.width)}
-      style={{
-        minWidth: 82,
-        minHeight: 42,
-        borderRadius: 18,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'transparent',
-      }}
+      style={{ flex: 1, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
     >
       <Text
         numberOfLines={1}
         style={{
-          color: active ? 'rgba(255,255,255,0.95)' : 'rgba(28,28,30,0.45)',
+          color: active ? redesign.color.ink : redesign.color.muted,
           fontFamily: typography.fontFamily,
-          fontSize: 11,
-          fontWeight: '700',
+          fontSize: 13,
+          fontWeight: active ? '800' : '600',
           textAlign: 'center',
-          transform: [{ translateX: isClosed ? -10 : 0 }],
         }}
       >
         {label}
@@ -94,12 +78,10 @@ function InvitationActions({
 }
 
 export default function ApplicationsPage() {
-  const { colors, palette } = useTheme()
   const queryClient = useQueryClient()
   const params = useLocalSearchParams<{ filter?: string }>()
   const initialFilter = Array.isArray(params.filter) ? params.filter[0] : params.filter
   const { data, isLoading, error, refetch } = useApplications()
-  const { data: deliverables } = useDeliverables()
 
   const onRefresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ['applications'] })
@@ -120,7 +102,6 @@ export default function ApplicationsPage() {
   const bubbleWidth = useSharedValue(0)
   const bubbleScale = useSharedValue(1)
 
-  const deliverableCampaignIds = useMemo(() => new Set((deliverables || []).map((item) => item.campaignId)), [deliverables])
   const pendingInvitations = (data?.invitations || []).filter((item) => item.status === 'pending')
   const declinedInvitations = (data?.invitations || []).filter((item) => item.status === 'declined')
   const acceptedApplications = (data?.applications || []).filter((item) => item.status === 'accepted')
@@ -289,15 +270,9 @@ export default function ApplicationsPage() {
   useEffect(() => {
     const metric = tabMetrics[activeFilter]
     if (!metric?.width) return
-
-    const leftInset = activeFilter === 'closed' ? -5 : 4
-    const rightInset = activeFilter === 'closed' ? 13 : 4
-    const targetX = metric.x + leftInset
-    const targetWidth = Math.max(0, metric.width - leftInset - rightInset)
-
-    bubbleX.value = withSpring(targetX, springs.balanced)
-    bubbleWidth.value = withSpring(targetWidth, springs.balanced)
-    bubbleScale.value = withSequence(withTiming(1.06, { duration: 120 }), withTiming(1, { duration: 180 }))
+    bubbleX.value = withSpring(metric.x, springs.balanced)
+    bubbleWidth.value = withSpring(metric.width, springs.balanced)
+    bubbleScale.value = withSequence(withTiming(1.05, { duration: 120 }), withTiming(1, { duration: 180 }))
   }, [activeFilter, bubbleScale, bubbleWidth, bubbleX, tabMetrics])
 
   const bubbleStyle = useAnimatedStyle(() => ({
@@ -307,84 +282,44 @@ export default function ApplicationsPage() {
 
 
   return (
-    <Screen onRefresh={onRefresh}>
+    <Screen onRefresh={onRefresh} bgColor={redesign.color.bg}>
       <AppHeader />
 
-      <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 8 }}>
-        <Text style={{ fontSize: 38, lineHeight: 42, fontWeight: '800', color: palette.text, fontFamily: typography.fontFamily, letterSpacing: -1 }}>
-          My Applications
+      <Animated.View entering={FadeInDown.duration(250)}>
+        <Text style={{ fontSize: 34, lineHeight: 38, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1 }}>
+          Applications
         </Text>
-        <Text style={{ color: palette.textMuted, fontSize: 16, fontFamily: typography.fontFamily }}>
-          Invitations, accepted campaigns and everything still in motion.
+        <Text style={{ color: redesign.color.muted, fontSize: 14.5, fontWeight: '500', fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
+          Invitations, accepted campaigns and everything in motion.
         </Text>
       </Animated.View>
 
-      {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load applications right now.</Text> : null}
+      {error ? <Text style={{ color: redesign.color.muted, fontSize: 12 }}>Could not load applications right now.</Text> : null}
 
-      <View
-        style={{
-          borderRadius: 24,
-          backgroundColor: 'rgba(248,250,252,0.56)',
-          borderWidth: 1,
-          borderColor: 'rgba(15,23,42,0.08)',
-          paddingHorizontal: 6,
-          paddingVertical: 8,
-          shadowColor: '#0F172A',
-          shadowOpacity: 0.08,
-          shadowRadius: 18,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 8,
-          overflow: 'hidden',
-        }}
-      >
-        <BlurView tint="light" intensity={64} style={{ position: 'absolute', inset: 0 }} />
-        <LinearGradient
+      <View style={{ flexDirection: 'row', gap: 4, padding: 5, borderRadius: 16, backgroundColor: '#ECEAE4' }}>
+        <Animated.View
           pointerEvents="none"
-          colors={['rgba(248,250,252,0.68)', 'rgba(255,255,255,0.52)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{ position: 'absolute', inset: 0 }}
+          style={[
+            {
+              position: 'absolute',
+              left: 0,
+              top: 5,
+              height: 36,
+              borderRadius: 12,
+              backgroundColor: '#fff',
+              shadowColor: '#0B0B0F',
+              shadowOpacity: 0.10,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 3,
+            },
+            bubbleStyle,
+          ]}
         />
-        <LinearGradient
-          pointerEvents="none"
-          colors={['rgba(255,255,255,0.34)', 'rgba(255,255,255,0.02)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 0.4 }}
-          style={{ position: 'absolute', left: 1, right: 1, top: 1, height: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
-        />
-        <LinearGradient
-          pointerEvents="none"
-          colors={['rgba(15,23,42,0)', 'rgba(15,23,42,0.06)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 14, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }}
-        />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center' }}>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
-                position: 'absolute',
-                left: 0,
-                top: 5,
-                height: 34,
-                borderRadius: 16,
-                backgroundColor: 'rgba(8,8,12,0.96)',
-                borderWidth: 0.5,
-                borderColor: 'rgba(255,255,255,0.12)',
-                shadowColor: '#000',
-                shadowOpacity: 0.20,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 4 },
-              },
-              bubbleStyle,
-            ]}
-          />
-          <FilterTab label="All" active={activeFilter === 'all'} onPress={() => setActiveFilter('all')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, all: { x, width } }))} />
-          <FilterTab label="Accepted" active={activeFilter === 'accepted'} onPress={() => setActiveFilter('accepted')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, accepted: { x, width } }))} />
-          <FilterTab label="Pending" active={activeFilter === 'pending'} onPress={() => setActiveFilter('pending')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, pending: { x, width } }))} />
-          <FilterTab label="Closed" active={activeFilter === 'closed'} onPress={() => setActiveFilter('closed')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, closed: { x, width } }))} />
-        </ScrollView>
+        <FilterTab label="All" active={activeFilter === 'all'} onPress={() => setActiveFilter('all')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, all: { x, width } }))} />
+        <FilterTab label="Accepted" active={activeFilter === 'accepted'} onPress={() => setActiveFilter('accepted')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, accepted: { x, width } }))} />
+        <FilterTab label="Pending" active={activeFilter === 'pending'} onPress={() => setActiveFilter('pending')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, pending: { x, width } }))} />
+        <FilterTab label="Closed" active={activeFilter === 'closed'} onPress={() => setActiveFilter('closed')} onLayout={(x, width) => setTabMetrics((prev) => ({ ...prev, closed: { x, width } }))} />
       </View>
 
       {isLoading ? (
@@ -422,11 +357,11 @@ export default function ApplicationsPage() {
             <View
               style={{
                 borderRadius: 24,
-                backgroundColor: palette.cardBg,
-                borderWidth: 1,
-                borderColor: palette.borderColor,
-                padding: 14,
-                ...shadows.card,
+                backgroundColor: redesign.color.card,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: redesign.color.hairlineStrong,
+                padding: 12,
+                ...redesign.shadow.card,
               }}
             >
               <CampaignCard
@@ -447,7 +382,7 @@ export default function ApplicationsPage() {
             </View>
           ) : item.type === 'invitation_closed' ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
                 Closed invitation
               </Text>
               <CampaignCard
@@ -467,7 +402,7 @@ export default function ApplicationsPage() {
             </View>
           ) : (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textMuted, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
                 {item.title}
               </Text>
               <CampaignCard campaign={item.campaign} onPress={() => router.push(campaignRouteParams(item.campaign) as never)} />

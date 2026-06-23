@@ -12,6 +12,7 @@ type Props = {
   onPress?: () => void
   disabled?: boolean
   icon?: ReactNode
+  trailingIcon?: ReactNode
   tone?: Tone
   minHeight?: number
   borderRadius?: number
@@ -23,6 +24,7 @@ export function LiquidButton({
   onPress,
   disabled = false,
   icon,
+  trailingIcon,
   tone = 'primary',
   minHeight = 52,
   borderRadius = 20,
@@ -148,6 +150,7 @@ export function LiquidButton({
         >
           {label}
         </Text>
+        {trailingIcon}
       </View>
     </Pressable>
   )

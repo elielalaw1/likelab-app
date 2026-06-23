@@ -121,7 +121,10 @@ function PushNotificationSetup() {
 
     // Foreground: show in-app toast when notification arrives while app is open
     foregroundListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      const { title, body } = notification.request.content
+      const { title, body, data } = notification.request.content
+      // The approval tutorial already celebrates approval, so suppress the redundant
+      // "You're approved" toast when the app is foregrounded.
+      if ((data as Record<string, unknown> | undefined)?.type === 'creator_approved') return
       if (title) toast.info(`${title}${body ? `\n${body}` : ''}`)
     })
 
@@ -220,6 +223,7 @@ export default function RootLayout() {
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="campaigns/[id]" />
+                <Stack.Screen name="leaderboard/[id]" />
                 <Stack.Screen name="settings" />
                 <Stack.Screen name="reset-password" />
                 <Stack.Screen name="forgot-password" />

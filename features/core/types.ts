@@ -66,6 +66,7 @@ export type Campaign = {
   keyMessages?: string[] | null
   prizeDistribution?: number[] | null
   coverImageUrl?: string | null
+  imageUrls?: string[] | null
   brandLogoUrl?: string | null
   brandInstagram?: string | null
   brandTiktok?: string | null

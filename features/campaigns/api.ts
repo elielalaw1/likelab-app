@@ -115,8 +115,10 @@ function extractStoragePath(raw: string): string | null {
   return raw.startsWith(bucketPrefix) ? raw.slice(bucketPrefix.length) : raw
 }
 
+// Returns an ORDERED list of image URLs per campaign (a campaign can have many
+// assets in campaign_assets — first = cover, the rest power the gallery carousel).
 async function getCampaignAssets(campaignIds: string[]) {
-  if (!campaignIds.length) return new Map<string, string>()
+  if (!campaignIds.length) return new Map<string, string[]>()
 
   const { data, error } = await supabase
     .from('campaign_assets')
@@ -126,38 +128,53 @@ async function getCampaignAssets(campaignIds: string[]) {
 
   if (error) throw new Error(error.message)
 
-  const imageMap = new Map<string, string>()
-  const toSign: Array<{ campaignId: string; path: string }> = []
+  // Preserve per-campaign order; a slot is either a direct URL or a storage path to sign.
+  type Slot = { direct?: string; path?: string }
+  const slotsByCampaign = new Map<string, Slot[]>()
+  const toSign: string[] = []
 
   for (const row of data || []) {
     const record = row as Row
     const campaignId = textValue(record, ['campaign_id'])
-    if (!campaignId || imageMap.has(campaignId)) continue
+    if (!campaignId) continue
 
     const raw = textValue(record, ['url', 'asset_url', 'file_url', 'image_url', 'thumbnail_url'])
     if (!raw) continue
 
     const storagePath = extractStoragePath(raw)
+    const slots = slotsByCampaign.get(campaignId) || []
     if (storagePath) {
-      toSign.push({ campaignId, path: storagePath })
+      slots.push({ path: storagePath })
+      toSign.push(storagePath)
     } else if (raw.startsWith('http')) {
-      imageMap.set(campaignId, raw)
+      slots.push({ direct: raw })
     }
+    slotsByCampaign.set(campaignId, slots)
   }
 
+  const signedByPath = new Map<string, string>()
   if (toSign.length) {
     // Single batch call instead of one request per image — 7-day TTL
     const { data: signedData } = await supabase.storage
       .from(CAMPAIGN_ASSETS_BUCKET)
-      .createSignedUrls(toSign.map(({ path }) => path), 7 * 24 * 3600)
+      .createSignedUrls(toSign, 7 * 24 * 3600)
 
-    const signedByPath = new Map(
-      (signedData || []).filter((r) => r.signedUrl).map((r) => [r.path, r.signedUrl])
-    )
-    for (const { campaignId, path } of toSign) {
-      const signedUrl = signedByPath.get(path)
-      if (signedUrl) imageMap.set(campaignId, signedUrl)
+    for (const r of signedData || []) {
+      if (r.signedUrl && r.path) signedByPath.set(r.path, r.signedUrl)
     }
+  }
+
+  const imageMap = new Map<string, string[]>()
+  for (const [campaignId, slots] of slotsByCampaign) {
+    const urls: string[] = []
+    for (const slot of slots) {
+      if (slot.direct) urls.push(slot.direct)
+      else if (slot.path) {
+        const signed = signedByPath.get(slot.path)
+        if (signed) urls.push(signed)
+      }
+    }
+    if (urls.length) imageMap.set(campaignId, urls)
   }
 
   return imageMap
@@ -196,9 +213,12 @@ export async function enrichCampaigns(campaigns: Campaign[]) {
 
   return campaigns.map((campaign) => {
     const brand = campaign.brandId ? brandMap.get(campaign.brandId) : undefined
+    const assetUrls = assetMap.get(campaign.id) || []
+    const imageUrls = assetUrls.length ? assetUrls : (campaign.coverImageUrl ? [campaign.coverImageUrl] : [])
     return {
       ...campaign,
-      coverImageUrl: assetMap.get(campaign.id) || campaign.coverImageUrl || null,
+      imageUrls,
+      coverImageUrl: imageUrls[0] || campaign.coverImageUrl || null,
       brandName: brand?.name || null,
       brandLogoUrl: brand?.logoUrl || null,
       brandInstagram: brand?.instagram || null,

@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Pressable, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { authColors } from '@/features/auth/theme'
+import { redesign } from '@/features/core/theme'
 
 type Props = {
   label: string
@@ -37,13 +38,13 @@ export function AuthInput({
   const isSecure = secureTextEntry && !visible
 
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 7 }}>
       <Text
         style={{
-          fontSize: 11,
-          color: authColors.muted,
-          fontWeight: '700',
-          letterSpacing: 0.88,
+          fontSize: 10,
+          color: redesign.color.faint,
+          fontWeight: '800',
+          letterSpacing: 1.0,
           textTransform: 'uppercase',
           fontFamily: authColors.typography.fontFamily,
         }}
@@ -52,23 +53,18 @@ export function AuthInput({
       </Text>
       <View
         style={{
-          height: 50,
-          borderWidth: 0.5,
-          borderColor: 'rgba(255,255,255,0.9)',
-          borderRadius: 12,
-          backgroundColor: 'rgba(255,255,255,0.65)',
+          height: 52,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: redesign.color.hairlineStrong,
+          borderRadius: 14,
+          backgroundColor: redesign.color.card,
           paddingHorizontal: 14,
           flexDirection: 'row',
           alignItems: 'center',
-          shadowColor: '#6040A0',
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 3,
         }}
       >
         {prefixText ? (
-          <Text style={{ color: authColors.muted, fontSize: 16, marginRight: 2, fontFamily: authColors.typography.fontFamily }}>{prefixText}</Text>
+          <Text style={{ color: redesign.color.muted, fontSize: 16, marginRight: 2, fontFamily: authColors.typography.fontFamily }}>{prefixText}</Text>
         ) : null}
         <TextInput
           value={displayValue}
@@ -76,7 +72,7 @@ export function AuthInput({
           onFocus={onFocus}
           onBlur={onBlur}
           placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={redesign.color.faint}
           secureTextEntry={isSecure}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
@@ -84,7 +80,7 @@ export function AuthInput({
           style={{
             flex: 1,
             fontSize: 16,
-            color: authColors.text,
+            color: redesign.color.ink,
             ...(isSecure ? null : { fontFamily: authColors.typography.fontFamily }),
           }}
         />
@@ -93,7 +89,7 @@ export function AuthInput({
             <MaterialCommunityIcons
               name={visible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color={authColors.muted}
+              color={redesign.color.muted}
             />
           </Pressable>
         ) : null}
