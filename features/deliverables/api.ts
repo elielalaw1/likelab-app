@@ -266,11 +266,13 @@ export async function deleteDeliverableVideo(deliverableId: string): Promise<voi
 export async function getDeliverableFeedback(deliverableId: string): Promise<DeliverableFeedback[]> {
   if (!deliverableId) return []
 
+  // Deployed Live schema: id, deliverable_id, submission_id, creator_id, brand_id,
+  // campaign_id, author_id, author_role, message, read_at, created_at. (No `kind`/`body`.)
   const { data, error } = await supabase
     .from('deliverable_feedback')
-    .select('id, deliverable_id, submission_id, author_role, kind, body, read_at, created_at')
+    .select('id, deliverable_id, submission_id, author_id, author_role, message, read_at, created_at')
     .eq('deliverable_id', deliverableId)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true })
 
   if (error) throw new Error(error.message)
 

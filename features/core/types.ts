@@ -179,10 +179,9 @@ export type DeliverableSubmission = {
 }
 
 // Brand → creator feedback on an uploaded video. Backed by the `deliverable_feedback`
-// table (Live). One row per comment; `submissionId` ties it to a specific video version
-// (nullable → deliverable-wide). `authorRole === 'system'` are backfilled legacy
-// flag_reason rows, shown without an author name.
-export type FeedbackKind = 'comment' | 'revision_request' | 'approval_note'
+// table (Live). The feedback text lives in the `message` column. `submissionId` ties it
+// to a specific video version (nullable → deliverable-wide). `authorRole === 'system'`
+// are backfilled legacy flag_reason rows, shown without an author name.
 export type FeedbackAuthorRole = 'brand' | 'admin' | 'system' | 'creator'
 
 export type DeliverableFeedback = {
@@ -190,7 +189,6 @@ export type DeliverableFeedback = {
   deliverableId: string
   submissionId: string | null
   authorRole: FeedbackAuthorRole
-  kind: FeedbackKind
   body: string
   readAt: string | null
   createdAt: string
@@ -202,8 +200,7 @@ export function mapFeedbackRow(row: Record<string, unknown>): DeliverableFeedbac
     deliverableId: String(row.deliverable_id ?? ''),
     submissionId: (row.submission_id as string) ?? null,
     authorRole: (row.author_role as FeedbackAuthorRole) ?? 'brand',
-    kind: (row.kind as FeedbackKind) ?? 'comment',
-    body: String(row.body ?? ''),
+    body: String(row.message ?? row.body ?? ''),
     readAt: (row.read_at as string) ?? null,
     createdAt: String(row.created_at ?? ''),
   }

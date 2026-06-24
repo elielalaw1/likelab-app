@@ -27,7 +27,7 @@ import { useCreatorProfile } from '@/features/profile/hooks'
 import { LinkSubmitRow } from '@/features/shared/ui/LinkSubmitRow'
 import { VideoUploadRow } from '@/features/shared/ui/VideoUploadRow'
 import { VideoReviewActions, ViewVideoButton } from '@/features/deliverables/ui/VideoReviewActions'
-import { FeedbackThread } from '@/features/deliverables/ui/FeedbackThread'
+import { FeedbackButton } from '@/features/deliverables/ui/FeedbackChat'
 import type { Deliverable } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
@@ -838,10 +838,12 @@ export default function CampaignDetailPage() {
                       <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 20, fontFamily: typography.fontFamily }}>{item.notes}</Text>
                     ) : null}
 
-                    {/* Brand feedback thread — shows in every stage so approval notes and
-                        comments stay visible, not just change requests. */}
-                    <FeedbackThread
+                    {/* Brand feedback — pulsing chat button → SMS-style thread. Shows in
+                        every stage so feedback stays reachable, not just on change requests. */}
+                    <FeedbackButton
                       deliverableId={item.id}
+                      brandName={campaign?.brandName}
+                      brandLogoUrl={campaign?.brandLogoUrl}
                       fallbackReason={deliverableStage(item) === 'revision' ? item.flagReason : null}
                     />
 
