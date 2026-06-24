@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
-import { getDeliverables, getLatestSubmission, getSubmissionById, submitDeliverableUrl, submitLink, uploadVideo } from '@/features/deliverables/api'
+import { getDeliverableFeedback, getDeliverables, getLatestSubmission, getSubmissionById, getUnreadFeedbackCounts, markFeedbackRead, submitDeliverableUrl, submitLink, uploadVideo } from '@/features/deliverables/api'
 import { VideoCompressionOptions } from '@/lib/video-compression'
 
 const queryPerf = {
@@ -25,6 +25,38 @@ export function useDeliverablesBadgeCount() {
     () => (data || []).filter((d) => d.status === 'pending' || d.status === 'revision_requested').length,
     [data]
   )
+}
+
+export function useDeliverableFeedback(deliverableId?: string) {
+  return useQuery({
+    queryKey: ['deliverable-feedback', deliverableId],
+    queryFn: () => getDeliverableFeedback(deliverableId || ''),
+    enabled: Boolean(deliverableId),
+    staleTime: 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  })
+}
+
+// Unread feedback counts keyed by deliverableId — for the Projects-list badge.
+export function useUnreadFeedbackCounts() {
+  return useQuery({
+    queryKey: ['feedback-unread'],
+    queryFn: getUnreadFeedbackCounts,
+    ...queryPerf,
+    placeholderData: (previous) => previous,
+  })
+}
+
+export function useMarkFeedbackRead() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: markFeedbackRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliverable-feedback'] })
+      queryClient.invalidateQueries({ queryKey: ['feedback-unread'] })
+    },
+  })
 }
 
 export function useSubmitDeliverable() {

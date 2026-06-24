@@ -1,6 +1,6 @@
 import { redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
-import { useDeliverables } from '@/features/deliverables/hooks'
+import { useDeliverables, useUnreadFeedbackCounts } from '@/features/deliverables/hooks'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { Screen } from '@/features/shared/ui/Screen'
@@ -31,11 +31,27 @@ export default function DeliverablesPage() {
   const { palette } = useTheme()
   const queryClient = useQueryClient()
   const { data, isLoading, error, refetch } = useDeliverables()
+  const { data: unreadFeedback } = useUnreadFeedbackCounts()
 
   const onRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['deliverables'] })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['deliverables'] }),
+      queryClient.invalidateQueries({ queryKey: ['feedback-unread'] }),
+    ])
     await refetch()
   }, [queryClient, refetch])
+
+  // Unread brand-feedback totals per campaign (summed across that campaign's deliverables)
+  // — drives the "N new feedback" badge on the action cards.
+  const unreadByCampaign = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!unreadFeedback) return map
+    for (const item of data || []) {
+      const n = unreadFeedback[item.id] || 0
+      if (n > 0) map.set(item.campaignId, (map.get(item.campaignId) || 0) + n)
+    }
+    return map
+  }, [data, unreadFeedback])
 
   // Per-campaign totals (for the progress bar): total deliverables and how many
   // have already been submitted (i.e. not pending / revision-requested).
@@ -152,6 +168,7 @@ export default function DeliverablesPage() {
           const isRevision = item.status === 'revision_requested'
           const total = Math.max(item.total, item.submitted + item.count)
           const pct = total > 0 ? Math.round((item.submitted / total) * 100) : 0
+          const unread = unreadByCampaign.get(item.campaignId) || 0
           return (
             <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
               <Pressable onPress={() => openCampaignVideos(item.campaignId)}>
@@ -163,9 +180,19 @@ export default function DeliverablesPage() {
                     style={{ position: 'absolute', top: -30, right: -30, width: 220, height: 220, borderRadius: 110 }}
                   />
                   <View style={{ padding: 22, gap: 16 }}>
-                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.4, textTransform: 'uppercase' }}>
-                      {isRevision ? 'Revision requested' : 'Active campaign'}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.4, textTransform: 'uppercase' }}>
+                        {isRevision ? 'Revision requested' : 'Active campaign'}
+                      </Text>
+                      {unread > 0 ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(124,63,242,0.30)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                          <MaterialCommunityIcons name="message-text" size={11} color="#fff" />
+                          <Text style={{ color: '#fff', fontSize: 10.5, fontWeight: '800', fontFamily: typography.fontFamily }}>
+                            {unread} new feedback
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <Text style={{ fontFamily: typography.fontFamily, fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.5, lineHeight: 26 }} numberOfLines={2}>
                       {item.campaignTitle}
                     </Text>
@@ -227,7 +254,12 @@ export default function DeliverablesPage() {
             History
           </Text>
           {history.map((item, index) => {
-            const cfg = STATUS_CONFIG[item.status] || { label: item.status, color: redesign.color.muted, icon: 'circle-outline' as const }
+            // Once the TikTok link is in, the deliverable is done — show "Live", not the raw
+            // (often still 'submitted'/'pending_review') status.
+            const isLive = !!item.url && /^https?:\/\//i.test(item.url)
+            const cfg = isLive
+              ? { label: 'Live', color: '#0EA5E9', icon: 'star-circle-outline' as const }
+              : STATUS_CONFIG[item.status] || { label: item.status, color: redesign.color.muted, icon: 'circle-outline' as const }
             const platform = item.platform ? `${item.platform.charAt(0).toUpperCase()}${item.platform.slice(1)}` : 'TikTok'
             return (
               <Animated.View key={item.id} entering={FadeInDown.delay(index * 40).duration(250)}>
@@ -262,7 +294,7 @@ export default function DeliverablesPage() {
 
                   {/* Approval chip (only while parent campaign is reviewing/posting) */}
                   {(() => {
-                    const chip = approvalChip(item.campaignPhase, item.approvalStatus, item.readyForPosting)
+                    const chip = isLive ? null : approvalChip(item.campaignPhase, item.approvalStatus, item.readyForPosting)
                     return chip ? (
                       <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: chip.bg }}>
                         <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: chip.text }}>

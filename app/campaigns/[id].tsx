@@ -25,6 +25,10 @@ import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/feat
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { LinkSubmitRow } from '@/features/shared/ui/LinkSubmitRow'
+import { VideoUploadRow } from '@/features/shared/ui/VideoUploadRow'
+import { VideoReviewActions, ViewVideoButton } from '@/features/deliverables/ui/VideoReviewActions'
+import { FeedbackThread } from '@/features/deliverables/ui/FeedbackThread'
+import type { Deliverable } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
@@ -57,8 +61,16 @@ function formatPlatform(platform?: string | null) {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-function canSubmitDeliverable(status: string) {
-  return status === 'pending' || status === 'revision_requested'
+// Creator-facing step for one deliverable, matching the backend flow:
+// upload video → brand review → (approved) post on TikTok + submit link → live.
+type DeliverableStage = 'upload' | 'under_review' | 'revision' | 'submit_link' | 'live'
+function deliverableStage(d: Deliverable): DeliverableStage {
+  // Brand change-requests take priority even if a link was already submitted.
+  if (d.status === 'revision_requested' || d.status === 'flagged' || d.approvalStatus === 'rejected') return 'revision'
+  if (d.url || d.status === 'published') return 'live'
+  if (d.approvalStatus === 'approved' || d.status === 'approved' || d.readyForPosting) return 'submit_link'
+  if (d.status === 'pending') return 'upload'
+  return 'under_review'
 }
 
 function Section({
@@ -144,7 +156,7 @@ export default function CampaignDetailPage() {
   const campaignId = Array.isArray(params.id) ? params.id[0] : params.id
   const initialTab = Array.isArray(params.tab) ? params.tab[0] : params.tab
 
-  const { data: campaign, isLoading, error, refetch: refetchCampaign, isFetching, dataUpdatedAt } = useCampaign(campaignId)
+  const { data: campaign, isLoading, error, refetch: refetchCampaign } = useCampaign(campaignId)
 
   useFocusEffect(
     useCallback(() => {
@@ -154,17 +166,6 @@ export default function CampaignDetailPage() {
     }, [campaignId, refetchCampaign])
   )
 
-  useEffect(() => {
-    if (campaign) {
-      console.log('[campaign detail]', {
-        id: campaign.id,
-        endDate: campaign.endDate,
-        daysLeft: getDaysLeft(campaign.endDate),
-        isFetching,
-        dataUpdatedAt: new Date(dataUpdatedAt).toISOString(),
-      })
-    }
-  }, [campaign, isFetching, dataUpdatedAt])
   const { data: profile } = useCreatorProfile()
   const { data: campaignDeliverables, isLoading: loadingDeliverables } = useCampaignDeliverables(campaignId)
   const { data: allDeliverables, isLoading: loadingAllDeliverables } = useDeliverables()
@@ -768,7 +769,7 @@ export default function CampaignDetailPage() {
               {loadingDeliverables || loadingAllDeliverables ? <ActivityIndicator color={colors.primary} /> : null}
 
               {leaderboard ? (
-                <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+                <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ marginBottom: 16 }}>
                   {(() => {
                     const pct = leaderboard.top_views > 0 ? Math.max(4, (leaderboard.my_views / leaderboard.top_views) * 100) : 4
                     return (
@@ -836,56 +837,90 @@ export default function CampaignDetailPage() {
                     {item.notes ? (
                       <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 20, fontFamily: typography.fontFamily }}>{item.notes}</Text>
                     ) : null}
-                    {item.status === 'revision_requested' && item.flagReason ? (
-                      <View
-                        style={{
-                          borderRadius: 12,
-                          borderWidth: 1,
-                          borderColor: '#FDBA74',
-                          backgroundColor: '#FFF7ED',
-                          padding: 12,
-                          gap: 6,
-                        }}
-                      >
-                        <Text style={{ color: '#C2410C', fontSize: 12, fontWeight: '800', letterSpacing: 0.8 }}>REVISION REQUESTED</Text>
-                        <Text style={{ color: '#9A3412', fontSize: 14, lineHeight: 20, fontFamily: typography.fontFamily }}>
-                          {item.flagReason}
-                        </Text>
-                      </View>
-                    ) : null}
-                    {canSubmitDeliverable(item.status) ? (
-                      <LinkSubmitRow
-                        deliverableId={item.id}
-                        submitLabel={item.status === 'revision_requested' ? 'Re-submit link' : 'Submit link'}
-                      />
-                    ) : item.url && /^https?:\/\//i.test(item.url) ? (
-                      <Pressable
-                        onPress={() => Linking.openURL(item.url || '').catch(() => undefined)}
-                        style={{
-                          borderRadius: 12,
-                          borderWidth: 1,
-                          borderColor: palette.borderColor,
-                          backgroundColor: palette.inputBg,
-                          paddingHorizontal: 12,
-                          paddingVertical: 10,
-                          gap: 4,
-                        }}
-                      >
-                        <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.7 }}>SUBMITTED URL</Text>
-                        <Text numberOfLines={2} style={{ color: colors.primary, fontSize: 14, fontFamily: typography.fontFamily }}>
-                          {item.url}
-                        </Text>
-                      </Pressable>
-                    ) : item.url ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <MaterialCommunityIcons name="check-circle" size={18} color="#0F9F6E" />
-                        <Text style={{ color: '#0F9F6E', fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily }}>
-                          Video submitted
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: typography.fontFamily }}>No URL submitted yet.</Text>
-                    )}
+
+                    {/* Brand feedback thread — shows in every stage so approval notes and
+                        comments stay visible, not just change requests. */}
+                    <FeedbackThread
+                      deliverableId={item.id}
+                      fallbackReason={deliverableStage(item) === 'revision' ? item.flagReason : null}
+                    />
+
+                    {(() => {
+                      const stage = deliverableStage(item)
+                      const caption = (text: string) => (
+                        <Text style={{ color: redesign.color.muted, fontSize: 13, lineHeight: 19, fontFamily: typography.fontFamily }}>{text}</Text>
+                      )
+
+                      if (stage === 'revision') {
+                        // The change-request reason now renders in <FeedbackThread> above.
+                        return (
+                          <>
+                            {caption('The brand asked for changes — upload a new version.')}
+                            <VideoUploadRow deliverableId={item.id} submitLabel="Re-upload video" />
+                          </>
+                        )
+                      }
+
+                      if (stage === 'upload') {
+                        return (
+                          <>
+                            {caption('Upload your video for the brand to review before you post it.')}
+                            <VideoUploadRow deliverableId={item.id} submitLabel="Upload video for review" />
+                          </>
+                        )
+                      }
+
+                      if (stage === 'under_review') {
+                        return (
+                          <>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 12, paddingVertical: 11 }}>
+                              <MaterialCommunityIcons name="clock-outline" size={18} color={redesign.color.purple} />
+                              <Text style={{ flex: 1, color: redesign.color.ink, fontSize: 13, fontWeight: '600', fontFamily: typography.fontFamily }}>
+                                Under review — the brand is checking your video.
+                              </Text>
+                            </View>
+                            <VideoReviewActions deliverableId={item.id} />
+                          </>
+                        )
+                      }
+
+                      if (stage === 'submit_link') {
+                        return (
+                          <>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                              <MaterialCommunityIcons name="check-decagram" size={18} color="#0F9F6E" />
+                              {caption('Approved! Post it on TikTok, then paste the link here.')}
+                            </View>
+                            <LinkSubmitRow deliverableId={item.id} submitLabel="Submit TikTok link" />
+                            <ViewVideoButton deliverableId={item.id} />
+                          </>
+                        )
+                      }
+
+                      // live — link submitted
+                      return (
+                        <>
+                          {item.url && /^https?:\/\//i.test(item.url) ? (
+                            <Pressable
+                              onPress={() => Linking.openURL(item.url || '').catch(() => undefined)}
+                              style={{ borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, backgroundColor: redesign.color.card, paddingHorizontal: 12, paddingVertical: 10, gap: 4 }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <MaterialCommunityIcons name="check-circle" size={15} color="#0F9F6E" />
+                                <Text style={{ color: '#0F9F6E', fontSize: 11, fontWeight: '800', letterSpacing: 0.7 }}>LIVE ON TIKTOK</Text>
+                              </View>
+                              <Text numberOfLines={2} style={{ color: colors.primary, fontSize: 14, fontFamily: typography.fontFamily }}>{item.url}</Text>
+                            </Pressable>
+                          ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <MaterialCommunityIcons name="check-circle" size={18} color="#0F9F6E" />
+                              <Text style={{ color: '#0F9F6E', fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily }}>Video submitted</Text>
+                            </View>
+                          )}
+                          <ViewVideoButton deliverableId={item.id} />
+                        </>
+                      )
+                    })()}
                   </Section>
                 )}
               />
