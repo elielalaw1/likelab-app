@@ -160,7 +160,7 @@ export async function getLatestSubmission(deliverableId: string): Promise<Delive
   return data ? mapSubmissionRow(data as Row) : null
 }
 
-export type MyVideo = { id: string; deliverableId: string; url: string; tiktokUrl: string | null; thumbnailUrl: string | null; createdAt: string }
+export type MyVideo = { id: string; deliverableId: string; url: string; tiktokUrl: string | null; thumbnailUrl: string | null; createdAt: string; archived: boolean }
 
 // Server thumbnails (if the backend generates them) live in `deliverable-thumbnails` at the
 // same path as the video but with a .jpg extension.
@@ -176,7 +176,7 @@ export async function getMyVideos(): Promise<MyVideo[]> {
 
   const { data, error } = await supabase
     .from('deliverable_submissions')
-    .select('id, deliverable_id, video_storage_path, created_at')
+    .select('id, deliverable_id, video_storage_path, video_archived_at, created_at')
     .eq('creator_id', userId)
     .eq('submission_type', 'video')
     .not('video_storage_path', 'is', null)
@@ -185,7 +185,7 @@ export async function getMyVideos(): Promise<MyVideo[]> {
 
   if (error) throw new Error(error.message)
 
-  const allRows = (data || []) as { id: string; deliverable_id: string; video_storage_path: string; created_at: string }[]
+  const allRows = (data || []) as { id: string; deliverable_id: string; video_storage_path: string; video_archived_at: string | null; created_at: string }[]
   // One tile per deliverable — keep only the newest video (rows are already newest-first),
   // so revision re-uploads don't surface superseded/rejected versions.
   const seenDeliverables = new Set<string>()
@@ -196,9 +196,13 @@ export async function getMyVideos(): Promise<MyVideo[]> {
   })
   if (!rows.length) return []
 
-  const { data: signed } = await supabase.storage
-    .from('deliverable-videos')
-    .createSignedUrls(rows.map((r) => r.video_storage_path), 6 * 3600)
+  // Skip archived rows: the cleanup job removed the underlying blob (campaign closed long ago),
+  // so signing its path would only yield a URL that 404s. We still surface the row via its
+  // retained thumbnail + TikTok link below.
+  const livePaths = rows.filter((r) => !r.video_archived_at).map((r) => r.video_storage_path)
+  const { data: signed } = livePaths.length
+    ? await supabase.storage.from('deliverable-videos').createSignedUrls(livePaths, 6 * 3600)
+    : { data: [] as { signedUrl: string | null; path: string | null }[] }
 
   const byPath = new Map((signed || []).filter((s) => s.signedUrl && s.path).map((s) => [s.path as string, s.signedUrl as string]))
 
@@ -233,12 +237,15 @@ export async function getMyVideos(): Promise<MyVideo[]> {
     .map((r) => ({
       id: String(r.id),
       deliverableId: String(r.deliverable_id),
-      url: byPath.get(r.video_storage_path) || '',
+      url: r.video_archived_at ? '' : (byPath.get(r.video_storage_path) || ''),
       tiktokUrl: tiktokByDeliverable.get(r.deliverable_id) || null,
       thumbnailUrl: thumbByVideoPath.get(r.video_storage_path) || null,
       createdAt: String(r.created_at),
+      archived: Boolean(r.video_archived_at),
     }))
-    .filter((v) => v.url)
+    // Keep a playable row (has a signed url) OR an archived row we can still represent
+    // with a thumbnail/TikTok link. Drop anything with nothing to show.
+    .filter((v) => v.url || (v.archived && (v.thumbnailUrl || v.tiktokUrl)))
 }
 
 // Signed URL to the creator's uploaded review video. Finds the latest VIDEO submission
@@ -246,7 +253,7 @@ export async function getMyVideos(): Promise<MyVideo[]> {
 export async function getDeliverableVideoSignedUrl(deliverableId: string): Promise<string | null> {
   const { data } = await supabase
     .from('deliverable_submissions')
-    .select('video_storage_path')
+    .select('video_storage_path, video_archived_at')
     .eq('deliverable_id', deliverableId)
     .eq('submission_type', 'video')
     .not('video_storage_path', 'is', null)
@@ -254,8 +261,10 @@ export async function getDeliverableVideoSignedUrl(deliverableId: string): Promi
     .limit(1)
     .maybeSingle()
 
-  const path = (data as { video_storage_path?: string } | null)?.video_storage_path
-  if (!path) return null
+  const row = data as { video_storage_path?: string; video_archived_at?: string | null } | null
+  const path = row?.video_storage_path
+  // Blob removed by the cleanup job — nothing playable to sign.
+  if (!path || row?.video_archived_at) return null
 
   const { data: signed, error } = await supabase.storage
     .from('deliverable-videos')

@@ -34,7 +34,8 @@ function GridCell({ video, width, onPress }: { video: MyVideo; width: number; on
   const thumb = video.thumbnailUrl || genThumb
 
   useEffect(() => {
-    if (video.thumbnailUrl || genThumb) return
+    // No source to generate from once the blob is archived; rely on the retained server thumbnail.
+    if (video.archived || video.thumbnailUrl || genThumb) return
     let active = true
     VideoThumbnails.getThumbnailAsync(video.url, { time: 0, quality: 0.5 })
       .then(({ uri }) => {
@@ -43,7 +44,7 @@ function GridCell({ video, width, onPress }: { video: MyVideo; width: number; on
       })
       .catch(() => undefined) // keep the gradient placeholder on failure
     return () => { active = false }
-  }, [video.id, video.url, video.thumbnailUrl, genThumb])
+  }, [video.id, video.url, video.thumbnailUrl, video.archived, genThumb])
 
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Play video" style={{ width, height: width * 1.5, borderRadius: 12, overflow: 'hidden', backgroundColor: '#15151F', alignItems: 'center', justifyContent: 'center' }}>
@@ -57,7 +58,47 @@ function GridCell({ video, width, onPress }: { video: MyVideo; width: number; on
           <FontAwesome5 name="tiktok" size={11} color="#fff" />
         </View>
       ) : null}
+      {video.archived ? (
+        <View style={{ position: 'absolute', bottom: 6, left: 6, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <MaterialCommunityIcons name="archive-outline" size={11} color="#fff" />
+          <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>ARCHIVED</Text>
+        </View>
+      ) : null}
     </Pressable>
+  )
+}
+
+// Archived item — the original blob was removed by the cleanup job, so there's nothing to play.
+// We show the retained thumbnail full-screen plus the TikTok link (where the video actually lives now).
+function ArchivedFeedItem({ video, width, height }: { video: MyVideo; width: number; height: number }) {
+  const poster = video.thumbnailUrl ?? thumbCache.get(video.id) ?? null
+  return (
+    <View style={{ width, height, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+      {poster ? (
+        <ExpoImage source={{ uri: poster }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" blurRadius={2} />
+      ) : (
+        <LinearGradient pointerEvents="none" colors={['rgba(124,63,242,0.4)', 'rgba(31,200,232,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+      )}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)' }} />
+      <View style={{ alignItems: 'center', gap: 14, paddingHorizontal: 32 }}>
+        <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="archive-outline" size={30} color="#fff" />
+        </View>
+        <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800', textAlign: 'center' }}>This video has been archived</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.7)', fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 19 }}>
+          {video.tiktokUrl ? 'Watch the published version on TikTok.' : 'The original upload is no longer stored.'}
+        </Text>
+        {video.tiktokUrl ? (
+          <Pressable
+            onPress={() => Linking.openURL(video.tiktokUrl!).catch(() => undefined)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.25)' }}
+          >
+            <FontAwesome5 name="tiktok" size={15} color="#fff" />
+            <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>Watch on TikTok</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
   )
 }
 
@@ -172,9 +213,13 @@ export function MyVideosFeed({ pagePadding = 16 }: { pagePadding?: number }) {
               getItemLayout={(_, index) => ({ length: height, offset: height * index, index })}
               onViewableItemsChanged={onViewable}
               viewabilityConfig={viewabilityConfig}
-              renderItem={({ item, index }) => (
-                <FeedVideoItem video={item} active={index === activeIndex} width={width} height={height} />
-              )}
+              renderItem={({ item, index }) =>
+                item.archived ? (
+                  <ArchivedFeedItem video={item} width={width} height={height} />
+                ) : (
+                  <FeedVideoItem video={item} active={index === activeIndex} width={width} height={height} />
+                )
+              }
             />
           ) : null}
           <View style={{ position: 'absolute', top: 0, left: 0, paddingTop: Math.max(insets.top, 50) + 6, paddingLeft: 14 }}>
