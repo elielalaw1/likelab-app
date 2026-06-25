@@ -23,6 +23,7 @@ export function PressableScale({ children, style, scaleTo = 0.97, haptic = 'sele
 
   return (
     <AnimatedPressable
+      accessibilityRole="button"
       {...rest}
       disabled={disabled}
       onPressIn={(e) => { if (!disabled) scale.value = withTiming(scaleTo, { duration: 90 }); onPressIn?.(e) }}

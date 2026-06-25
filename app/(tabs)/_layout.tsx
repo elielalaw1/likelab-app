@@ -8,6 +8,7 @@ import { TutorialOverlay } from '@/features/onboarding/TutorialOverlay'
 import { WelcomePendingOverlay } from '@/features/onboarding/WelcomePendingOverlay'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { useApplicationRealtime } from '@/features/shared/hooks/useApplicationRealtime'
+import { useDeliverableRealtime } from '@/features/shared/hooks/useDeliverableRealtime'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import * as Notifications from 'expo-notifications'
 import { Redirect, Tabs } from 'expo-router'
@@ -16,6 +17,7 @@ import { ActivityIndicator, View } from 'react-native'
 
 function RealtimeSetup({ userId }: { userId: string }) {
   useApplicationRealtime(userId)
+  useDeliverableRealtime(userId)
   return null
 }
 

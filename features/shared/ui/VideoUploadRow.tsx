@@ -25,8 +25,9 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
   // row flips out of the upload state without a manual pull-to-refresh.
   useEffect(() => {
     if (submission?.status === 'submitted') {
+      // ['deliverables'] prefix-matches ['deliverables','campaign']; also refresh the profile feed.
       queryClient.invalidateQueries({ queryKey: ['deliverables'] })
-      queryClient.invalidateQueries({ queryKey: ['deliverables', 'campaign'] })
+      queryClient.invalidateQueries({ queryKey: ['my-videos'] })
     } else if (submission?.status === 'failed') {
       // Keep the raw server error in the dev logs; the creator sees a friendly message.
       console.warn('[VideoUploadRow] server processing failed:', submission?.errorMessage)

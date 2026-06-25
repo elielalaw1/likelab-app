@@ -7,6 +7,7 @@ import { formatCompactCount, stripAtPrefix } from '@/features/auth/api'
 import { AvatarPreviewModal } from '@/features/profile/ui/AvatarPreviewModal'
 import { ProfileCollaborations } from '@/features/profile/ui/ProfileCollaborations'
 import Animated, { FadeInDown } from 'react-native-reanimated'
+import { MyVideosFeed } from '@/features/deliverables/ui/MyVideosFeed'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { Screen } from '@/features/shared/ui/Screen'
@@ -65,18 +66,6 @@ function NicheChip({ label, tint, text, dot }: { label: string; tint: string; te
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: tint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
       {dot ? <View style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: text }} /> : null}
       <Text style={{ color: text, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700' }}>{label}</Text>
-    </View>
-  )
-}
-
-function WorkStatCard({ value, label, icon, color }: { value: number; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string }) {
-  return (
-    <View style={{ flex: 1, backgroundColor: redesign.color.card, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 14, gap: 10, ...redesign.shadow.card }}>
-      <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: `${color}1A`, alignItems: 'center', justifyContent: 'center' }}>
-        <MaterialCommunityIcons name={icon} size={18} color={color} />
-      </View>
-      <Text style={{ fontFamily: typography.fontFamily, fontSize: 24, fontWeight: '900', color: redesign.color.ink, letterSpacing: -1, fontVariant: ['tabular-nums'] }}>{value}</Text>
-      <Text style={FAINT_LABEL}>{label}</Text>
     </View>
   )
 }
@@ -221,24 +210,45 @@ export function ProfileOverview() {
             ))}
           </View>
 
-          {/* Work — media-kit image grid (the centrepiece) */}
+          {/* My videos — TikTok-style grid embedded right in the profile */}
+          <MyVideosFeed />
+
+          {/* Work — media-kit image grid */}
           <ProfileCollaborations items={acceptedCampaigns} />
 
-          {/* Activity — compact tinted tiles */}
-          <View style={{ gap: 10 }}>
+          {/* Activity — slim 3-column row */}
+          <View style={{ gap: 8 }}>
             <Text style={PROFILE_SECTION_LABEL}>Activity</Text>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Pressable style={{ flex: 1 }} onPress={() => router.push({ pathname: '/(tabs)/applications', params: { filter: 'accepted' } })}>
-                <WorkStatCard value={stats.activeCampaignsCount} label="Active" icon="rocket-launch-outline" color={redesign.color.successText} />
-              </Pressable>
-              <Pressable style={{ flex: 1 }} onPress={() => router.push('/(tabs)/applications')}>
-                <WorkStatCard value={stats.applicationsCount} label="Applied" icon="send-outline" color={redesign.color.purple} />
-              </Pressable>
-              <Pressable style={{ flex: 1 }} onPress={() => router.push('/(tabs)/deliverables')}>
-                <WorkStatCard value={stats.deliverablesCount} label="Delivered" icon="video-check-outline" color="#0E92AD" />
-              </Pressable>
+            <View style={{ flexDirection: 'row', backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 14, ...redesign.shadow.card }}>
+              {[
+                { label: 'Active', value: stats.activeCampaignsCount, onPress: () => router.push({ pathname: '/(tabs)/applications', params: { filter: 'accepted' } }) },
+                { label: 'Applied', value: stats.applicationsCount, onPress: () => router.push('/(tabs)/applications') },
+                { label: 'Delivered', value: stats.deliverablesCount, onPress: () => router.push('/(tabs)/deliverables') },
+              ].map((s, i) => (
+                <Pressable key={s.label} onPress={s.onPress} style={{ flex: 1, alignItems: 'center', gap: 3, borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderLeftColor: redesign.color.hairlineStrong }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '900', color: redesign.color.ink, letterSpacing: -0.5, fontVariant: ['tabular-nums'] }}>{s.value}</Text>
+                  <Text style={FAINT_LABEL}>{s.label}</Text>
+                </Pressable>
+              ))}
             </View>
           </View>
+
+          {/* Insights entry — campaign performance (views/likes/rank) */}
+          <Pressable
+            onPress={() => router.push('/insights')}
+            accessibilityRole="button"
+            accessibilityLabel="View insights"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14, ...redesign.shadow.card }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="chart-line" size={19} color={redesign.color.purple} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700', color: redesign.color.ink }}>Insights</Text>
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: redesign.color.muted, marginTop: 1 }}>Views, likes & ranking across campaigns</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
+          </Pressable>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
             <View style={{ flex: 2 }}>

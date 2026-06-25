@@ -69,7 +69,7 @@ function MockAccepted() {
 function MockSubmit({ arrow }: { arrow: object }) {
   return (
     <View style={{ width: 240, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, padding: 14, gap: 10, ...redesign.shadow.card }}>
-      <Text style={{ fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontFamily: typography.fontFamily }}>SUBMIT YOUR VIDEO</Text>
+      <Text style={{ fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontFamily: typography.fontFamily }}>DROP YOUR TIKTOK LINK</Text>
       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
         <View style={{ flex: 1, height: 38, borderRadius: 12, borderWidth: 1, borderColor: redesign.color.hairlineStrong, backgroundColor: redesign.color.bg, justifyContent: 'center', paddingHorizontal: 10 }}>
           <Text style={{ fontSize: 12, color: redesign.color.faint, fontFamily: typography.fontFamily }}>Paste your link…</Text>
@@ -125,12 +125,34 @@ function MockWelcome() {
 
 type Slide = { title: string; body: string; mock: (arrow: object, arrowH: object) => React.ReactNode }
 
+function MockReview() {
+  return (
+    <View style={{ width: 220, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, overflow: 'hidden', ...redesign.shadow.card }}>
+      <View style={{ height: 92, alignItems: 'center', justifyContent: 'center' }}>
+        <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0, opacity: 0.45 }} />
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.85)', alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="play" size={22} color={redesign.color.ink} />
+        </View>
+        <View style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: redesign.color.successBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
+          <MaterialCommunityIcons name="check-decagram" size={12} color={redesign.color.successText} />
+          <Text style={{ color: redesign.color.successText, fontSize: 9, fontWeight: '800', fontFamily: typography.fontFamily }}>APPROVED</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 6 }}>
+        <Text style={{ fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontFamily: typography.fontFamily }}>BRAND REVIEW</Text>
+        <Text style={{ fontSize: 12.5, fontWeight: '600', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Green light — ready to post 🎬</Text>
+      </View>
+    </View>
+  )
+}
+
 const SLIDES: Slide[] = [
   { title: 'You’re approved! 🎉', body: 'Welcome to LikeLab. Here’s how it works in a few quick steps.', mock: () => <MockWelcome /> },
   { title: 'Discover & apply', body: 'Browse open campaigns and tap Apply on the ones that fit you.', mock: (a) => <MockDiscover arrow={a} /> },
   { title: 'Get selected', body: 'Brands review creators and pick their favourites — you’ll be notified when you’re in.', mock: () => <MockAccepted /> },
-  { title: 'Create & submit', body: 'Film your content, then submit your video link straight from the campaign.', mock: (a) => <MockSubmit arrow={a} /> },
-  { title: 'Compete & earn', body: 'Climb the live leaderboard as your views grow — the top creators earn the reward.', mock: (_a, ah) => <MockLeaderboard arrow={ah} /> },
+  { title: 'Film & get approved', body: 'Upload your video in the app. The brand reviews it and gives the green light (or asks for tweaks).', mock: () => <MockReview /> },
+  { title: 'Post & go live', body: 'Once approved, post it on TikTok and drop the link in the app to confirm it’s live.', mock: (a) => <MockSubmit arrow={a} /> },
+  { title: 'Compete & earn', body: 'Your views feed the live leaderboard as they grow — the top creators earn the reward.', mock: (_a, ah) => <MockLeaderboard arrow={ah} /> },
 ]
 
 export function TutorialOverlay() {

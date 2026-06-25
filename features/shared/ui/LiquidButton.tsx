@@ -80,6 +80,9 @@ export function LiquidButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       style={[
         {
           minHeight,
@@ -146,6 +149,7 @@ export function LiquidButton({
         {icon}
         <Text
           numberOfLines={1}
+          maxFontSizeMultiplier={1.3}
           style={{ color: toneText[tone], fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700', textAlign: 'center' }}
         >
           {label}

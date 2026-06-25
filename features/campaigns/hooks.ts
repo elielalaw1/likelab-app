@@ -71,13 +71,41 @@ export function useCampaignDeliverables(campaignId?: string) {
   })
 }
 
+type CampaignRow = { id: string; creatorApplicationStatus?: string | null }
+
 export function useApplyToCampaign() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: applyToCampaign,
-    onSuccess: () => {
+    // Flip the campaign to "applied" immediately so the CTA / card reflects the tap
+    // before the round-trip completes. onError restores; onSettled reconciles.
+    onMutate: async (campaignId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['campaigns'] })
+      const prevList = queryClient.getQueryData<CampaignRow[]>(['campaigns'])
+      const prevDetail = queryClient.getQueryData<CampaignRow>(['campaigns', campaignId])
+
+      if (prevList) {
+        queryClient.setQueryData<CampaignRow[]>(
+          ['campaigns'],
+          prevList.map((c) => (c.id === campaignId ? { ...c, creatorApplicationStatus: 'applied' } : c))
+        )
+      }
+      if (prevDetail) {
+        queryClient.setQueryData<CampaignRow>(['campaigns', campaignId], {
+          ...prevDetail,
+          creatorApplicationStatus: 'applied',
+        })
+      }
+      return { prevList, prevDetail, campaignId }
+    },
+    onError: (_err, campaignId, context) => {
+      if (context?.prevList) queryClient.setQueryData(['campaigns'], context.prevList)
+      if (context?.prevDetail) queryClient.setQueryData(['campaigns', campaignId], context.prevDetail)
+    },
+    onSettled: (_data, _err, campaignId) => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['campaigns', campaignId] })
     },
   })
 }
