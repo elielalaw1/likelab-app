@@ -32,7 +32,12 @@ export async function getInsights(): Promise<InsightsSummary> {
 
   const results = await Promise.all(
     accepted.map(async (app): Promise<CampaignInsight> => {
-      const { data } = await supabase.rpc('get_campaign_leaderboard_position', { p_campaign_id: app.campaignId })
+      const { data, error } = await supabase.rpc('get_campaign_leaderboard_position', { p_campaign_id: app.campaignId })
+      if (error) {
+        // Don't fail the whole insights screen for one campaign — log it and fall
+        // back to a no-data row so the campaign still appears (rather than vanishing).
+        console.warn(`[insights] leaderboard RPC failed for campaign ${app.campaignId}:`, error.message)
+      }
       const row = Array.isArray(data) && data.length > 0 ? data[0] : null
       return {
         campaignId: app.campaignId,

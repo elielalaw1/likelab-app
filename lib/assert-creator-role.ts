@@ -21,7 +21,14 @@ export async function assertCreatorRole(userId: string): Promise<boolean> {
       .select('role')
       .eq('user_id', userId)
 
-    if (error) return true
+    // Deliberately fail OPEN on a DB/network error: locking out a real creator on
+    // a flaky connection is worse than briefly tolerating an unverified one (who
+    // is still gated by RLS on every query). We log it so the failure is visible
+    // rather than silent, and we do NOT cache this result so it re-checks next boot.
+    if (error) {
+      console.warn('[assertCreatorRole] role check failed, failing open:', error.message)
+      return true
+    }
 
     // Empty array = RLS blocking or timing issue — fail open, never log out a valid user
     if (!Array.isArray(data) || data.length === 0) return true

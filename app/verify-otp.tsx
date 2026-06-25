@@ -100,8 +100,13 @@ export default function VerifyOtpPage() {
         if (Object.keys(profileUpdate).length > 0) {
           await updateCreatorProfile(profileUpdate as Parameters<typeof updateCreatorProfile>[0]).catch(() => null)
         }
+        router.replace('/connect-tiktok')
+        return
       }
-      router.replace('/connect-tiktok')
+      // No pending password — the in-memory signup state was lost (screen
+      // remounted / cold start). We can't establish a session here, so send the
+      // user to log in rather than landing on an authed screen with no session.
+      router.replace('/login')
     } catch {
       setError('Something went wrong. Try again.')
     } finally {

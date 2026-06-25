@@ -157,85 +157,19 @@ export async function getAcceptedApplicationCampaigns(limit = 3) {
   }))
 }
 
+// Accept/decline run as a single SECURITY DEFINER transaction on the backend
+// (status check + application upsert + invitation update), so concurrent
+// double-taps/retries can't produce inconsistent state. The RPC returns true
+// only when it actually changed a pending row; false means it was already
+// handled / not found / not owned.
 export async function acceptInvitation(invitationId: string) {
-  const userId = await getCurrentUserId()
-
-  const { data: invitation, error: invitationError } = await supabase
-    .from('campaign_invitations')
-    .select('id, campaign_id, status')
-    .eq('id', invitationId)
-    .eq('creator_id', userId)
-    .maybeSingle()
-
-  if (invitationError) throw new Error(invitationError.message)
-  if (!invitation) throw new Error('Invitation not found')
-  if (invitation.status !== 'pending') {
-    throw new Error(`Invitation cannot be accepted from status "${invitation.status}"`)
-  }
-
-  // Order matters: we only mark invitation accepted after ensuring an accepted
-  // application row exists. This avoids ending up with accepted invitation but
-  // missing application if insert fails client-side.
-  // TODO: move this flow into a single RPC/Edge transaction for true atomicity.
-
-  const { data: existingApp, error: existingAppError } = await supabase
-    .from('applications')
-    .select('id, status')
-    .eq('creator_id', userId)
-    .eq('campaign_id', invitation.campaign_id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-
-  if (existingAppError) throw new Error(existingAppError.message)
-  if (existingApp && existingApp.length > 0) {
-    const current = existingApp[0]
-    if (current.status !== 'accepted') {
-      const { error: promoteError } = await supabase
-        .from('applications')
-        .update({ status: 'accepted' })
-        .eq('id', current.id)
-      if (promoteError) throw new Error(promoteError.message)
-    }
-  } else {
-    const { error: insertError } = await supabase.from('applications').insert({
-      campaign_id: invitation.campaign_id,
-      creator_id: userId,
-      status: 'accepted',
-    })
-    if (insertError) throw new Error(insertError.message)
-  }
-
-  const { error: updateError } = await supabase
-    .from('campaign_invitations')
-    .update({ status: 'accepted' })
-    .eq('id', invitationId)
-    .eq('creator_id', userId)
-    .eq('status', 'pending')
-  if (updateError) throw new Error(updateError.message)
+  const { data, error } = await supabase.rpc('accept_campaign_invitation', { p_invitation_id: invitationId })
+  if (error) throw new Error(error.message)
+  if (data === false) throw new Error('This invitation was already handled.')
 }
 
 export async function declineInvitation(invitationId: string) {
-  const userId = await getCurrentUserId()
-
-  const { data: invitation, error: invitationError } = await supabase
-    .from('campaign_invitations')
-    .select('id, status')
-    .eq('id', invitationId)
-    .eq('creator_id', userId)
-    .maybeSingle()
-
-  if (invitationError) throw new Error(invitationError.message)
-  if (!invitation) throw new Error('Invitation not found')
-  if (invitation.status !== 'pending') {
-    throw new Error(`Invitation cannot be declined from status "${invitation.status}"`)
-  }
-
-  const { error } = await supabase
-    .from('campaign_invitations')
-    .update({ status: 'declined' })
-    .eq('id', invitationId)
-    .eq('creator_id', userId)
-    .eq('status', 'pending')
-
+  const { data, error } = await supabase.rpc('decline_campaign_invitation', { p_invitation_id: invitationId })
   if (error) throw new Error(error.message)
+  if (data === false) throw new Error('This invitation was already handled.')
 }

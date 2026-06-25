@@ -22,7 +22,13 @@ function parseHashParams(url: string): Record<string, string> {
   const hash = url.includes('#') ? url.split('#')[1] : ''
   const params: Record<string, string> = {}
   for (const part of hash.split('&')) {
-    const [key, value] = part.split('=')
+    // Split on the FIRST '=' only — JWT access/refresh tokens are base64url and
+    // can end in '='/'==' padding, which a naive split('=') would truncate and
+    // make setSession() reject (the link then looks "expired").
+    const eq = part.indexOf('=')
+    if (eq === -1) continue
+    const key = part.slice(0, eq)
+    const value = part.slice(eq + 1)
     if (key && value) params[decodeURIComponent(key)] = decodeURIComponent(value)
   }
   return params

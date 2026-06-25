@@ -36,23 +36,20 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 }
 
 export async function savePushToken(token: string, userId: string): Promise<void> {
-  try {
-    await supabase
-      .from('creator_profiles')
-      .update({ push_token: token })
-      .eq('user_id', userId)
-  } catch {
-    // safe to ignore
-  }
+  // supabase-js resolves (not throws) on a query error, so capture `error`
+  // explicitly — otherwise a failed save leaves the user with notifications
+  // silently disabled and no trace to debug.
+  const { error } = await supabase
+    .from('creator_profiles')
+    .update({ push_token: token })
+    .eq('user_id', userId)
+  if (error) console.warn('[push] failed to save push token:', error.message)
 }
 
 export async function deletePushToken(userId: string): Promise<void> {
-  try {
-    await supabase
-      .from('creator_profiles')
-      .update({ push_token: null })
-      .eq('user_id', userId)
-  } catch {
-    // safe to ignore
-  }
+  const { error } = await supabase
+    .from('creator_profiles')
+    .update({ push_token: null })
+    .eq('user_id', userId)
+  if (error) console.warn('[push] failed to clear push token:', error.message)
 }

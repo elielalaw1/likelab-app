@@ -131,7 +131,17 @@ export async function uploadVideo(params: {
 
   supabase.functions
     .invoke('process-video-upload', { body: { submission_id: data.id } })
-    .catch((invokeError: unknown) => console.warn('[uploadVideo] process-video-upload failed:', invokeError))
+    .catch((invokeError: unknown) => {
+      console.warn('[uploadVideo] process-video-upload failed:', invokeError)
+      // The processor never started — don't leave the row stuck on 'uploading'
+      // forever (the client poller would spin every few seconds indefinitely).
+      // Flip it to 'failed' so the UI can show an error and offer a retry.
+      void supabase
+        .from('deliverable_submissions')
+        .update({ status: 'failed', error_message: 'Could not start video processing. Please try uploading again.' })
+        .eq('id', data.id)
+        .then(undefined, () => {})
+    })
 
   return mapSubmissionRow((data || {}) as Row)
 }
@@ -209,7 +219,14 @@ export async function getMyVideos(): Promise<MyVideo[]> {
 
   // The posted TikTok link lives on the parent deliverable (set when the creator submits it).
   const deliverableIds = Array.from(new Set(rows.map((r) => r.deliverable_id)))
-  const { data: dels } = await supabase.from('deliverables').select('id, url').in('id', deliverableIds)
+  // Filter by creator_id too (defense-in-depth alongside RLS) so a crafted
+  // deliverable_id can never surface another creator's row here.
+  const { data: dels, error: delsError } = await supabase
+    .from('deliverables')
+    .select('id, url')
+    .in('id', deliverableIds)
+    .eq('creator_id', userId)
+  if (delsError) throw new Error(delsError.message)
   const tiktokByDeliverable = new Map((dels || []).map((d) => [String(d.id), (textValue(d as Row, ['url']) || null)]))
 
   return rows

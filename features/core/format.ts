@@ -52,10 +52,13 @@ export function getDaysLeft(endDate?: string | null) {
   const end = new Date(endDate)
   if (Number.isNaN(end.getTime())) return null
 
+  // Compare whole calendar days in UTC. endDate comes from the DB as a UTC ISO
+  // string; reading it with local getFullYear/Month/Date and rebuilding a local
+  // Date shifted the day by ±1 for non-UTC users (off-by-one "days left").
   const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const targetDay = new Date(end.getFullYear(), end.getMonth(), end.getDate())
-  const diffMs = targetDay.getTime() - startOfToday.getTime()
+  const startOfToday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const targetDay = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate())
+  const diffMs = targetDay - startOfToday
 
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 }

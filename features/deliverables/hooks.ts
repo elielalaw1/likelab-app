@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getDeliverableFeedback, getDeliverables, getLatestSubmission, getSubmissionById, getUnreadFeedbackCounts, markFeedbackRead, submitDeliverableUrl, submitLink, uploadVideo } from '@/features/deliverables/api'
 import { VideoCompressionOptions } from '@/lib/video-compression'
 
@@ -160,7 +160,16 @@ export function useUploadVideo() {
   return { upload, reset, markDone, markFailed, stage, compressionProgress, error }
 }
 
-export function useSubmissionStatus(submissionId?: string, options?: { pollInterval?: number }) {
+export function useSubmissionStatus(submissionId?: string, options?: { pollInterval?: number; timeoutMs?: number }) {
+  // Backstop: if the backend never moves the row off 'uploading'/'processing'
+  // (e.g. the processor died silently), stop polling after timeoutMs instead of
+  // spinning every few seconds forever and draining the battery.
+  const timeoutMs = options?.timeoutMs ?? 5 * 60 * 1000
+  const startRef = useRef(Date.now())
+  useEffect(() => {
+    startRef.current = Date.now()
+  }, [submissionId])
+
   return useQuery({
     queryKey: ['submission-status', submissionId],
     queryFn: () => getSubmissionById(submissionId || ''),
@@ -168,6 +177,7 @@ export function useSubmissionStatus(submissionId?: string, options?: { pollInter
     refetchInterval: (query) => {
       const status = query.state.data?.status
       if (status === 'submitted' || status === 'failed') return false
+      if (Date.now() - startRef.current > timeoutMs) return false
       return options?.pollInterval ?? 3000
     },
   })

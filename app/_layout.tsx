@@ -96,12 +96,20 @@ function PushNotificationSetup() {
   useEffect(() => {
     if (!userId) return
 
+    // Guard against a logout/login race: setupPush awaits permission prompts, so a
+    // different user could be signed in by the time it resolves. The cleanup flips
+    // `active` to false, so a stale in-flight run won't save A's token under B.
+    let active = true
+    const save = (token: string) => {
+      if (active) savePushToken(token, userId)
+    }
+
     const setupPush = async () => {
       const { status: existingStatus } = await Notifications.getPermissionsAsync()
 
       if (existingStatus === 'granted') {
         const token = await registerForPushNotificationsAsync()
-        if (token) savePushToken(token, userId)
+        if (token) save(token)
         return
       }
 
@@ -117,14 +125,14 @@ function PushNotificationSetup() {
               text: 'Turn on notifications',
               onPress: async () => {
                 const token = await registerForPushNotificationsAsync()
-                if (token) savePushToken(token, userId)
+                if (token) save(token)
               },
             },
           ]
         )
       } else {
         const token = await registerForPushNotificationsAsync()
-        if (token) savePushToken(token, userId)
+        if (token) save(token)
       }
     }
 
@@ -181,6 +189,7 @@ function PushNotificationSetup() {
     })
 
     return () => {
+      active = false
       foregroundListener.current?.remove()
       foregroundListener.current = null
       notificationResponseListener.current?.remove()
