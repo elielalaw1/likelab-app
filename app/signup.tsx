@@ -1,11 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { AuthInput } from '@/features/auth/components/AuthInput'
 import { signupCreator } from '@/features/auth/api'
 import { setPendingAuth } from '@/lib/pending-auth'
+import { parseReferralCode } from '@/features/referral/logic'
+import { peekPendingReferralCode, setPendingReferralCode } from '@/features/referral/redeem'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { designSignupWordmark } from '@/design/assets'
 import { SelectPopover } from '@/features/profile/ui/SelectPopover'
@@ -69,6 +72,23 @@ export default function SignupPage() {
   const [instagramHandle, setInstagramHandle] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
+
+  // Pre-fill the invite code from a captured deep link, or the clipboard if it
+  // looks like a referral code (best-effort — silently ignored otherwise).
+  useEffect(() => {
+    const pending = peekPendingReferralCode()
+    if (pending) {
+      setInviteCode(pending)
+      return
+    }
+    Clipboard.getStringAsync()
+      .then((clip) => {
+        const parsed = parseReferralCode(clip)
+        if (parsed) setInviteCode(parsed)
+      })
+      .catch(() => {})
+  }, [])
 
   // Step 2 — personal
   const [gender, setGender] = useState('')
@@ -133,6 +153,8 @@ export default function SignupPage() {
         followers: null,
         likes: null,
       })
+      // Stash the referral code (if any) for redemption once authenticated.
+      setPendingReferralCode(inviteCode)
       setPendingAuth({
         email: email.trim(),
         password,
@@ -186,6 +208,7 @@ export default function SignupPage() {
               <AuthInput label="INSTAGRAM HANDLE" value={instagramHandle} onChangeText={(v) => setInstagramHandle(v.replace(/^@+/, ''))} placeholder="yourinstagram" prefixText="@" sanitizeText={(v) => v.replace(/^@+/, '')} />
               <AuthInput label="PASSWORD *" value={password} onChangeText={setPassword} placeholder="Min 8 characters" secureTextEntry showToggle />
               <AuthInput label="CONFIRM PASSWORD *" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat password" secureTextEntry showToggle />
+              <AuthInput label="INVITE CODE (OPTIONAL)" value={inviteCode} onChangeText={(v) => setInviteCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))} placeholder="ABC234" autoCapitalize="characters" />
               <Text style={{ color: redesign.color.muted, fontSize: 11, fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 17, marginTop: 4 }}>
                 {'By continuing, you agree to our '}
                 <Text onPress={() => Linking.openURL('https://likelab.io/terms-of-service')} style={{ color: redesign.color.ink, textDecorationLine: 'underline' }}>Terms of Service</Text>

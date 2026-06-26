@@ -20,6 +20,7 @@ import * as Notifications from 'expo-notifications'
 import * as SecureStore from 'expo-secure-store'
 import { TikTokAuthGuard } from '@/features/auth/TikTokAuthGuard'
 import { ReconnectAutoRoute } from '@/features/auth/ReconnectAutoRoute'
+import { ReferralLinkHandler } from '@/features/referral/ReferralLinkHandler'
 import { ToastContainer, toast } from '@/features/shared/ui/Toast'
 import { ErrorBoundary } from '@/features/shared/ui/ErrorBoundary'
 import { OfflineBanner } from '@/features/shared/ui/OfflineBanner'
@@ -266,6 +267,7 @@ export default function RootLayout() {
             <PushNotificationSetup />
             <TikTokAuthGuard />
             <ReconnectAutoRoute />
+            <ReferralLinkHandler />
             <ErrorBoundary>
               <View style={{ flex: 1 }}>
                 <Stack screenOptions={{ headerShown: false }}>
@@ -273,6 +275,7 @@ export default function RootLayout() {
                   <Stack.Screen name="campaigns/[id]" />
                   <Stack.Screen name="leaderboard/[id]" />
                   <Stack.Screen name="insights" />
+                  <Stack.Screen name="invite" />
                   <Stack.Screen name="settings" />
                   <Stack.Screen name="reset-password" />
                   <Stack.Screen name="forgot-password" />
