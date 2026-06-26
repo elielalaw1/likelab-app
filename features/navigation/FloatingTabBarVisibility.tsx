@@ -25,6 +25,11 @@ export function FloatingTabBarVisibilityProvider({ children }: Props) {
   const visibleRef = useRef(true)
   const lastYRef = useRef(0)
   const accumulatedDeltaRef = useRef(0)
+  // After a reset the next scroll event seeds lastYRef with the live offset instead
+  // of diffing against a stale 0. The tab navigator (lazy:false) preserves scroll
+  // position, so returning to a tab scrolled to y=500 would otherwise produce a
+  // first delta of +500 and spuriously hide (and invert) the bar.
+  const primeNextRef = useRef(false)
 
   const setVisible = useCallback((value: boolean) => {
     if (visibleRef.current === value) return
@@ -35,11 +40,21 @@ export function FloatingTabBarVisibilityProvider({ children }: Props) {
   const resetScrollTracking = useCallback(() => {
     lastYRef.current = 0
     accumulatedDeltaRef.current = 0
+    primeNextRef.current = true
   }, [])
 
   const reportScroll = useCallback(
     (rawY: number) => {
       const y = Math.max(0, rawY || 0)
+
+      // First report after a reset: just record the position (no delta) so a
+      // preserved scroll offset doesn't read as a huge sudden movement.
+      if (primeNextRef.current) {
+        primeNextRef.current = false
+        lastYRef.current = y
+        return
+      }
+
       const delta = y - lastYRef.current
       lastYRef.current = y
 

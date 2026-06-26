@@ -158,12 +158,31 @@ export default function CampaignDetailPage() {
 
   const { data: campaign, isLoading, error, refetch: refetchCampaign } = useCampaign(campaignId)
 
+  const [leaderboard, setLeaderboard] = useState<{ rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number } | null>(null)
+
+  const refetchLeaderboard = useCallback(async () => {
+    if (!campaignId) return
+    try {
+      const { data, error: rpcError } = await supabase.rpc('get_campaign_leaderboard_position', { p_campaign_id: campaignId })
+      if (rpcError) {
+        // Transient RPC failure — don't keep stale data and allow the next focus to retry.
+        setLeaderboard(null)
+        return
+      }
+      setLeaderboard(data && data.length > 0 ? data[0] : null)
+    } catch {
+      // Network/unexpected failure — clear so a retry happens on the next focus.
+      setLeaderboard(null)
+    }
+  }, [campaignId])
+
   useFocusEffect(
     useCallback(() => {
       if (campaignId) {
         void refetchCampaign()
+        void refetchLeaderboard()
       }
-    }, [campaignId, refetchCampaign])
+    }, [campaignId, refetchCampaign, refetchLeaderboard])
   )
 
   const { data: profile } = useCreatorProfile()
@@ -173,7 +192,6 @@ export default function CampaignDetailPage() {
   const [activeTab, setActiveTab] = useState<'brief' | 'videos'>(
     initialTab === 'videos' ? 'videos' : 'brief'
   )
-  const [leaderboard, setLeaderboard] = useState<{ rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number } | null>(null)
   const [applySuccess, setApplySuccess] = useState(false)
   const [briefOpen, setBriefOpen] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
@@ -348,14 +366,6 @@ export default function CampaignDetailPage() {
       </View>
     </View>
   ) : null
-
-  useEffect(() => {
-    if (!campaignId) return
-    void Promise.resolve(
-      supabase.rpc('get_campaign_leaderboard_position', { p_campaign_id: campaignId })
-        .then(({ data }) => { if (data && data.length > 0) setLeaderboard(data[0]) })
-    ).catch(() => {})
-  }, [campaignId])
 
   useEffect(() => {
     setActiveTab(initialTab === 'videos' ? 'videos' : 'brief')
@@ -569,7 +579,7 @@ export default function CampaignDetailPage() {
             />
             {([
               { key: 'brief', icon: 'file-document-outline', label: 'Brief' },
-              { key: 'videos', icon: 'video-outline', label: `Videos ${campaignDeliverables?.length ?? 0}/${campaign.requiredVideos ?? 0}` },
+              { key: 'videos', icon: 'video-outline', label: `Videos ${visibleDeliverables.length}/${campaign.requiredVideos ?? 0}` },
             ] as const).map((tab) => (
               <Pressable
                 key={tab.key}

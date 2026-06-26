@@ -90,6 +90,7 @@ function mapCampaign(row: Row): Campaign {
     thingsToAvoid: textValue(row, ['forbidden']),
     requiredHashtags: toStringArray(row.required_hashtags),
     keyMessages: toStringArray(row.key_messages),
+    preferredCreators: textValue(row, ['preferred_creators']),
     prizeDistribution: toPrizeDistribution(row.prize_distribution),
   }
 }
@@ -349,7 +350,7 @@ export async function getCampaignDeliverables(campaignId: string): Promise<Deliv
 
   const { data, error } = await supabase
     .from('deliverables')
-    .select('id, campaign_id, status, approval_status, ready_for_posting, platform, type, url, campaigns(name, brand_id, phase)')
+    .select('id, campaign_id, status, approval_status, ready_for_posting, platform, type, url, notes, campaigns(name, brand_id, phase)')
     .eq('creator_id', userId)
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: true })

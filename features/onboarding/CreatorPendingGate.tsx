@@ -90,7 +90,9 @@ export function CreatorPendingGate({ state }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          brand_id: profile.id,
+          meeting_type: 'creator_appeal',
+          requester_user_id: profile.id,
+          reason: appealReason.trim().slice(0, 2000),
           brand_name: `Creator Appeal: ${profile.email}`,
           brand_email: profile.email,
           date: selectedDate,

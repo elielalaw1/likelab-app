@@ -2,6 +2,8 @@ import { useTheme } from '@/features/core/useTheme'
 import { useDeliverablesBadgeCount } from '@/features/deliverables/hooks'
 import { FloatingTabBar } from '@/features/navigation/FloatingTabBar'
 import { FloatingTabBarVisibilityProvider } from '@/features/navigation/FloatingTabBarVisibility'
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs'
+import { withLayoutContext } from 'expo-router'
 import { CreatorProfileLiveSync } from '@/features/profile/CreatorProfileLiveSync'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
 import { TutorialOverlay } from '@/features/onboarding/TutorialOverlay'
@@ -11,9 +13,16 @@ import { useApplicationRealtime } from '@/features/shared/hooks/useApplicationRe
 import { useDeliverableRealtime } from '@/features/shared/hooks/useDeliverableRealtime'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import * as Notifications from 'expo-notifications'
-import { Redirect, Tabs } from 'expo-router'
+import { Redirect } from 'expo-router'
 import { useEffect } from 'react'
 import { ActivityIndicator, View } from 'react-native'
+
+// Material top tabs give a finger-following pager (the next tab slides in as you
+// drag), wired into expo-router via withLayoutContext. The visible bottom bar is
+// still our custom FloatingTabBar; tabBarPosition="bottom" just tells the
+// navigator where the (overlay) bar lives.
+const { Navigator } = createMaterialTopTabNavigator()
+const MaterialTopTabs = withLayoutContext(Navigator)
 
 function RealtimeSetup({ userId }: { userId: string }) {
   useApplicationRealtime(userId)
@@ -59,22 +68,15 @@ export default function TabsLayout() {
       <CreatorProfileLiveSync userId={session.user.id} />
       <RealtimeSetup userId={session.user.id} />
       <BadgeSync />
-      <Tabs
+      <MaterialTopTabs
         tabBar={(props) => <FloatingTabBar {...props} />}
-        screenOptions={{
-          headerShown: false,
-          tabBarHideOnKeyboard: true,
-          sceneStyle: { backgroundColor: palette.bg },
-        }}
+        tabBarPosition="bottom"
+        screenOptions={{ swipeEnabled: true, lazy: false }}
       >
-        <Tabs.Screen name="overview" options={{ title: 'Discover' }} />
-        <Tabs.Screen name="campaigns" options={{ href: null }} />
-        <Tabs.Screen name="applications" options={{ href: null }} />
-        <Tabs.Screen name="deliverables" options={{ title: 'Deliverables' }} />
-        <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
-        <Tabs.Screen name="index" options={{ href: null }} />
-        <Tabs.Screen name="explore" options={{ href: null }} />
-      </Tabs>
+        <MaterialTopTabs.Screen name="overview" options={{ title: 'Discover' }} />
+        <MaterialTopTabs.Screen name="deliverables" options={{ title: 'Deliverables' }} />
+        <MaterialTopTabs.Screen name="profile" options={{ title: 'Profile' }} />
+      </MaterialTopTabs>
       <CreatorOnboardingGate />
       <WelcomePendingOverlay />
       <TutorialOverlay />

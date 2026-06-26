@@ -132,8 +132,9 @@ export default function LeaderboardPage() {
               </LinearGradient>
             </Animated.View>
 
-            {/* Your position card */}
-            {position ? (
+            {/* Your position card — only when the creator has a real rank.
+                An unranked creator (rank 0/null) would otherwise show "#0 / 0th of N". */}
+            {position && myRank > 0 ? (
               <Animated.View
                 entering={FadeInDown.duration(280).delay(60)}
                 style={{ borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', padding: 18, gap: 16 }}

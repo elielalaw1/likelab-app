@@ -28,15 +28,21 @@ function formatPlatform(platform?: string | null) {
   return platform.replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+// Returns null when there's no end date (open-ended), -1 when the end date has
+// passed (closed), otherwise the whole number of days remaining (min 1).
 function daysRemaining(endDate?: string | null): number | null {
   if (!endDate) return null
   const diff = new Date(endDate).getTime() - Date.now()
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-  return days > 0 ? days : 0
+  if (diff <= 0) return -1
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
+function isExpired(campaign: Campaign): boolean {
+  return daysRemaining(campaign.endDate) === -1
 }
 
 function canApply(campaign: Campaign): boolean {
-  return !campaign.creatorApplicationStatus && !campaign.invitationStatus
+  return !campaign.creatorApplicationStatus && !campaign.invitationStatus && !isExpired(campaign)
 }
 
 function brandVerified(campaign: Campaign): boolean {
@@ -48,6 +54,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
   const { palette } = useTheme()
   const brandSheetRef = useRef<BottomSheetModal>(null)
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'blocked'>('idle')
+  const applyingRef = useRef(false)
   const days = daysRemaining(campaign.endDate)
   const showApply = canApply(campaign) && !!onApply
   const hasSocials = !!(campaign.brandInstagram || campaign.brandTiktok)
@@ -72,16 +79,19 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
 
   function handleApply() {
     if (!onApply) return
+    // Guard against rapid double-taps firing onApply() more than once.
+    if (applyingRef.current || applyState !== 'idle') return
+    applyingRef.current = true
     haptic.medium()
     const result = onApply()
     if (result === false) {
       haptic.warning()
       setApplyState('blocked')
-      setTimeout(() => setApplyState('idle'), 2500)
+      setTimeout(() => { setApplyState('idle'); applyingRef.current = false }, 2500)
     } else {
       haptic.success()
       setApplyState('applied')
-      setTimeout(() => setApplyState('idle'), 2500)
+      setTimeout(() => { setApplyState('idle'); applyingRef.current = false }, 2500)
     }
   }
 
@@ -158,7 +168,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           {campaign.title}
         </Text>
         <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '500' }} numberOfLines={1}>
-          {[reward || null, formatPlatform(campaign.platforms?.[0]), days != null && `${days === 0 ? 1 : days}d left`].filter(Boolean).join('  ·  ')}
+          {[reward || null, formatPlatform(campaign.platforms?.[0]), days != null && (days < 0 ? 'Closed' : `${days}d left`)].filter(Boolean).join('  ·  ')}
         </Text>
       </View>
     </View>
@@ -243,7 +253,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           <View style={{ flex: 1, borderRadius: redesign.radius.cell, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairline }}>
             <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '800', letterSpacing: 1.0, textTransform: 'uppercase', marginBottom: 4 }}>Closes</Text>
             <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
-              {days == null ? 'Open' : `${days === 0 ? 1 : days}d`}
+              {days == null ? 'Open' : days < 0 ? 'Closed' : `${days}d`}
             </Text>
           </View>
         </View>
@@ -269,6 +279,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
         {/* Apply pill */}
         {showApply ? (
           <Pressable
+            disabled={applyState !== 'idle'}
             onPress={(e) => { e.stopPropagation?.(); handleApply() }}
             onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
             style={{

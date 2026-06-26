@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { radii, typography } from '@/features/core/theme'
@@ -19,6 +19,11 @@ export function SelectPopover({ label, value, options, placeholder, onSelect, se
   const { colors, palette } = useTheme()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+
+  // Reset the search when the popover closes so it doesn't reopen pre-filtered.
+  useEffect(() => {
+    if (!open) setQuery('')
+  }, [open])
 
   const filtered = useMemo(() => {
     if (!searchable || !query.trim()) return options

@@ -19,10 +19,6 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, w
 
 type FilterKey = 'all' | 'accepted' | 'pending' | 'closed'
 
-export const options = {
-  tabBarButton: () => null,
-}
-
 function FilterTab({
   label,
   active,
@@ -378,7 +374,15 @@ export default function ApplicationsPage() {
                 }}
                 onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: item.invitation.campaignId } } as never)}
               />
-              <InvitationActions invitation={item.invitation} onAccept={onAccept} onDecline={onDecline} loading={acceptInvitation.isPending || declineInvitation.isPending} />
+              <InvitationActions
+                invitation={item.invitation}
+                onAccept={onAccept}
+                onDecline={onDecline}
+                loading={
+                  (acceptInvitation.isPending && acceptInvitation.variables === item.invitation.id) ||
+                  (declineInvitation.isPending && declineInvitation.variables === item.invitation.id)
+                }
+              />
             </View>
           ) : item.type === 'invitation_closed' ? (
             <View style={{ gap: 8 }}>

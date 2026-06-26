@@ -279,7 +279,7 @@ export default function SignupPage() {
           {/* Step 4 — Review */}
           {step === 4 ? (
             <View style={cardStyle}>
-              <View style={{ backgroundColor: 'redesign.color.bg', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: 'redesign.color.hairlineStrong', gap: 4 }}>
+              <View style={{ backgroundColor: redesign.color.bg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: redesign.color.hairlineStrong, gap: 4 }}>
                 <Text style={{ color: redesign.color.ink, fontSize: 14, fontWeight: '700', fontFamily: typography.fontFamily, marginBottom: 4 }}>Your account</Text>
                 {([
                   ['Name', displayName],
@@ -301,7 +301,7 @@ export default function SignupPage() {
                 ))}
               </View>
 
-              <View style={{ backgroundColor: 'redesign.color.bg', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: 'redesign.color.hairlineStrong' }}>
+              <View style={{ backgroundColor: redesign.color.bg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: redesign.color.hairlineStrong }}>
                 <Text style={{ color: redesign.color.muted, fontSize: 13, lineHeight: 18, fontFamily: typography.fontFamily }}>
                   After creating your account you will connect your TikTok to automatically import your profile picture and stats.
                 </Text>

@@ -19,7 +19,7 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
   const queryClient = useQueryClient()
   const [submissionId, setSubmissionId] = useState<string | null>(null)
   const { upload, stage, compressionProgress, error } = useUploadVideo()
-  const { data: submission } = useSubmissionStatus(submissionId ?? undefined)
+  const { data: submission, isTimedOut } = useSubmissionStatus(submissionId ?? undefined)
 
   // When the backend finishes processing, refetch the parent deliverable so the
   // row flips out of the upload state without a manual pull-to-refresh.
@@ -36,7 +36,9 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
 
   const serverStatus = submission?.status
   const isDone = serverStatus === 'submitted'
-  const isFailed = stage === 'error' || serverStatus === 'failed'
+  // Treat a polling timeout (processor stalled/died silently) as a failure so the
+  // UI falls out of the infinite "Processing…" spinner into a retry affordance.
+  const isFailed = stage === 'error' || serverStatus === 'failed' || isTimedOut
   const isBusy =
     !isFailed &&
     !isDone &&
@@ -112,7 +114,10 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
     <View style={{ gap: 8 }}>
       {isFailed ? (
         <Text style={{ color: palette.dangerText, fontSize: 12, fontFamily: typography.fontFamily }}>
-          {error || 'Something went wrong while processing your video. Please try uploading again.'}
+          {error ||
+            (isTimedOut
+              ? 'Processing is taking longer than expected. Please try uploading again.'
+              : 'Something went wrong while processing your video. Please try uploading again.')}
         </Text>
       ) : null}
       <LiquidButton

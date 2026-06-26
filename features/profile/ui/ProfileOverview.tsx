@@ -3,6 +3,11 @@ import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { useCreatorProfile } from '@/features/profile/hooks'
+import { computeTier } from '@/features/profile/tiers'
+import { TierEmblem, TierRow } from '@/features/profile/ui/TierBadge'
+import { useReferral } from '@/features/referral/hooks'
+import { referralMilestone } from '@/features/referral/logic'
+import { ConnectorBadge } from '@/features/referral/ui/ConnectorBadge'
 import { formatCompactCount, stripAtPrefix } from '@/features/auth/api'
 import { AvatarPreviewModal } from '@/features/profile/ui/AvatarPreviewModal'
 import { ProfileCollaborations } from '@/features/profile/ui/ProfileCollaborations'
@@ -19,8 +24,9 @@ import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
-import { useMemo, useState } from 'react'
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ProfileCoachmarks, type CoachStep } from '@/features/onboarding/ProfileCoachmarks'
 
 const FAINT_LABEL = {
   fontFamily: typography.fontFamily,
@@ -75,6 +81,8 @@ export function ProfileOverview() {
   const { data: profile, isLoading: profileLoading, error: profileError } = useCreatorProfile()
   const { data: applicationsData } = useApplications()
   const { data: deliverables } = useDeliverables()
+  const { data: referral } = useReferral()
+  const connectorEarned = referral ? referralMilestone(referral.joinedCount).reached : false
   const queryClient = useQueryClient()
   const [avatarOpen, setAvatarOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
@@ -107,6 +115,13 @@ export function ProfileOverview() {
     }
   }, [applicationsData?.applications, deliverables])
 
+  // Cosmetic creator tier — driven by how many campaigns the creator has applied
+  // to. Computed client-side from already-loaded data (see features/profile/tiers.ts).
+  const tierProgress = useMemo(
+    () => computeTier({ appliedCampaigns: applicationsData?.applications.length ?? 0 }),
+    [applicationsData?.applications],
+  )
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     queryClient.clear()
@@ -122,8 +137,29 @@ export function ProfileOverview() {
     { label: 'Views', value: formatCompactCount(profile?.tiktokViews) || '0' },
   ]
 
+  // Coachmark tour plumbing — refs to the real elements + their scroll offsets.
+  const scrollRef = useRef<ScrollView>(null)
+  const tierRef = useRef<View>(null)
+  const videosRef = useRef<View>(null)
+  const insightsRef = useRef<View>(null)
+  const inviteRef = useRef<View>(null)
+  const contactRef = useRef<View>(null)
+  const contentY = useRef<Record<string, number>>({})
+  const onLayoutY = (key: string) => (e: { nativeEvent: { layout: { y: number } } }) => { contentY.current[key] = e.nativeEvent.layout.y }
+  const coachSteps: CoachStep[] = [
+    { key: 'tier', viewRef: tierRef, title: 'Your creator level', body: 'Apply to campaigns to climb the ladder — each tier unlocks a new emblem. Tap to see all levels.' },
+    { key: 'videos', viewRef: videosRef, title: 'My videos', body: 'Every video you post for a campaign lands here — your living portfolio.' },
+    { key: 'insights', viewRef: insightsRef, title: 'Insights', body: 'Track your views, likes and leaderboard ranking across all your campaigns.' },
+    { key: 'invite', viewRef: inviteRef, title: 'Invite friends', body: 'Share your code with other creators. When 3 join, you earn the Connector badge.' },
+    { key: 'contact', viewRef: contactRef, title: 'We’re here to help', body: 'Questions? Reach the LikeLab team any time from Contact Us.' },
+  ]
+
   return (
-    <Screen bgColor={redesign.color.bg}>
+    <Screen
+      bgColor={redesign.color.bg}
+      scrollRef={scrollRef}
+      overlay={<ProfileCoachmarks steps={coachSteps} scrollRef={scrollRef} contentY={contentY} />}
+    >
       <AppHeader />
 
       {profileLoading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -134,21 +170,27 @@ export function ProfileOverview() {
           {/* Identity — editorial */}
           <Animated.View entering={FadeInDown.duration(320)} style={{ alignItems: 'center', paddingTop: 2 }}>
             <Pressable onPress={() => setAvatarOpen(true)}>
-              <LinearGradient
-                colors={redesign.gradient.avatarRing}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={{ width: 112, height: 112, borderRadius: 38, alignItems: 'center', justifyContent: 'center', ...redesign.shadow.card }}
-              >
-                <View style={{ width: 104, height: 104, borderRadius: 33, borderWidth: 3, borderColor: redesign.color.bg, overflow: 'hidden', backgroundColor: '#E6E4F0', alignItems: 'center', justifyContent: 'center' }}>
-                  {profile.avatarUrl ? (
-                    <ExpoImage source={{ uri: profile.avatarUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" transition={200} />
-                  ) : (
-                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 38, fontWeight: '800', color: redesign.color.purple }}>
-                      {(profile.displayName || 'C').charAt(0).toUpperCase()}
-                    </Text>
-                  )}
+              <View>
+                <LinearGradient
+                  colors={tierProgress.tier.ring}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={{ width: 112, height: 112, borderRadius: 38, alignItems: 'center', justifyContent: 'center', ...redesign.shadow.card }}
+                >
+                  <View style={{ width: 104, height: 104, borderRadius: 33, borderWidth: 3, borderColor: redesign.color.bg, overflow: 'hidden', backgroundColor: '#E6E4F0', alignItems: 'center', justifyContent: 'center' }}>
+                    {profile.avatarUrl ? (
+                      <ExpoImage source={{ uri: profile.avatarUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" transition={200} />
+                    ) : (
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 38, fontWeight: '800', color: redesign.color.purple }}>
+                        {(profile.displayName || 'C').charAt(0).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
+                </LinearGradient>
+                {/* Tier emblem overlay — the creator's current level marker */}
+                <View style={{ position: 'absolute', right: -3, bottom: -3 }}>
+                  <TierEmblem tier={tierProgress.tier} size={34} />
                 </View>
-              </LinearGradient>
+              </View>
             </Pressable>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 16 }}>
@@ -210,8 +252,15 @@ export function ProfileOverview() {
             ))}
           </View>
 
+          {/* Creator tier — subtle, tappable strip → full ladder screen */}
+          <View ref={tierRef} onLayout={onLayoutY('tier')}>
+            <TierRow progress={tierProgress} onPress={() => router.push('/tiers')} />
+          </View>
+
           {/* My videos — TikTok-style grid embedded right in the profile */}
-          <MyVideosFeed />
+          <View ref={videosRef} onLayout={onLayoutY('videos')}>
+            <MyVideosFeed />
+          </View>
 
           {/* Work — media-kit image grid */}
           <ProfileCollaborations items={acceptedCampaigns} />
@@ -221,8 +270,8 @@ export function ProfileOverview() {
             <Text style={PROFILE_SECTION_LABEL}>Activity</Text>
             <View style={{ flexDirection: 'row', backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 14, ...redesign.shadow.card }}>
               {[
-                { label: 'Active', value: stats.activeCampaignsCount, onPress: () => router.push({ pathname: '/(tabs)/applications', params: { filter: 'accepted' } }) },
-                { label: 'Applied', value: stats.applicationsCount, onPress: () => router.push('/(tabs)/applications') },
+                { label: 'Active', value: stats.activeCampaignsCount, onPress: () => router.push({ pathname: '/applications', params: { filter: 'accepted' } }) },
+                { label: 'Applied', value: stats.applicationsCount, onPress: () => router.push('/applications') },
                 { label: 'Delivered', value: stats.deliverablesCount, onPress: () => router.push('/(tabs)/deliverables') },
               ].map((s, i) => (
                 <Pressable key={s.label} onPress={s.onPress} style={{ flex: 1, alignItems: 'center', gap: 3, borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderLeftColor: redesign.color.hairlineStrong }}>
@@ -234,6 +283,7 @@ export function ProfileOverview() {
           </View>
 
           {/* Insights entry — campaign performance (views/likes/rank) */}
+          <View ref={insightsRef} onLayout={onLayoutY('insights')}>
           <Pressable
             onPress={() => router.push('/insights')}
             accessibilityRole="button"
@@ -249,6 +299,30 @@ export function ProfileOverview() {
             </View>
             <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
           </Pressable>
+          </View>
+
+          {/* Invite friends entry — referral loop */}
+          <View ref={inviteRef} onLayout={onLayoutY('invite')}>
+          <Pressable
+            onPress={() => router.push('/invite')}
+            accessibilityRole="button"
+            accessibilityLabel="Invite friends"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14, ...redesign.shadow.card }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(242,92,193,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="gift-outline" size={19} color={redesign.color.magenta} />
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700', color: redesign.color.ink }}>Invite friends</Text>
+              {connectorEarned ? (
+                <ConnectorBadge compact />
+              ) : (
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: redesign.color.muted }}>Share your code & grow the community</Text>
+              )}
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
+          </Pressable>
+          </View>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
             <View style={{ flex: 2 }}>
@@ -276,6 +350,7 @@ export function ProfileOverview() {
         </>
       ) : null}
 
+      <View ref={contactRef} onLayout={onLayoutY('contact')}>
       <GlassCard radius={radii.card} style={{ marginTop: 8 }}>
         <View>
         <Pressable
@@ -297,7 +372,7 @@ export function ProfileOverview() {
             ].map((item) => (
               <Pressable
                 key={item.label}
-                onPress={() => Linking.openURL(item.url)}
+                onPress={() => Linking.openURL(item.url).catch(() => {})}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -320,6 +395,7 @@ export function ProfileOverview() {
         ) : null}
         </View>
       </GlassCard>
+      </View>
     </Screen>
   )
 }

@@ -44,15 +44,19 @@ export function ProfilePendingGate({ userId }: Props) {
     }
     try {
       setSubmitting(true)
-      await supabase.from('creator_profiles').update({
+      const { error } = await supabase.from('creator_profiles').update({
         appeal_reason: appealReason.trim(),
         appeal_submitted_at: new Date().toISOString(),
       }).eq('user_id', userId)
+      if (error) throw error
+      // Only advance on a confirmed successful save.
+      setAppealStep('confirm')
     } catch (_) {
-      // Gracefully handle if columns don't exist yet
+      // supabase-js returns { error } rather than throwing, so we surface it
+      // here instead of silently pretending the appeal was submitted.
+      Alert.alert('Could not submit appeal', 'Something went wrong. Please try again.')
     } finally {
       setSubmitting(false)
-      setAppealStep('confirm')
     }
   }
 

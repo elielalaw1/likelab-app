@@ -16,7 +16,8 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
-import { designBackground, designWordmark } from '@/design/assets'
+import { designBackground, designLogo } from '@/design/assets'
+import { redesign, typography } from '@/features/core/theme'
 
 function parseHashParams(url: string): Record<string, string> {
   const hash = url.includes('#') ? url.split('#')[1] : ''
@@ -87,6 +88,8 @@ export default function ResetPasswordPage() {
       }
       await supabase.auth.signOut({ scope: 'local' })
       router.replace('/login')
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Could not update your password. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -105,12 +108,20 @@ export default function ResetPasswordPage() {
         <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 22 }} keyboardShouldPersistTaps="handled">
             <View style={{ flex: 1, justifyContent: 'center', paddingTop: 52, paddingBottom: 40 }}>
-              <View style={{ alignItems: 'center', marginBottom: 28 }}>
+              <View style={{ alignItems: 'center', marginBottom: 28, gap: 14 }}>
                 <Image
-                  source={designWordmark}
-                  style={{ width: 360, height: 56 }}
+                  source={designLogo}
+                  style={{ width: 66, height: 66 }}
                   resizeMode="contain"
                 />
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: redesign.color.ink, fontSize: 24, fontWeight: '800', letterSpacing: -0.6, fontFamily: typography.fontFamily, textAlign: 'center' }}>
+                    Set a new password
+                  </Text>
+                  <Text style={{ color: redesign.color.muted, fontSize: 14, fontWeight: '500', fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 20, maxWidth: 300 }}>
+                    Choose a new password for your creator account.
+                  </Text>
+                </View>
               </View>
 
               <View

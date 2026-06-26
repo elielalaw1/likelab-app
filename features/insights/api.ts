@@ -4,6 +4,9 @@ import { getApplications } from '@/features/applications/api'
 export type CampaignInsight = {
   campaignId: string
   campaignTitle: string
+  // When the creator was accepted onto the campaign — lets the dashboard order
+  // campaigns chronologically (for the view trend) without a new query.
+  createdAt: string
   rank: number | null
   totalCreators: number | null
   views: number
@@ -42,6 +45,7 @@ export async function getInsights(): Promise<InsightsSummary> {
       return {
         campaignId: app.campaignId,
         campaignTitle: app.campaignTitle,
+        createdAt: app.createdAt ?? '',
         rank: row?.rank ?? null,
         totalCreators: row?.total_creators ?? null,
         views: Number(row?.my_views ?? 0),

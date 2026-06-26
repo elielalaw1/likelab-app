@@ -10,6 +10,8 @@ import { redesign, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
 import { onReplayTutorial } from '@/features/onboarding/tutorialControl'
+import { startProfileTour } from '@/features/onboarding/profileTourControl'
+import { router } from 'expo-router'
 
 const SEEN_PREFIX = 'tutorial_seen_approval:'
 
@@ -227,9 +229,16 @@ export function TutorialOverlay() {
     openAtStart()
   }), [])
 
-  const finish = () => setVisible(false)
+  // On finish, fade out, jump to the profile tab and kick off the coachmark tour
+  // that points at the real profile elements.
+  const finish = () => {
+    setVisible(false)
+    router.navigate('/(tabs)/profile')
+    startProfileTour()
+  }
 
   const isLast = index === SLIDES.length - 1
+  const nextLabel = isLast ? 'View profile' : 'Next'
   const handleNext = () => {
     haptic.selection()
     if (isLast) { finish(); return }
@@ -300,7 +309,7 @@ export function TutorialOverlay() {
               onPress={handleNext}
               style={{ minHeight: 54, borderRadius: 999, backgroundColor: redesign.color.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...redesign.shadow.cta }}
             >
-              <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800' }}>{isLast ? 'Get started' : 'Next'}</Text>
+              <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800' }}>{nextLabel}</Text>
               <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
             </Pressable>
           </View>

@@ -9,7 +9,7 @@ import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { getProfileCompletion } from '@/features/profile/completion'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs'
 import { useQueryClient } from '@tanstack/react-query'
 import { BlurView } from 'expo-blur'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -121,7 +121,7 @@ const iconMap = {
 const visibleTabNames = new Set(['overview', 'deliverables', 'profile'])
 const BAR_HORIZONTAL_PADDING = 8
 
-export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export function FloatingTabBar({ state, descriptors, navigation }: MaterialTopTabBarProps) {
   useTheme()
   const insets = useSafeAreaInsets()
   const { visible } = useFloatingTabBarVisibility()

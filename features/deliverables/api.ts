@@ -350,9 +350,13 @@ export async function getSubmissionById(
     .from('deliverable_submissions')
     .select('id, status, error_message, external_asset_url')
     .eq('id', id)
-    .single()
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
+
+  // Row gone (e.g. deleted mid-poll) — return null instead of throwing so the
+  // poller/UI can recover rather than getting stuck on the last 'processing' state.
+  if (!data) return null
 
   return {
     id: String(data.id),

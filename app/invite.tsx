@@ -94,6 +94,9 @@ export default function InvitePage() {
   const reachedRef = useRef(false)
 
   const code = data?.code ?? '······'
+  // Only a real backend-issued code can be redeemed by an invitee, so never let
+  // the local hash fallback reach the clipboard/share sheet.
+  const shareable = data?.hasBackendCode === true
 
   // Celebrate once when the Connector milestone is first reached.
   useEffect(() => {
@@ -107,15 +110,15 @@ export default function InvitePage() {
   }, [data])
 
   const onCopy = useCallback(async () => {
-    if (!data?.code) return
+    if (!data?.code || !shareable) return
     await Clipboard.setStringAsync(data.code)
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     setCopied(true)
     setTimeout(() => setCopied(false), 1600)
-  }, [data?.code])
+  }, [data?.code, shareable])
 
   const onShare = useCallback(async () => {
-    if (!data?.code) return
+    if (!data?.code || !shareable) return
     try {
       const result = await Share.share({ message: buildShareMessage(data.code) })
       if (result.action === Share.sharedAction) {
@@ -125,7 +128,7 @@ export default function InvitePage() {
     } catch {
       // user dismissed the share sheet — no-op
     }
-  }, [data?.code])
+  }, [data?.code, shareable])
 
   return (
     <Screen tabAware={false} bgColor={redesign.color.bg}>
@@ -158,11 +161,11 @@ export default function InvitePage() {
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', color: 'rgba(255,255,255,0.5)', letterSpacing: 1.6, textTransform: 'uppercase' }}>Your invite code</Text>
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 38, fontWeight: '900', color: '#fff', letterSpacing: 6, marginLeft: 6 }}>{code}</Text>
             <View style={{ flexDirection: 'row', gap: 10, alignSelf: 'stretch' }}>
-              <Pressable onPress={onCopy} accessibilityRole="button" accessibilityLabel="Copy invite code" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 46, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' }}>
+              <Pressable onPress={onCopy} disabled={!shareable} accessibilityRole="button" accessibilityState={{ disabled: !shareable }} accessibilityLabel="Copy invite code" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 46, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', opacity: shareable ? 1 : 0.4 }}>
                 <MaterialCommunityIcons name={copied ? 'check' : 'content-copy'} size={16} color="#fff" />
                 <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: '#fff' }}>{copied ? 'Copied!' : 'Copy'}</Text>
               </Pressable>
-              <Pressable onPress={onShare} accessibilityRole="button" accessibilityLabel="Share invite" style={{ flex: 1.4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 46, borderRadius: 14, backgroundColor: '#fff' }}>
+              <Pressable onPress={onShare} disabled={!shareable} accessibilityRole="button" accessibilityState={{ disabled: !shareable }} accessibilityLabel="Share invite" style={{ flex: 1.4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 46, borderRadius: 14, backgroundColor: '#fff', opacity: shareable ? 1 : 0.4 }}>
                 <MaterialCommunityIcons name="share-variant" size={16} color={redesign.color.ink} />
                 <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink }}>Share invite</Text>
               </Pressable>
@@ -180,7 +183,14 @@ export default function InvitePage() {
       {/* Reward hook */}
       <MilestoneCard joinedCount={data?.joinedCount ?? 0} />
 
-      {data && !data.isLive ? (
+      {data && !data.hasBackendCode ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}>
+          <MaterialCommunityIcons name="progress-clock" size={14} color={redesign.color.faint} />
+          <Text style={{ flex: 1, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.faint, lineHeight: 17 }}>
+            Setting up your invite code… it&apos;ll be ready to share in a moment.
+          </Text>
+        </View>
+      ) : data && !data.isLive ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}>
           <MaterialCommunityIcons name="information-outline" size={14} color={redesign.color.faint} />
           <Text style={{ flex: 1, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.faint, lineHeight: 17 }}>

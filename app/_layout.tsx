@@ -29,7 +29,8 @@ import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 SplashScreen.preventAutoHideAsync()
 
 const ALLOWED_NOTIFICATION_ROUTES = [
-  /^\/\(tabs\)\/(overview|applications|deliverables)(\?.*)?$/,
+  /^\/\(tabs\)\/(overview|deliverables)(\?.*)?$/,
+  /^\/applications(\?.*)?$/,
   /^\/campaigns\/[a-zA-Z0-9_-]+(\?.*)?$/,
   /^\/settings(\?.*)?$/,
 ]
@@ -55,7 +56,7 @@ function resolveNotificationRoute(data: Record<string, unknown>): string | null 
     case 'campaign_phase_change':
       return campaignRoute
     case 'application_rejected':
-      return '/(tabs)/applications'
+      return '/applications'
     case 'creator_approved':
       return '/(tabs)/overview'
     case 'deliverable_assigned':
@@ -92,7 +93,46 @@ function PushNotificationSetup() {
   const queryClient = useQueryClient()
   const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null)
   const foregroundListener = useRef<Notifications.EventSubscription | null>(null)
+  // Tracks notification identifiers we've already routed, so the cold-start handler
+  // (getLastNotificationResponseAsync) and the live response listener don't both act
+  // on the same tap.
+  const handledResponseIds = useRef<Set<string>>(new Set())
   const userId = session?.user?.id ?? null
+
+  // Shared handling for a notification tap (background, closed, or cold-start). Runs
+  // cache invalidation, fire-and-forget open tracking, and navigation. De-duplicates
+  // by the notification's request identifier so the same tap isn't handled twice.
+  const handleNotificationResponse = (response: Notifications.NotificationResponse, uid: string) => {
+    const identifier = response.notification.request.identifier
+    if (handledResponseIds.current.has(identifier)) return
+    handledResponseIds.current.add(identifier)
+
+    const data = response.notification.request.content.data as Record<string, unknown>
+
+    // Refresh deliverables before navigating so the target screen renders the
+    // up-to-date stage rather than the pre-approval one.
+    const type = data?.type as string | undefined
+    if (type && DELIVERABLE_NOTIF_TYPES.has(type)) {
+      queryClient.invalidateQueries({ queryKey: ['deliverables'] })
+    }
+    if (type === 'feedback_added') {
+      queryClient.invalidateQueries({ queryKey: ['deliverable-feedback'] })
+      queryClient.invalidateQueries({ queryKey: ['feedback-unread'] })
+    }
+
+    // Fire-and-forget open tracking for analytics
+    const batchId = data?.batch_id
+    if (typeof batchId === 'string') {
+      fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/track-push-open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batch_id: batchId, user_id: uid }),
+      }).catch(() => {})
+    }
+
+    const route = resolveNotificationRoute(data)
+    if (route) router.push(route as never)
+  }
 
   useEffect(() => {
     if (!userId) return
@@ -162,31 +202,16 @@ function PushNotificationSetup() {
 
     // Background/closed: track open + navigate to route on tap
     notificationResponseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as Record<string, unknown>
+      handleNotificationResponse(response, userId)
+    })
 
-      // Refresh deliverables before navigating so the target screen renders the
-      // up-to-date stage rather than the pre-approval one.
-      const type = data?.type as string | undefined
-      if (type && DELIVERABLE_NOTIF_TYPES.has(type)) {
-        queryClient.invalidateQueries({ queryKey: ['deliverables'] })
-      }
-      if (type === 'feedback_added') {
-        queryClient.invalidateQueries({ queryKey: ['deliverable-feedback'] })
-        queryClient.invalidateQueries({ queryKey: ['feedback-unread'] })
-      }
-
-      // Fire-and-forget open tracking for analytics
-      const batchId = data?.batch_id
-      if (typeof batchId === 'string' && userId) {
-        fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/track-push-open`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ batch_id: batchId, user_id: userId }),
-        }).catch(() => {})
-      }
-
-      const route = resolveNotificationRoute(data)
-      if (route) router.push(route as never)
+    // Cold-start: the response listener above does NOT fire for the tap that launched
+    // a terminated app, so the user would land on the default screen. Read the initial
+    // response here and route it through the same handler. We only reach this effect
+    // once a userId/session exists, so navigation timing is already gated on auth; the
+    // identifier-based de-dupe prevents double handling if the live listener also fires.
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (active && response) handleNotificationResponse(response, userId)
     })
 
     return () => {
@@ -272,10 +297,13 @@ export default function RootLayout() {
               <View style={{ flex: 1 }}>
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="applications" />
                   <Stack.Screen name="campaigns/[id]" />
                   <Stack.Screen name="leaderboard/[id]" />
                   <Stack.Screen name="insights" />
+                  <Stack.Screen name="tiers" />
                   <Stack.Screen name="invite" />
+                  <Stack.Screen name="invite/[code]" />
                   <Stack.Screen name="settings" />
                   <Stack.Screen name="reset-password" />
                   <Stack.Screen name="forgot-password" />

@@ -15,7 +15,8 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
-import { designBackground, designWordmark } from '@/design/assets'
+import { designBackground, designLogo } from '@/design/assets'
+import { redesign, typography } from '@/features/core/theme'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -40,6 +41,8 @@ export default function ForgotPasswordPage() {
       }
 
       setSent(true)
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Could not send the reset link. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -58,12 +61,20 @@ export default function ForgotPasswordPage() {
         <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 22 }} keyboardShouldPersistTaps="handled">
             <View style={{ flex: 1, justifyContent: 'center', paddingTop: 52, paddingBottom: 40 }}>
-              <View style={{ alignItems: 'center', marginBottom: 28 }}>
+              <View style={{ alignItems: 'center', marginBottom: 28, gap: 14 }}>
                 <Image
-                  source={designWordmark}
-                  style={{ width: 360, height: 56 }}
+                  source={designLogo}
+                  style={{ width: 66, height: 66 }}
                   resizeMode="contain"
                 />
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: redesign.color.ink, fontSize: 24, fontWeight: '800', letterSpacing: -0.6, fontFamily: typography.fontFamily, textAlign: 'center' }}>
+                    Forgot your password?
+                  </Text>
+                  <Text style={{ color: redesign.color.muted, fontSize: 14, fontWeight: '500', fontFamily: typography.fontFamily, textAlign: 'center', lineHeight: 20, maxWidth: 300 }}>
+                    No worries — enter your email and we&apos;ll send you a reset link.
+                  </Text>
+                </View>
               </View>
 
               <View

@@ -1,7 +1,7 @@
 import { Animated, Dimensions, Image, Modal, Pressable, Text, View } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import { spacing, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
@@ -21,6 +21,14 @@ export function AppHeader() {
   const [showCat, setShowCat] = useState(false)
   const tapCount = useRef(0)
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const confettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clear any pending easter-egg timers on unmount so they can't fire setState after
+  // the header is gone (leaks / setState-after-unmount warnings).
+  useEffect(() => () => {
+    if (tapTimer.current) clearTimeout(tapTimer.current)
+    if (confettiTimer.current) clearTimeout(confettiTimer.current)
+  }, [])
 
   const handleLogoPress = () => {
     tapCount.current += 1
@@ -31,7 +39,8 @@ export function AppHeader() {
     if (tapCount.current >= EASTER_EGG_TAPS) {
       tapCount.current = 0
       setShowConfetti(true)
-      setTimeout(() => {
+      if (confettiTimer.current) clearTimeout(confettiTimer.current)
+      confettiTimer.current = setTimeout(() => {
         setShowConfetti(false)
         setShowCat(true)
       }, 5500)

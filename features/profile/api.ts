@@ -42,14 +42,18 @@ function inferPhoneCountryCode(phone?: string | null) {
   return matches[0] || null
 }
 
+// Phone is optional, so it is intentionally excluded here. Keep this list in
+// sync with the checklist keys in getProfileCompletion so the percentage and
+// the "complete" check agree (a profile with everything but a phone hits 100%).
+const COMPLETION_KEYS = ['avatar_url', 'age_range', 'primary_category', 'gender', 'country', 'address', 'postal_code']
+
 function completionPercentage(row: Row) {
-  const requiredKeys = ['avatar_url', 'age_range', 'primary_category', 'gender', 'country', 'phone', 'address', 'postal_code']
-  const filled = requiredKeys.reduce((acc, key) => {
+  const filled = COMPLETION_KEYS.reduce((acc, key) => {
     const value = row[key]
     return typeof value === 'string' && value.trim() ? acc + 1 : acc
   }, 0)
 
-  return Math.round((filled / requiredKeys.length) * 100)
+  return Math.round((filled / COMPLETION_KEYS.length) * 100)
 }
 
 function mapProfile(creator: Row, profile: Row, userId: string): CreatorProfile {

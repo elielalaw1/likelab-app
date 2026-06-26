@@ -12,6 +12,9 @@ export type ReferralStats = {
   // True once the backend is actually issuing codes + tracking referrals.
   // The UI shows a subtle "activating soon" hint while this is false.
   isLive: boolean
+  // True when `code` is a real backend-issued code (not the local hash fallback).
+  // The invite UI only allows sharing/copying a real code so invitees can redeem it.
+  hasBackendCode: boolean
 }
 
 // Reads referral state, degrading gracefully to a local mock so the invite UI is
@@ -31,7 +34,7 @@ export type ReferralStats = {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function getReferralStats(): Promise<ReferralStats> {
   const userId = await getCurrentUserId()
-  const fallback: ReferralStats = { code: fallbackReferralCode(userId), invitedCount: 0, joinedCount: 0, isLive: false }
+  const fallback: ReferralStats = { code: fallbackReferralCode(userId), invitedCount: 0, joinedCount: 0, isLive: false, hasBackendCode: false }
 
   // 1) The creator's own code.
   let code = fallback.code
@@ -61,5 +64,5 @@ export async function getReferralStats(): Promise<ReferralStats> {
     // referrals table not there yet — counts stay 0
   }
 
-  return { code, invitedCount, joinedCount, isLive: hasBackendCode && hasReferralsTable }
+  return { code, invitedCount, joinedCount, isLive: hasBackendCode && hasReferralsTable, hasBackendCode }
 }

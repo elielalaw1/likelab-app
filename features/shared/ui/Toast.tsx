@@ -12,11 +12,15 @@ type ToastItem = { id: number; type: ToastType; message: string }
 
 let _setToasts: React.Dispatch<React.SetStateAction<ToastItem[]>> | null = null
 
+// Monotonic id counter. Date.now() collides for two toasts emitted in the same
+// millisecond, which makes dismiss() remove both and React warn on duplicate keys.
+let nextId = 0
+
 function emit(type: ToastType, message: string) {
   if (type === 'success') haptic.success()
   else if (type === 'error') haptic.error()
   else haptic.light()
-  _setToasts?.((prev) => [...prev.slice(-2), { id: Date.now(), type, message }])
+  _setToasts?.((prev) => [...prev.slice(-2), { id: ++nextId, type, message }])
 }
 
 export const toast = {

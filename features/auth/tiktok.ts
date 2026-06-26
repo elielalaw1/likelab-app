@@ -1,6 +1,15 @@
 import * as WebBrowser from 'expo-web-browser'
 import * as Crypto from 'expo-crypto'
+import * as SecureStore from 'expo-secure-store'
 import { supabase } from '@/lib/supabase'
+
+/**
+ * Key used to persist the OAuth `state` so the deep-link callback path can validate
+ * it even across app restarts (see app/auth/tiktok/callback.tsx). This guards against
+ * account-injection where an attacker lures a logged-in victim into opening a callback
+ * deep link carrying the attacker's authorization code.
+ */
+export const TIKTOK_OAUTH_STATE_KEY = 'tiktok_oauth_state'
 
 const CLIENT_KEY = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY
 const SUPABASE_FUNCTIONS_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL!
@@ -55,6 +64,29 @@ export async function authorizeTikTok(): Promise<TikTokAuthorizationResult | nul
 
   const state = Crypto.randomUUID()
 
+  // Persist the state before opening the auth session so the deep-link callback path
+  // can validate it (one-time use) even if the app is killed and relaunched.
+  try {
+    await SecureStore.setItemAsync(TIKTOK_OAUTH_STATE_KEY, state)
+  } catch {
+    // Non-fatal: the in-session comparison below still runs. The deep-link path will
+    // reject if it can't read a matching persisted state.
+  }
+
+  // Register the state with the backend (table `tiktok_oauth_states`, owner-scoped,
+  // 10-min TTL) so the `exchange-tiktok-code` edge function can validate it
+  // server-side and burn it (single-use) — the CSRF backstop. The exchange always
+  // sends `state`, so this row must exist for the server to accept the code.
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const userId = session?.user?.id
+    if (userId) {
+      await supabase.from('tiktok_oauth_states').insert({ state, user_id: userId })
+    }
+  } catch {
+    // Non-fatal here; a failed insert surfaces as a rejected exchange the user can retry.
+  }
+
   const params = new URLSearchParams({
     client_key: CLIENT_KEY,
     response_type: 'code',
@@ -89,7 +121,11 @@ export async function authorizeTikTok(): Promise<TikTokAuthorizationResult | nul
   return { code, state, redirectUri: TIKTOK_REDIRECT_URI }
 }
 
-export async function exchangeTikTokCode({ code, redirectUri }: Pick<TikTokAuthorizationResult, 'code' | 'redirectUri'>) {
+export async function exchangeTikTokCode({
+  code,
+  redirectUri,
+  state,
+}: Pick<TikTokAuthorizationResult, 'code' | 'redirectUri'> & { state?: string }) {
   const { data, error } = await supabase.auth.getSession()
   if (error) throw new Error(error.message)
 
@@ -105,7 +141,9 @@ export async function exchangeTikTokCode({ code, redirectUri }: Pick<TikTokAutho
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ code, redirectUri }),
+    // Forward `state` so the edge function can validate it server-side once deployed.
+    // Sending an extra field is harmless / forward-compatible until then.
+    body: JSON.stringify({ code, redirectUri, state }),
   })
 
   const payload = await readJsonPayload(response)

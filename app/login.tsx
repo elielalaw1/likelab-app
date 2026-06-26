@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Image,
+  ImageBackground,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -21,7 +22,7 @@ import { assertCreatorRole, NON_CREATOR_MESSAGE } from '@/lib/assert-creator-rol
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import { redesign, typography } from '@/features/core/theme'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
-import { designWordmark } from '@/design/assets'
+import { designBackground, designWordmark } from '@/design/assets'
 
 export default function LoginPage() {
   const { session, loading: sessionLoading } = useAuthSession()
@@ -29,6 +30,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [roleVerified, setRoleVerified] = useState(false)
   const [loginCooldown, setLoginCooldown] = useState(0)
   const failureCountRef = useRef(0)
 
@@ -38,7 +40,10 @@ export default function LoginPage() {
     return () => clearTimeout(id)
   }, [loginCooldown])
 
-  if (!sessionLoading && session) {
+  // Hold back the redirect until the signed-in user is confirmed to be a creator.
+  // Redirecting on `session` alone races the awaited assertCreatorRole() below and
+  // would briefly land a non-creator (brand) account inside the creator-only tabs.
+  if (!sessionLoading && session && roleVerified) {
     return <Redirect href="/(tabs)/overview" />
   }
 
@@ -66,7 +71,10 @@ export default function LoginPage() {
         const isCreator = await assertCreatorRole(data.user.id)
         if (!isCreator) {
           Alert.alert('Access denied', NON_CREATOR_MESSAGE)
+          return
         }
+        // Only now allow the <Redirect> to fire — role is confirmed creator.
+        setRoleVerified(true)
       }
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Something went wrong.')
@@ -78,16 +86,20 @@ export default function LoginPage() {
   const disabled = loading || loginCooldown > 0
 
   return (
-    <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
-      {/* Restrained holographic glow, top-right */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0.2, y: 0.5 }}
-        style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
+    <View style={{ flex: 1, backgroundColor: '#F7F6F2' }}>
+      {/* Signature backdrop image (shared with forgot/reset-password) + soft veil */}
+      <ImageBackground
+        source={designBackground}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+        resizeMode="cover"
       />
-      <SafeAreaView style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.14)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', inset: 0 }}
+      />
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
         <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ flex: 1 }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 32 }}>
             <View style={{ alignItems: 'center', marginBottom: 28 }}>
@@ -185,7 +197,7 @@ export default function LoginPage() {
 
             <View style={{ marginTop: 22, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
               <Text style={{ color: redesign.color.muted, fontSize: 14.5, fontFamily: typography.fontFamily }}>Don&apos;t have an account?</Text>
-              <Pressable onPress={() => router.push('/signup')} hitSlop={6}>
+              <Pressable onPress={() => router.push('/welcome')} hitSlop={6}>
                 <Text style={{ color: redesign.color.ink, fontSize: 14.5, fontWeight: '800', fontFamily: typography.fontFamily }}>Sign up</Text>
               </Pressable>
             </View>

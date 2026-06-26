@@ -218,8 +218,9 @@ export const PHONE_CODE_OPTIONS: Option[] = [
   { label: '🇷🇴 (+40)', value: '+40' },
   { label: '🇭🇷 (+385)', value: '+385' },
   { label: '🇸🇮 (+386)', value: '+386' },
-  { label: '🇺🇸 (+1)', value: '+1' },
-  { label: '🇨🇦 (+1)', value: '+1' },
+  // US and Canada share the +1 dial code; combine into one entry so selection
+  // and the displayed flag don't collapse to whichever appears first.
+  { label: '🇺🇸🇨🇦 (+1)', value: '+1' },
   { label: '🇲🇽 (+52)', value: '+52' },
   { label: '🇧🇷 (+55)', value: '+55' },
   { label: '🇦🇷 (+54)', value: '+54' },

@@ -1,7 +1,21 @@
 import { useEffect, useRef } from 'react'
-import { router } from 'expo-router'
+import { router, useSegments } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/features/shared/ui/Toast'
+import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
+
+// Unauthenticated / pre-login routes where we must never force a TikTok reconnect.
+const AUTH_ROUTE_SEGMENTS = new Set([
+  'login',
+  'signup',
+  'forgot-password',
+  'reset-password',
+  'welcome',
+  'check-email',
+  'verify-otp',
+  'invite',
+  'index',
+])
 
 const TIKTOK_INVALID_PATTERNS = [
   /TIKTOK_AUTH_INVALID/i,
@@ -33,7 +47,16 @@ function looksLikeTikTokAuthError(err: unknown): boolean {
  */
 export function TikTokAuthGuard() {
   const queryClient = useQueryClient()
+  const { session } = useAuthSession()
+  const segments = useSegments()
   const lastTriggerAt = useRef<number>(0)
+
+  // Mirror session/route into refs so the cache subscription reads the latest values
+  // without needing to resubscribe on every navigation.
+  const sessionRef = useRef(session)
+  sessionRef.current = session
+  const segmentsRef = useRef(segments)
+  segmentsRef.current = segments
 
   useEffect(() => {
     const cache = queryClient.getQueryCache()
@@ -42,6 +65,15 @@ export function TikTokAuthGuard() {
       if (event.type !== 'updated') return
       const err = event.query.state.error
       if (!looksLikeTikTokAuthError(err)) return
+
+      // Only act on a TikTok auth error when there's an active session AND we're inside
+      // the authenticated app area. A stale TikTok query can fire while the user is
+      // logged out or sitting on the login screen — redirecting then is wrong.
+      if (!sessionRef.current) return
+      const currentSegments = segmentsRef.current
+      const inAuthedApp =
+        currentSegments[0] === '(tabs)' || !AUTH_ROUTE_SEGMENTS.has(currentSegments[0] ?? 'index')
+      if (!inAuthedApp) return
 
       const now = Date.now()
       if (now - lastTriggerAt.current < 5000) return

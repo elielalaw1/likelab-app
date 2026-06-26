@@ -1,7 +1,18 @@
-import { useCallback } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
+import Animated, {
+  Easing,
+  Extrapolation,
+  FadeInDown,
+  interpolate,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated'
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useQueryClient } from '@tanstack/react-query'
@@ -11,9 +22,84 @@ import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { redesign, typography } from '@/features/core/theme'
 import { formatCompactCount } from '@/features/auth/api'
 import { useInsights } from '@/features/insights/hooks'
+import { buildChart, computeTrend, type Trend } from '@/features/insights/logic'
 import type { CampaignInsight } from '@/features/insights/api'
 
-function SummaryCell({ label, value }: { label: string; value: string }) {
+const AnimatedText = Animated.createAnimatedComponent(TextInput)
+const AnimatedPath = Animated.createAnimatedComponent(Path)
+
+// ─── Animated counter ─────────────────────────────────────────────────────────
+// Ticks from 0 up to the target when it mounts. Formatting happens INSIDE the
+// worklet (no external JS call), so the value spins on the UI thread without a
+// per-frame React re-render — same pattern as welcome.tsx's SpinViews.
+function AnimatedCounter({
+  value,
+  mode = 'count',
+  delay = 0,
+  style,
+}: {
+  value: number
+  mode?: 'count' | 'rank'
+  delay?: number
+  style: object
+}) {
+  const progress = useSharedValue(0)
+  useEffect(() => {
+    progress.value = 0
+    progress.value = withDelay(delay, withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) }))
+  }, [value, delay, progress])
+
+  const animatedProps = useAnimatedProps(() => {
+    const v = Math.round(interpolate(progress.value, [0, 1], [0, value], Extrapolation.CLAMP))
+    let text: string
+    if (mode === 'rank') {
+      text = `#${v}`
+    } else if (v >= 1_000_000) {
+      text = `${(v / 1_000_000).toFixed(1)}M`
+    } else if (v >= 1_000) {
+      text = `${(v / 1_000).toFixed(1)}K`
+    } else {
+      text = `${v}`
+    }
+    return { text, defaultValue: text } as Partial<{ text: string; defaultValue: string }>
+  })
+
+  return (
+    <AnimatedText
+      editable={false}
+      pointerEvents="none"
+      underlineColorAndroid="transparent"
+      animatedProps={animatedProps as never}
+      style={style}
+    />
+  )
+}
+
+// ─── Trend pill ("+34% vs last campaign") ────────────────────────────────────
+function TrendBadge({ trend }: { trend: Trend }) {
+  if (trend.percent == null || trend.direction === 'flat') return null
+  const up = trend.direction === 'up'
+  const tint = up ? redesign.color.successText : '#E5484D'
+  const bg = up ? redesign.color.successBg : 'rgba(229,72,77,0.12)'
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(300).delay(140)}
+      style={{ flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', gap: 5, backgroundColor: bg, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 11, marginTop: 12 }}
+    >
+      <MaterialCommunityIcons name={up ? 'trending-up' : 'trending-down'} size={15} color={tint} />
+      <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '800', color: tint, fontVariant: ['tabular-nums'] }}>
+        {up ? '+' : ''}{trend.percent}% views
+      </Text>
+      <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: redesign.color.muted }}>
+        vs last campaign
+      </Text>
+    </Animated.View>
+  )
+}
+
+// ─── Summary cells ────────────────────────────────────────────────────────────
+function SummaryCell({ label, value, mode, delay, placeholder }: { label: string; value: number | null; mode: 'count' | 'rank'; delay: number; placeholder?: string }) {
+  const valueStyle = { fontFamily: typography.fontFamily, fontSize: 24, fontWeight: '800' as const, color: redesign.color.ink, letterSpacing: -0.8, fontVariant: ['tabular-nums' as const], minWidth: 30, textAlign: 'center' as const, padding: 0 }
   return (
     <View
       style={{
@@ -29,16 +115,171 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
         ...redesign.shadow.card,
       }}
     >
-      <Text
-        maxFontSizeMultiplier={1.4}
-        style={{ fontFamily: typography.fontFamily, fontSize: 24, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.8, fontVariant: ['tabular-nums'] }}
-      >
-        {value}
-      </Text>
+      {value == null ? (
+        <Text maxFontSizeMultiplier={1.4} style={valueStyle}>{placeholder ?? '–'}</Text>
+      ) : (
+        <AnimatedCounter value={value} mode={mode} delay={delay} style={valueStyle} />
+      )}
       <Text style={{ fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' }}>
         {label}
       </Text>
     </View>
+  )
+}
+
+// ─── Views trend chart ────────────────────────────────────────────────────────
+// Per-campaign views in chronological order. NOTE: the backend stores only the
+// current leaderboard position, not historical snapshots, so this is a trend
+// across campaigns (each happened at a point in time) — not a day-by-day curve.
+// A true time-series needs the backend to persist periodic snapshots first.
+function ViewsChart({ values }: { values: number[] }) {
+  const [width, setWidth] = useState(0)
+  const HEIGHT = 150
+  const geo = useMemo(() => buildChart(values, width, HEIGHT, 12), [values, width])
+  const len = geo.length
+
+  const draw = useSharedValue(0)
+  useEffect(() => {
+    if (width <= 0) return
+    draw.value = 0
+    draw.value = withDelay(280, withTiming(1, { duration: 1150, easing: Easing.inOut(Easing.cubic) }))
+  }, [width, values, draw])
+
+  const lineProps = useAnimatedProps(() => ({ strokeDashoffset: len * (1 - draw.value) }))
+  const areaProps = useAnimatedProps(() => ({ fillOpacity: interpolate(draw.value, [0, 0.4, 1], [0, 0.5, 1], Extrapolation.CLAMP) }))
+  const dotStyle = useAnimatedStyle(() => ({ opacity: interpolate(draw.value, [0.7, 1], [0, 1], Extrapolation.CLAMP) }))
+  const last = geo.points[geo.points.length - 1]
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(320).delay(120)}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      style={{ backgroundColor: redesign.color.card, borderRadius: 22, padding: 16, gap: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, ...redesign.shadow.card }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase' }}>
+          Views per campaign
+        </Text>
+        <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '600', color: redesign.color.muted }}>
+          oldest → newest
+        </Text>
+      </View>
+
+      {width > 0 ? (
+        <Svg width={width} height={HEIGHT}>
+          <Defs>
+            <SvgGradient id="insightsArea" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={redesign.color.purple} stopOpacity={0.32} />
+              <Stop offset="0.55" stopColor={redesign.color.magenta} stopOpacity={0.12} />
+              <Stop offset="1" stopColor={redesign.color.cyan} stopOpacity={0} />
+            </SvgGradient>
+            <SvgGradient id="insightsLine" x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0" stopColor={redesign.color.purple} />
+              <Stop offset="0.5" stopColor={redesign.color.magenta} />
+              <Stop offset="1" stopColor={redesign.color.cyan} />
+            </SvgGradient>
+          </Defs>
+          <AnimatedPath animatedProps={areaProps} d={geo.areaPath} fill="url(#insightsArea)" />
+          <AnimatedPath
+            animatedProps={lineProps}
+            d={geo.linePath}
+            stroke="url(#insightsLine)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+            strokeDasharray={len}
+          />
+          {geo.points.map((p, i) => (
+            <Circle key={i} cx={p.x} cy={p.y} r={i === geo.points.length - 1 ? 0 : 2.5} fill={redesign.color.card} stroke={redesign.color.magenta} strokeWidth={1.5} />
+          ))}
+        </Svg>
+      ) : (
+        <View style={{ height: HEIGHT }} />
+      )}
+
+      {/* Latest point callout */}
+      {width > 0 && last ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[{ position: 'absolute', left: Math.min(Math.max(last.x - 18, 12), width - 24), top: last.y + 16 }, dotStyle]}
+        >
+          <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: redesign.color.cyan, borderWidth: 2.5, borderColor: redesign.color.card, ...redesign.shadow.card }} />
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  )
+}
+
+// ─── "Your top performer" highlight ──────────────────────────────────────────
+function TopPerformerCard({ item }: { item: CampaignInsight }) {
+  return (
+    <Animated.View entering={FadeInDown.duration(320).delay(80)}>
+      <LinearGradient
+        colors={redesign.gradient.holographic}
+        locations={redesign.gradient.holographicLocations}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ borderRadius: 24, padding: 1.4, ...redesign.shadow.card }}
+      >
+        <View style={{ borderRadius: 22.6, backgroundColor: redesign.color.darkScreen, padding: 18, gap: 16, overflow: 'hidden' }}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(124,63,242,0.4)', 'transparent']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0.2, y: 0.9 }}
+            style={{ position: 'absolute', top: -30, right: -30, width: 160, height: 160, borderRadius: 80 }}
+          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <MaterialCommunityIcons name="trophy" size={15} color={redesign.color.gold} />
+            <Text style={{ fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', color: 'rgba(255,255,255,0.5)', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+              Your top performer
+            </Text>
+          </View>
+
+          <View>
+            <Text numberOfLines={1} style={{ fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>
+              {item.campaignTitle}
+            </Text>
+            {item.rank != null ? (
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>
+                Ranked #{item.rank}{item.totalCreators != null ? ` of ${item.totalCreators} creators` : ''}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 22 }}>
+            <View style={{ gap: 3 }}>
+              <AnimatedCounter
+                value={item.views}
+                mode="count"
+                delay={260}
+                style={{ fontFamily: typography.fontFamily, fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.8, fontVariant: ['tabular-nums'], padding: 0, minWidth: 40 }}
+              />
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Views</Text>
+            </View>
+            <View style={{ gap: 3 }}>
+              <AnimatedCounter
+                value={item.likes}
+                mode="count"
+                delay={340}
+                style={{ fontFamily: typography.fontFamily, fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.8, fontVariant: ['tabular-nums'], padding: 0, minWidth: 40 }}
+              />
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Likes</Text>
+            </View>
+            <Pressable
+              onPress={() => router.push(`/leaderboard/${item.campaignId}`)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open leaderboard for ${item.campaignTitle}`}
+              hitSlop={8}
+              style={{ marginLeft: 'auto', alignSelf: 'center', width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <MaterialCommunityIcons name="arrow-top-right" size={20} color="#fff" />
+            </Pressable>
+          </View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
   )
 }
 
@@ -95,6 +336,22 @@ export default function InsightsPage() {
     await refetch()
   }, [queryClient, refetch])
 
+  // Chronological view of the campaigns (oldest → newest) for the trend chart
+  // and the "vs last campaign" comparison. perCampaign itself is views-desc.
+  const chronological = useMemo(
+    () => (data ? [...data.perCampaign].sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()) : []),
+    [data],
+  )
+  const chartValues = useMemo(() => chronological.map((c) => c.views), [chronological])
+  const trend = useMemo<Trend | null>(() => {
+    if (chronological.length === 0) return null
+    const latest = chronological[chronological.length - 1]
+    const previous = chronological[chronological.length - 2]
+    return computeTrend(latest.views, previous?.views ?? null)
+  }, [chronological])
+
+  const topPerformer = data?.perCampaign[0]
+
   return (
     <Screen onRefresh={onRefresh} tabAware={false} bgColor={redesign.color.bg}>
       <AppHeader />
@@ -118,6 +375,7 @@ export default function InsightsPage() {
         <Text style={{ fontSize: 14.5, fontWeight: '500', color: redesign.color.muted, fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
           Your performance across accepted campaigns.
         </Text>
+        {trend ? <TrendBadge trend={trend} /> : null}
       </Animated.View>
 
       {isLoading && !data ? (
@@ -140,10 +398,14 @@ export default function InsightsPage() {
         ) : (
           <>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <SummaryCell label="Total views" value={formatCompactCount(data.totalViews) || '0'} />
-              <SummaryCell label="Total likes" value={formatCompactCount(data.totalLikes) || '0'} />
-              <SummaryCell label="Best rank" value={data.bestRank != null ? `#${data.bestRank}` : '–'} />
+              <SummaryCell label="Total views" value={data.totalViews} mode="count" delay={120} />
+              <SummaryCell label="Total likes" value={data.totalLikes} mode="count" delay={200} />
+              <SummaryCell label="Best rank" value={data.bestRank} mode="rank" delay={280} placeholder="–" />
             </View>
+
+            {topPerformer ? <TopPerformerCard item={topPerformer} /> : null}
+
+            {chartValues.length >= 2 ? <ViewsChart values={chartValues} /> : null}
 
             <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
               Per campaign · {data.campaignsTracked}
@@ -156,7 +418,7 @@ export default function InsightsPage() {
             </View>
 
             <Text style={{ fontSize: 12, fontWeight: '500', color: redesign.color.faint, fontFamily: typography.fontFamily, lineHeight: 18, textAlign: 'center', marginTop: 4 }}>
-              Figures reflect your current position. Trends over time are coming soon.
+              Figures reflect your current leaderboard position. Day-by-day trends arrive once campaign history is tracked.
             </Text>
           </>
         )

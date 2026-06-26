@@ -166,19 +166,34 @@ export function useSubmissionStatus(submissionId?: string, options?: { pollInter
   // spinning every few seconds forever and draining the battery.
   const timeoutMs = options?.timeoutMs ?? 5 * 60 * 1000
   const startRef = useRef(Date.now())
+  const [isTimedOut, setIsTimedOut] = useState(false)
   useEffect(() => {
     startRef.current = Date.now()
+    setIsTimedOut(false)
   }, [submissionId])
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['submission-status', submissionId],
     queryFn: () => getSubmissionById(submissionId || ''),
     enabled: Boolean(submissionId),
-    refetchInterval: (query) => {
-      const status = query.state.data?.status
+    refetchInterval: (q) => {
+      const status = q.state.data?.status
       if (status === 'submitted' || status === 'failed') return false
-      if (Date.now() - startRef.current > timeoutMs) return false
+      if (Date.now() - startRef.current > timeoutMs) {
+        // Poller is giving up while the row is still 'uploading'/'processing'
+        // (processor likely died silently). Surface a terminal flag so the UI
+        // can drop the infinite spinner and offer a retry.
+        setIsTimedOut(true)
+        return false
+      }
       return options?.pollInterval ?? 3000
     },
   })
+
+  // Mark as timed out if we stopped polling while still mid-processing — covers
+  // the case where the query is idle (no further refetchInterval calls fire).
+  const stillProcessing = query.data?.status !== 'submitted' && query.data?.status !== 'failed'
+  const timedOut = isTimedOut && Boolean(submissionId) && stillProcessing
+
+  return { ...query, isTimedOut: timedOut }
 }
