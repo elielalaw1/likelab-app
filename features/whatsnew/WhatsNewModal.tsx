@@ -9,7 +9,7 @@ import { redesign, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
 import { WHATS_NEW, hasSeenWhatsNew, markWhatsNewSeen } from '@/features/whatsnew/whatsNew'
-import { VideoGridPreview } from '@/features/shared/ui/VideoGridPreview'
+import { ProjectCardPreview } from '@/features/shared/ui/ProjectCardPreview'
 
 // ── Module-level opener (Toast pattern) so the AppHeader CTA can open the single
 //    modal owned by <WhatsNewHost />. ──────────────────────────────────────────
@@ -145,9 +145,9 @@ type WhatsNewSlide = { title: string; body: string; mock: () => React.ReactNode 
 
 const SLIDES: WhatsNewSlide[] = [
   {
-    title: 'A whole new video flow',
-    body: 'Your campaign videos now live in a clean grid — every video clearly tagged with what to do next.',
-    mock: () => <VideoGridPreview />,
+    title: 'Your work, all in one place',
+    body: 'The new Projects hub shows each campaign as a card — clearly tagged with exactly what to do next.',
+    mock: () => <ProjectCardPreview />,
   },
   {
     title: 'Creator Levels are here',
@@ -161,7 +161,7 @@ const SLIDES: WhatsNewSlide[] = [
   },
   {
     title: 'A fresh Discover',
-    body: 'A redesigned home that puts a featured campaign and your active work front and centre.',
+    body: 'A redesigned Discover that leads with a featured campaign and what’s open to you right now.',
     mock: () => <MockDiscover />,
   },
 ]

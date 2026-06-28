@@ -11,7 +11,7 @@ import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
 import { onReplayTutorial } from '@/features/onboarding/tutorialControl'
 import { startProfileTour } from '@/features/onboarding/profileTourControl'
-import { VideoGridPreview } from '@/features/shared/ui/VideoGridPreview'
+import { ProjectCardPreview } from '@/features/shared/ui/ProjectCardPreview'
 import { router } from 'expo-router'
 
 const SEEN_PREFIX = 'tutorial_seen_approval:'
@@ -163,7 +163,7 @@ const SLIDES: Slide[] = [
   { title: 'You’re approved! 🎉', body: 'Welcome to LikeLab. Here’s how it works in a few quick steps.', mock: () => <MockWelcome /> },
   { title: 'Discover & apply', body: 'Browse open campaigns and tap Apply on the ones that fit you.', mock: (a) => <MockDiscover arrow={a} /> },
   { title: 'Get selected', body: 'Brands review creators and pick their favourites — you’ll be notified when you’re in.', mock: () => <MockAccepted /> },
-  { title: 'Film & get approved', body: 'Upload your video in the app and follow the clear steps — upload, review, post, live. The brand gives the green light (or asks for tweaks).', mock: () => <VideoGridPreview /> },
+  { title: 'Film & get approved', body: 'Your campaigns land in Projects — each card tells you exactly what to do next: upload, review, post, live. The brand gives the green light (or asks for tweaks).', mock: () => <ProjectCardPreview /> },
   { title: 'Post & go live', body: 'Once approved, post it on TikTok and drop the link in the app to confirm it’s live.', mock: (a) => <MockSubmit arrow={a} /> },
   { title: 'Compete & earn', body: 'Your views feed the live leaderboard as they grow — the top creators earn the reward.', mock: (_a, ah) => <MockLeaderboard arrow={ah} /> },
   { title: 'Level up as a creator', body: 'Every time the brand approves your work you earn XP and climb the creator levels — your standing, right in the app.', mock: () => <MockLevels /> },
