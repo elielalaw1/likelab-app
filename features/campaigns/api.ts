@@ -350,7 +350,7 @@ export async function getCampaignDeliverables(campaignId: string): Promise<Deliv
 
   const { data, error } = await supabase
     .from('deliverables')
-    .select('id, campaign_id, status, approval_status, ready_for_posting, platform, type, url, notes, campaigns(name, brand_id, phase)')
+    .select('id, campaign_id, status, approval_status, ready_for_posting, platform, type, url, flag_reason, campaigns(name, brand_id, phase)')
     .eq('creator_id', userId)
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: true })
@@ -371,7 +371,7 @@ export async function getCampaignDeliverables(campaignId: string): Promise<Deliv
       platform: textValue(row, ['platform']) || 'tiktok',
       type: textValue(row, ['type']),
       url: textValue(row, ['url']),
-      notes: textValue(row, ['notes']),
+      flagReason: textValue(row, ['flag_reason']),
       campaignBrandName: null,
     } satisfies Deliverable
   })

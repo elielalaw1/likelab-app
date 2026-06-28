@@ -72,4 +72,14 @@ describe('buildChart', () => {
     const g = buildChart([50, 50, 50], 300, 100)
     expect(g.points.every((p) => Number.isFinite(p.y))).toBe(true)
   })
+
+  it('over-estimates path length so the draw-on animation covers the full curve', () => {
+    const g = buildChart([10, 90, 20, 80], 300, 100, 6)
+    const first = g.points[0]
+    const last = g.points[g.points.length - 1]
+    const straightLine = Math.hypot(last.x - first.x, last.y - first.y)
+    // A curved cubic path is always longer than the endpoint chord — the padded
+    // length must cover it or the stroke stops short of the newest point.
+    expect(g.length).toBeGreaterThan(straightLine)
+  })
 })

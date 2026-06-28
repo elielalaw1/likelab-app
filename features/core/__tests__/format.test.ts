@@ -3,6 +3,7 @@ import {
   formatKr,
   formatCurrencySek,
   getDaysLeft,
+  isCampaignClosed,
   countryFlag,
   normalizeStatus,
   formatCampaignGoal,
@@ -78,6 +79,37 @@ describe('getDaysLeft', () => {
   it('returns null for missing or invalid dates', () => {
     expect(getDaysLeft(null)).toBeNull()
     expect(getDaysLeft('not-a-date')).toBeNull()
+  })
+})
+
+// Gates Apply on both the card and the detail screen and drives the "Closed" label.
+// Unlike getDaysLeft (which clamps past deadlines to 0) it distinguishes a campaign
+// that has ENDED from one that ends later today.
+describe('isCampaignClosed', () => {
+  beforeAll(() => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-06-25T10:00:00Z'))
+  })
+  afterAll(() => {
+    jest.useRealTimers()
+  })
+
+  it('is false when there is no end date or the date is invalid', () => {
+    expect(isCampaignClosed(null)).toBe(false)
+    expect(isCampaignClosed(undefined)).toBe(false)
+    expect(isCampaignClosed('not-a-date')).toBe(false)
+  })
+
+  it('is true once the end instant has passed', () => {
+    expect(isCampaignClosed('2026-06-24T10:00:00Z')).toBe(true)
+  })
+
+  it('is false for an end instant in the future', () => {
+    expect(isCampaignClosed('2026-06-26T10:00:00Z')).toBe(false)
+  })
+
+  it('is false for an end instant later the same day (ends today, not ended)', () => {
+    expect(isCampaignClosed('2026-06-25T20:00:00Z')).toBe(false)
   })
 })
 

@@ -7,13 +7,13 @@ import { redesign, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
 import { designTopLogo } from '@/design/assets'
+import * as SecureStore from 'expo-secure-store'
 
-// Shows once per "awaiting" episode, tracked PER user so it doesn't leak across
-// accounts: if user A sees it then user B signs in within the same process, B must
-// still see it. A userId is removed from the set when that account is observed as
-// approved so a later downgrade (e.g. admin re-disapproves while testing) shows it
-// again. Mirrors TutorialOverlay's per-user "seen" handling.
-const shownUserIds = new Set<string>()
+// Shows once per real "pending" episode, persisted PER user (SecureStore) so it
+// doesn't re-fire on every cold start. The flag is cleared when the account is
+// observed as approved, so a later downgrade (admin re-disapproves) shows it again.
+// Mirrors TutorialOverlay's per-user "seen" handling.
+const SEEN_PREFIX = 'likelab_welcome_pending_seen_'
 
 // Just the LikeLab logo, gently floating.
 function ReviewIllustration() {
@@ -40,22 +40,31 @@ export function WelcomePendingOverlay() {
   // during the brief tabs render that happens BEFORE TikTokGuard redirects a new
   // user to /connect-tiktok — so it never showed when they returned. Gating on
   // tiktokConnected means it fires right after signup → TikTok connection.
-  const awaiting = !!profile && status !== 'approved' && !!profile.tiktokConnected
+  // Only "awaiting" for a GENUINELY pending creator past the TikTok gate. Gating on
+  // status === 'pending' (not !== 'approved') keeps the reassuring "you'll be
+  // approved" copy away from rejected/unknown accounts.
+  const awaiting = !!profile && status === 'pending' && !!profile.tiktokConnected
 
-  // Re-evaluate whenever the status settles/changes (not just on first load) so an
-  // approved account that later flips to pending (admin disapproves) re-triggers
-  // the welcome. The per-user shown flag re-arms on every observed `approved`, so the
-  // approved → disapproved round-trip always shows it again.
+  // Re-evaluate whenever the status settles/changes. The per-user SEEN flag is
+  // cleared on every observed `approved`, so an approved → disapproved round-trip
+  // shows the welcome again.
   useEffect(() => {
     if (!userId) return
-    if (awaiting && !shownUserIds.has(userId)) {
-      shownUserIds.add(userId)
-      setVisible(true)
-    }
+    const key = `${SEEN_PREFIX}${userId}`
+
     if (status === 'approved') {
-      shownUserIds.delete(userId) // re-arm so a future downgrade re-triggers the welcome
+      void SecureStore.deleteItemAsync(key).catch(() => {})
       setVisible(false)
+      return
     }
+
+    if (!awaiting) return
+    let cancelled = false
+    void (async () => {
+      const seen = await SecureStore.getItemAsync(key).catch(() => null)
+      if (!cancelled && !seen) setVisible(true)
+    })()
+    return () => { cancelled = true }
   }, [awaiting, status, userId])
 
   const breathe = useSharedValue(0)
@@ -64,8 +73,15 @@ export function WelcomePendingOverlay() {
   }, [breathe])
   const dotStyle = useAnimatedStyle(() => ({ opacity: 0.35 + breathe.value * 0.55, transform: [{ scale: 0.85 + breathe.value * 0.3 }] }))
 
+  const dismiss = () => {
+    haptic.selection()
+    setVisible(false)
+    // Persist so this pending-welcome doesn't re-open on the next cold start.
+    if (userId) void SecureStore.setItemAsync(`${SEEN_PREFIX}${userId}`, '1').catch(() => {})
+  }
+
   return (
-    <Modal visible={visible} animationType="fade" onRequestClose={() => setVisible(false)}>
+    <Modal visible={visible} animationType="fade" onRequestClose={dismiss}>
       <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
         <LinearGradient
           pointerEvents="none"
@@ -105,7 +121,7 @@ export function WelcomePendingOverlay() {
 
           <View style={{ paddingBottom: 24 }}>
             <Pressable
-              onPress={() => { haptic.selection(); setVisible(false) }}
+              onPress={dismiss}
               style={{ minHeight: 54, borderRadius: 999, backgroundColor: redesign.color.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...redesign.shadow.cta }}
             >
               <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800' }}>Got it</Text>

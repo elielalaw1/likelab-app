@@ -9,9 +9,12 @@ import { redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useApplyToCampaign, useCampaigns } from '@/features/campaigns/hooks'
 import { useDeliverables } from '@/features/deliverables/hooks'
-import { useCreatorProfile } from '@/features/profile/hooks'
+import { useCreatorProfile, useReputation } from '@/features/profile/hooks'
+import { isProfileComplete } from '@/features/profile/api'
+import { isAwaitingLink } from '@/features/deliverables/api'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
-import { EmptyState } from '@/features/shared/ui/EmptyState'
+import { ActiveCampaignRail, FeaturedCampaign } from '@/features/campaigns/ui/DiscoverSections'
+import { TierRow } from '@/features/profile/ui/TierBadge'
 import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
@@ -50,7 +53,7 @@ export default function ProjectsPage() {
   const badgeCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const d of deliverables || []) {
-      if (d.status === 'pending' || d.status === 'revision_requested') {
+      if (d.status === 'pending' || d.status === 'revision_requested' || isAwaitingLink(d)) {
         counts[d.campaignId] = (counts[d.campaignId] || 0) + 1
       }
     }
@@ -87,14 +90,14 @@ export default function ProjectsPage() {
     [browsableAll, category]
   )
 
+  // Top campaign becomes the editorial featured hero; the rest fill the list/grid.
+  const featured = browsable.length > 0 ? browsable[0] : null
+  const rest = useMemo(() => (browsable.length > 1 ? browsable.slice(1) : []), [browsable])
   const browseRows = useMemo(
-    () => Array.from({ length: Math.ceil(browsable.length / 2) }, (_, i) => browsable.slice(i * 2, i * 2 + 2)),
-    [browsable]
+    () => Array.from({ length: Math.ceil(rest.length / 2) }, (_, i) => rest.slice(i * 2, i * 2 + 2)),
+    [rest]
   )
-  const acceptedRows = useMemo(
-    () => Array.from({ length: Math.ceil(accepted.length / 2) }, (_, i) => accepted.slice(i * 2, i * 2 + 2)),
-    [accepted]
-  )
+  const { tier } = useReputation()
 
   const isGrid = viewMode === 'grid'
 
@@ -110,6 +113,9 @@ export default function ProjectsPage() {
           Apply to campaigns. Compete. Get paid.
         </Text>
       </Animated.View>
+
+      {/* In-progress campaigns — what a returning creator cares about first */}
+      <ActiveCampaignRail campaigns={accepted} badgeCounts={badgeCounts} onPress={(c) => router.push(campaignRouteParams(c) as never)} />
 
       {/* Category filter chips */}
       {categories.length > 1 ? (
@@ -152,127 +158,95 @@ export default function ProjectsPage() {
       ) : null}
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load campaigns right now.</Text> : null}
 
-      {/* View toggle */}
-      {browsable.length > 0 && (
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-          <Pressable
-            onPress={() => { haptic.selection(); setViewMode((v) => (v === 'list' ? 'grid' : 'list')) }}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              backgroundColor: isGrid ? 'rgba(8,8,12,0.96)' : 'rgba(255,255,255,0.60)',
-              borderWidth: 0.5,
-              borderColor: isGrid ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,1)',
-              shadowColor: isGrid ? '#000' : '#6040A0',
-              shadowOpacity: isGrid ? 0.20 : 0.10,
-              shadowRadius: isGrid ? 12 : 10,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 6,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <MaterialCommunityIcons
-              name={isGrid ? 'view-list-outline' : 'view-grid-outline'}
-              size={18}
-              color={isGrid ? 'rgba(255,255,255,0.95)' : 'rgba(28,28,30,0.55)'}
-            />
-          </Pressable>
-        </View>
-      )}
-
-      {browsable.length > 0 && (
-        <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
-          Open now · {browsable.length}
-        </Text>
-      )}
-
-      {isGrid ? (
-        <View style={{ gap: 10 }}>
-          {browsable.length === 0 && !isLoading ? (
-            <EmptyState title="No Campaigns" subtitle="No new campaigns available right now." icon="bullhorn-outline" />
-          ) : null}
-          {browseRows.map((row, i) => (
-            <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
-              {row.map((item) => (
-                <View key={item.id} style={{ flex: 1 }}>
-                  <CampaignCard
-                    campaign={item}
-                    compact
-                    onPress={() => router.push(campaignRouteParams(item) as never)}
-                  />
-                </View>
-              ))}
-              {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
-            </View>
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          data={browsable}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={false}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No Campaigns" subtitle="No new campaigns available right now." icon="bullhorn-outline" /> : null}
-          renderItem={({ item, index }) => (
-            <CampaignCard
-              campaign={item}
-              index={index}
-              onPress={() => router.push(campaignRouteParams(item) as never)}
-              onApply={() => {
-                if (!isApproved) {
-                  Alert.alert('Awaiting approval', 'Your account is pending review. You\'ll be able to apply once approved.')
-                  return false
-                }
-                applyMutation.mutate(item.id)
-              }}
-            />
-          )}
-        />
-      )}
-
-      {accepted.length > 0 && (
+      {browsable.length > 0 ? (
         <>
-          <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily, marginTop: browsable.length ? 4 : 0 }}>
-            My Active
+          <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+            Open now · {browsable.length}
           </Text>
-          {isGrid ? (
-            <View style={{ gap: 10 }}>
-              {acceptedRows.map((row, i) => (
-                <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
-                  {row.map((item) => (
-                    <View key={item.id} style={{ flex: 1 }}>
-                      <CampaignCard
-                        campaign={item}
-                        compact
-                        badge={badgeCounts[item.id]}
-                        onPress={() => router.push(campaignRouteParams(item) as never)}
-                      />
+
+          {featured ? (
+            <FeaturedCampaign campaign={featured} onPress={() => router.push(campaignRouteParams(featured) as never)} />
+          ) : null}
+
+          {rest.length > 0 ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+                  More · {rest.length}
+                </Text>
+                <Pressable
+                  onPress={() => { haptic.selection(); setViewMode((v) => (v === 'list' ? 'grid' : 'list')) }}
+                  style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: isGrid ? 'rgba(8,8,12,0.96)' : 'rgba(255,255,255,0.60)', borderWidth: 0.5, borderColor: isGrid ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,1)', alignItems: 'center', justifyContent: 'center', ...redesign.shadow.card }}
+                >
+                  <MaterialCommunityIcons name={isGrid ? 'view-list-outline' : 'view-grid-outline'} size={18} color={isGrid ? 'rgba(255,255,255,0.95)' : 'rgba(28,28,30,0.55)'} />
+                </Pressable>
+              </View>
+
+              {isGrid ? (
+                <View style={{ gap: 10 }}>
+                  {browseRows.map((row, i) => (
+                    <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
+                      {row.map((item) => (
+                        <View key={item.id} style={{ flex: 1 }}>
+                          <CampaignCard campaign={item} compact onPress={() => router.push(campaignRouteParams(item) as never)} />
+                        </View>
+                      ))}
+                      {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
                     </View>
                   ))}
-                  {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
                 </View>
-              ))}
-            </View>
-          ) : (
-            <FlatList
-              data={accepted}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-              renderItem={({ item, index }) => (
-                <CampaignCard
-                  campaign={item}
-                  index={index}
-                  badge={badgeCounts[item.id]}
-                  onPress={() => router.push(campaignRouteParams(item) as never)}
+              ) : (
+                <FlatList
+                  data={rest}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+                  renderItem={({ item, index }) => (
+                    <CampaignCard
+                      campaign={item}
+                      index={index}
+                      onPress={() => router.push(campaignRouteParams(item) as never)}
+                      onApply={async () => {
+                        if (!isApproved) {
+                          Alert.alert('Awaiting approval', 'Your account is pending review. You\'ll be able to apply once approved.')
+                          return false
+                        }
+                        if (!profile || !isProfileComplete(profile)) {
+                          Alert.alert('Complete your profile', 'Finish your creator profile before applying.', [
+                            { text: 'Not now', style: 'cancel' },
+                            { text: 'Complete profile', onPress: () => router.push('/settings') },
+                          ])
+                          return false
+                        }
+                        try {
+                          await applyMutation.mutateAsync(item.id)
+                          return true
+                        } catch {
+                          // Failure is surfaced centrally via the mutation's onError toast.
+                          return false
+                        }
+                      }}
+                    />
+                  )}
                 />
               )}
-            />
-          )}
+            </>
+          ) : null}
         </>
-      )}
+      ) : !isLoading ? (
+        <Animated.View entering={FadeInDown.duration(300)} style={{ gap: 14, backgroundColor: redesign.color.card, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 20, ...redesign.shadow.card }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="bell-badge-outline" size={23} color={redesign.color.purple} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 15.5, fontWeight: '800', letterSpacing: -0.3 }}>No open campaigns right now</Text>
+              <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', lineHeight: 18, marginTop: 2 }}>We&apos;ll notify you the moment a new one drops. Meanwhile, keep your standing climbing.</Text>
+            </View>
+          </View>
+          <TierRow progress={tier} onPress={() => router.push('/tiers')} />
+        </Animated.View>
+      ) : null}
     </Screen>
   )
 }

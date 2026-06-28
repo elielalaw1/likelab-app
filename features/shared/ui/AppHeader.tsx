@@ -47,14 +47,14 @@ export function AppHeader() {
       return
     }
 
-    router.push('/(tabs)/overview')
+    router.navigate('/(tabs)/overview')
     scrollEvents.emit('scrollToTop:overview')
   }
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.xs }}>
 
-      {/* 7 taps — confetti */}
+      {/* 15 taps — confetti */}
       <Modal visible={showConfetti} transparent animationType="none" statusBarTranslucent>
         <View style={{ flex: 1 }} pointerEvents="none">
           <ConfettiCannon count={200} origin={{ x: width / 2, y: -10 }} autoStart fadeOut explosionSpeed={600} fallSpeed={4500} />
@@ -63,7 +63,7 @@ export function AppHeader() {
         </View>
       </Modal>
 
-      {/* 15 taps — cat */}
+      {/* 15 taps (delayed) — cat */}
       <Modal visible={showCat} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCat(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowCat(false)}>
           <ExpoImage

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Session } from '@supabase/supabase-js'
-import * as SecureStore from 'expo-secure-store'
+import * as Notifications from 'expo-notifications'
+import { File, Paths } from 'expo-file-system'
 import { clearPersistedSupabaseSession, supabase } from '@/lib/supabase'
 import { assertCreatorRole, clearCreatorRoleCache } from '@/lib/assert-creator-role'
 import { deletePushToken } from '@/features/notifications/push'
@@ -10,14 +11,17 @@ import { getApplications } from '@/features/applications/api'
 import { getDeliverables } from '@/features/deliverables/api'
 import { getCreatorProfile } from '@/features/profile/api'
 
-const FIRST_LAUNCH_KEY = 'likelab_first_launch_v1'
+const FIRST_LAUNCH_MARKER = 'likelab_first_launch_v1'
 
 async function clearSessionOnFirstLaunch(): Promise<void> {
   try {
-    const seen = await SecureStore.getItemAsync(FIRST_LAUNCH_KEY)
-    if (!seen) {
-      await SecureStore.setItemAsync(FIRST_LAUNCH_KEY, '1')
+    // Marker lives in the app sandbox (Documents), which iOS wipes on uninstall.
+    // The old SecureStore/Keychain guard SURVIVED reinstall, so the keychain-
+    // resident session was never cleared on a fresh install — defeating the point.
+    const marker = new File(Paths.document, FIRST_LAUNCH_MARKER)
+    if (!marker.exists) {
       await clearPersistedSupabaseSession()
+      marker.create()
     }
   } catch {
     // ignore — don't block auth init
@@ -109,6 +113,9 @@ function initializeAuthSessionStore() {
         void deletePushToken(lastKnownUserId)
         lastKnownUserId = null
       }
+      // Reset the app-icon badge so a stale count doesn't persist on the login
+      // screen or carry into the next account.
+      void Notifications.setBadgeCountAsync(0).catch(() => {})
       void clearCreatorRoleCache()
       setAuthState({ session: null, loading: false })
       return
@@ -137,4 +144,18 @@ export function useAuthSession() {
     () => authState,
     () => authState
   )
+}
+
+// Clears this device's push token while STILL authenticated (so RLS lets the
+// UPDATE through), then signs out. The post-SIGNED_OUT deletePushToken stays as a
+// best-effort fallback, but by then auth.uid() is null and the UPDATE no-ops.
+export async function signOutCreator(): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getSession()
+    const uid = data.session?.user?.id
+    if (uid) await deletePushToken(uid)
+  } catch {
+    // best-effort — sign out regardless
+  }
+  await supabase.auth.signOut()
 }

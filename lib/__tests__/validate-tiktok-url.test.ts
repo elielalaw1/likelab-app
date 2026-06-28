@@ -14,6 +14,11 @@ describe('isValidTikTokUrl', () => {
     expect(isValidTikTokUrl('https://vm.tiktok.com/ZMabc123/')).toBe(true)
   })
 
+  it('accepts vt. short links and a bare tiktok.com domain', () => {
+    expect(isValidTikTokUrl('https://vt.tiktok.com/ZSabc123/')).toBe(true)
+    expect(isValidTikTokUrl('https://tiktok.com')).toBe(true)
+  })
+
   it('tolerates surrounding whitespace (pasted links)', () => {
     expect(isValidTikTokUrl('   https://www.tiktok.com/@user/video/1  ')).toBe(true)
   })

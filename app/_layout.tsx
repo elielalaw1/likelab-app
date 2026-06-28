@@ -80,8 +80,12 @@ const DELIVERABLE_NOTIF_TYPES = new Set(['deliverable_assigned', 'deliverable_re
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
+    // Foreground: suppress the native banner/alert — the app's own in-app toast
+    // (addNotificationReceivedListener below) is the single foreground surface, so a
+    // foregrounded push doesn't show twice. Background/closed delivery is unaffected
+    // (this handler only governs foreground presentation).
+    shouldShowAlert: false,
+    shouldShowBanner: false,
     shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
@@ -229,7 +233,7 @@ function PushNotificationSetup() {
 const KILLSWITCH_GIST_API = 'https://api.github.com/gists/9f23eb439b9a2edf58e812d3c9e0f9f4'
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Montserrat: Montserrat_400Regular,
     'Montserrat-Light': Montserrat_300Light,
     'Montserrat-Medium': Montserrat_500Medium,
@@ -249,7 +253,7 @@ export default function RootLayout() {
         const content = gist?.files?.['likelab-config.json']?.content
         const data = content ? JSON.parse(content) : { active: true }
         if (data.active === false) {
-          setKillswitch({ blocked: true, message: data.message || 'Tillfälligt otillgänglig.' })
+          setKillswitch({ blocked: true, message: data.message || 'Temporarily unavailable.' })
         } else {
           setKillswitch({ blocked: false, message: '' })
         }
@@ -265,12 +269,15 @@ export default function RootLayout() {
   }, [])
 
   useEffect(() => {
-    if (fontsLoaded && killswitch !== null) {
+    // Treat a font-load failure as "ready" so the app boots with system fonts
+    // instead of hanging on the splash screen forever (useFonts leaves
+    // fontsLoaded=false and only sets fontError on failure).
+    if ((fontsLoaded || fontError) && killswitch !== null) {
       SplashScreen.hideAsync()
     }
-  }, [fontsLoaded, killswitch])
+  }, [fontsLoaded, fontError, killswitch])
 
-  if (!fontsLoaded || killswitch === null) {
+  if ((!fontsLoaded && !fontError) || killswitch === null) {
     return null
   }
 

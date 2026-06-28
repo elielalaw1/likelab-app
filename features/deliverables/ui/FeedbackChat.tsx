@@ -179,7 +179,7 @@ export function FeedbackButton({
         <Animated.View entering={FadeInDown.duration(350)} style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: redesign.color.ink, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
           <MaterialCommunityIcons name="message-badge" size={14} color="#fff" />
           <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '700' }}>
-            Du har fått feedback från {brandName || 'brandet'}
+            New feedback from {brandName || 'the brand'}
           </Text>
         </Animated.View>
       ) : null}

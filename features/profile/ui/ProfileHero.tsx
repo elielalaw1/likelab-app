@@ -91,8 +91,8 @@ export function ProfileHero({ profile, onAvatarPress }: Props) {
               <Pressable
                 onPress={() =>
                   Alert.alert(
-                    'Verifierad creator',
-                    'Ditt konto är granskat och godkänt av LikeLab, och din profil är 100% komplett.'
+                    'Verified creator',
+                    'Your account has been reviewed and approved by LikeLab, and your profile is 100% complete.'
                   )
                 }
                 hitSlop={8}

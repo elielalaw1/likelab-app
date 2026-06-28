@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
@@ -10,9 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { StatusBadge } from '@/features/shared/ui/StatusBadge'
-import { approvalChip } from '@/features/campaigns/phase'
-import { formatCampaignGoal, formatDateRange, getDaysLeft } from '@/features/core/format'
+import { formatCampaignGoal, formatDateRange, getDaysLeft, isCampaignClosed } from '@/features/core/format'
 import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -24,10 +22,8 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
-import { LinkSubmitRow } from '@/features/shared/ui/LinkSubmitRow'
-import { VideoUploadRow } from '@/features/shared/ui/VideoUploadRow'
-import { VideoReviewActions, ViewVideoButton } from '@/features/deliverables/ui/VideoReviewActions'
-import { FeedbackButton } from '@/features/deliverables/ui/FeedbackChat'
+import { CampaignVideoGrid } from '@/features/deliverables/ui/CampaignVideoGrid'
+import { deliverableStage, STAGE_UI } from '@/features/deliverables/stage'
 import type { Deliverable } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
@@ -59,18 +55,6 @@ function formatPlatform(platform?: string | null) {
     .replace(/[_-]+/g, ' ')
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-// Creator-facing step for one deliverable, matching the backend flow:
-// upload video → brand review → (approved) post on TikTok + submit link → live.
-type DeliverableStage = 'upload' | 'under_review' | 'revision' | 'submit_link' | 'live'
-function deliverableStage(d: Deliverable): DeliverableStage {
-  // Brand change-requests take priority even if a link was already submitted.
-  if (d.status === 'revision_requested' || d.status === 'flagged' || d.approvalStatus === 'rejected') return 'revision'
-  if (d.url || d.status === 'published') return 'live'
-  if (d.approvalStatus === 'approved' || d.status === 'approved' || d.readyForPosting) return 'submit_link'
-  if (d.status === 'pending') return 'upload'
-  return 'under_review'
 }
 
 function Section({
@@ -239,8 +223,8 @@ export default function CampaignDetailPage() {
           await SecureStore.setItemAsync(REVIEW_KEY, String(Date.now())).catch(() => {})
         }
       }).catch(() => {})
-    } catch (applyError) {
-      toast.error(applyError instanceof Error ? applyError.message : 'Could not apply')
+    } catch {
+      // Failure is surfaced centrally via the mutation's onError toast.
     }
   }
 
@@ -255,6 +239,7 @@ export default function CampaignDetailPage() {
   }, [allDeliverables, campaignDeliverables, campaignId])
   const primaryPlatform = campaign?.platforms?.[0] || visibleDeliverables?.[0]?.platform || 'TikTok'
   const daysLeft = getDaysLeft(campaign?.endDate)
+  const closed = isCampaignClosed(campaign?.endDate)
   const heroImages = campaign
     ? (campaign.imageUrls?.length ? campaign.imageUrls : campaign.coverImageUrl ? [campaign.coverImageUrl] : [])
     : []
@@ -264,6 +249,13 @@ export default function CampaignDetailPage() {
         helper: 'You already have an active application for this campaign.',
         disabled: true,
         tone: 'success' as const,
+      }
+    : closed
+    ? {
+        label: 'Campaign closed',
+        helper: 'This campaign is no longer accepting applications.',
+        disabled: true,
+        tone: 'secondary' as const,
       }
     : profile?.reviewStatus !== 'approved'
       ? {
@@ -325,7 +317,7 @@ export default function CampaignDetailPage() {
               Closes in
             </Text>
             <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }}>
-              {daysLeft == null ? 'Open now' : `${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
+              {closed ? 'Closed' : daysLeft == null ? 'Open now' : daysLeft === 0 ? 'Last day' : `${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
             </Text>
           </View>
           <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -814,128 +806,83 @@ export default function CampaignDetailPage() {
                 </Animated.View>
               ) : null}
 
-              <FlatList
-                data={visibleDeliverables}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-                ListEmptyComponent={
-                  !loadingDeliverables && !loadingAllDeliverables ? (
-                    <EmptyState title="No Videos Yet" subtitle="Assigned deliverables will appear in this tab." icon="video-outline" />
-                  ) : null
-                }
-                renderItem={({ item }) => (
-                  <Section icon="video-outline" title={item.campaignTitle || 'Deliverable'} tint="rgba(96,165,250,0.14)">
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text, fontFamily: typography.fontFamily }}>
-                        {`${formatPlatform(item.platform || 'tiktok')} ${item.type ? `- ${formatPlatform(item.type)}` : ''}`}
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        {(() => {
-                          const chip = approvalChip(campaign?.phase, item.approvalStatus, item.readyForPosting)
-                          return chip ? (
-                            <View style={{ borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: chip.bg }}>
-                              <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: chip.text }}>
-                                {chip.label}
-                              </Text>
-                            </View>
-                          ) : null
-                        })()}
-                        <StatusBadge status={item.status} />
+              {visibleDeliverables.length > 0 ? (() => {
+                const total = visibleDeliverables.length
+                const stages = visibleDeliverables.map(deliverableStage)
+                const submitted = stages.filter((s) => s === 'under_review' || s === 'submit_link' || s === 'live').length
+                const pct = total > 0 ? Math.round((submitted / total) * 100) : 0
+                const nextIdx = stages.findIndex((s) => STAGE_UI[s].actionable)
+                const nextLabel =
+                  nextIdx === -1
+                    ? 'All caught up'
+                    : stages[nextIdx] === 'upload'
+                      ? `Upload Video ${nextIdx + 1}`
+                      : stages[nextIdx] === 'revision'
+                        ? `Re-upload Video ${nextIdx + 1}`
+                        : `Post Video ${nextIdx + 1} on TikTok`
+                return (
+                  <Animated.View
+                    entering={FadeInDown.duration(400)}
+                    style={{ marginBottom: 16, borderRadius: 24, overflow: 'hidden', backgroundColor: redesign.color.ink, ...redesign.shadow.cta }}
+                  >
+                    {/* Signature purple radial glow — matches the app's hero cards */}
+                    <LinearGradient
+                      colors={['rgba(124,63,242,0.55)', 'rgba(124,63,242,0)']}
+                      start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.8 }}
+                      style={{ position: 'absolute', top: -40, right: -40, width: 240, height: 240, borderRadius: 120 }}
+                    />
+                    <View style={{ padding: 20, gap: 16 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                        <View>
+                          <Text style={{ fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.4, textTransform: 'uppercase' }}>
+                            Your progress
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 5 }}>
+                            <CountUp
+                              value={submitted}
+                              duration={650}
+                              style={{ fontFamily: typography.fontFamily, fontSize: 42, fontWeight: '900', color: '#fff', letterSpacing: -2, lineHeight: 44, padding: 0, minWidth: 26 }}
+                            />
+                            <Text style={{ fontFamily: typography.fontFamily, fontSize: 17, fontWeight: '700', color: 'rgba(255,255,255,0.5)' }}>
+                              {`of ${total} submitted`}
+                            </Text>
+                          </View>
+                        </View>
+                        <LinearGradient
+                          colors={redesign.gradient.avatarRing}
+                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                          style={{ width: 56, height: 56, borderRadius: 28, padding: 2.5, alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <View style={{ flex: 1, alignSelf: 'stretch', borderRadius: 25.5, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '900', color: '#fff', fontVariant: ['tabular-nums'] }}>{`${pct}%`}</Text>
+                          </View>
+                        </LinearGradient>
+                      </View>
+                      <View style={{ height: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+                        <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${Math.max(pct, 3)}%`, borderRadius: 999 }} />
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: nextIdx === -1 ? 'rgba(255,255,255,0.08)' : 'rgba(124,63,242,0.28)', borderRadius: 999, paddingLeft: 9, paddingRight: 14, paddingVertical: 8 }}>
+                        <MaterialCommunityIcons name={nextIdx === -1 ? 'check-circle' : 'arrow-right-circle'} size={16} color={nextIdx === -1 ? redesign.color.payoutGreen : '#fff'} />
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '800', color: '#fff', letterSpacing: -0.1 }}>
+                          {nextIdx === -1 ? 'All caught up — nothing to do' : `Next: ${nextLabel}`}
+                        </Text>
                       </View>
                     </View>
-                    {item.notes ? (
-                      <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 20, fontFamily: typography.fontFamily }}>{item.notes}</Text>
-                    ) : null}
+                  </Animated.View>
+                )
+              })() : null}
 
-                    {/* Brand feedback — pulsing chat button → SMS-style thread. Shows in
-                        every stage so feedback stays reachable, not just on change requests. */}
-                    <FeedbackButton
-                      deliverableId={item.id}
-                      brandName={campaign?.brandName}
-                      brandLogoUrl={campaign?.brandLogoUrl}
-                      fallbackReason={deliverableStage(item) === 'revision' ? item.flagReason : null}
-                    />
-
-                    {(() => {
-                      const stage = deliverableStage(item)
-                      const caption = (text: string) => (
-                        <Text style={{ color: redesign.color.muted, fontSize: 13, lineHeight: 19, fontFamily: typography.fontFamily }}>{text}</Text>
-                      )
-
-                      if (stage === 'revision') {
-                        // The change-request reason now renders in <FeedbackThread> above.
-                        return (
-                          <>
-                            {caption('The brand asked for changes — upload a new version.')}
-                            <VideoUploadRow deliverableId={item.id} submitLabel="Re-upload video" />
-                          </>
-                        )
-                      }
-
-                      if (stage === 'upload') {
-                        return (
-                          <>
-                            {caption('Upload your video for the brand to review before you post it.')}
-                            <VideoUploadRow deliverableId={item.id} submitLabel="Upload video for review" />
-                          </>
-                        )
-                      }
-
-                      if (stage === 'under_review') {
-                        return (
-                          <>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 12, paddingVertical: 11 }}>
-                              <MaterialCommunityIcons name="clock-outline" size={18} color={redesign.color.purple} />
-                              <Text style={{ flex: 1, color: redesign.color.ink, fontSize: 13, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                                Under review — the brand is checking your video.
-                              </Text>
-                            </View>
-                            <VideoReviewActions deliverableId={item.id} />
-                          </>
-                        )
-                      }
-
-                      if (stage === 'submit_link') {
-                        return (
-                          <>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                              <MaterialCommunityIcons name="check-decagram" size={18} color="#0F9F6E" />
-                              {caption('Approved! Post it on TikTok, then paste the link here.')}
-                            </View>
-                            <LinkSubmitRow deliverableId={item.id} submitLabel="Submit TikTok link" />
-                            <ViewVideoButton deliverableId={item.id} />
-                          </>
-                        )
-                      }
-
-                      // live — link submitted
-                      return (
-                        <>
-                          {item.url && /^https?:\/\//i.test(item.url) ? (
-                            <Pressable
-                              onPress={() => Linking.openURL(item.url || '').catch(() => undefined)}
-                              style={{ borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, backgroundColor: redesign.color.card, paddingHorizontal: 12, paddingVertical: 10, gap: 4 }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <MaterialCommunityIcons name="check-circle" size={15} color="#0F9F6E" />
-                                <Text style={{ color: '#0F9F6E', fontSize: 11, fontWeight: '800', letterSpacing: 0.7 }}>LIVE ON TIKTOK</Text>
-                              </View>
-                              <Text numberOfLines={2} style={{ color: colors.primary, fontSize: 14, fontFamily: typography.fontFamily }}>{item.url}</Text>
-                            </Pressable>
-                          ) : (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <MaterialCommunityIcons name="check-circle" size={18} color="#0F9F6E" />
-                              <Text style={{ color: '#0F9F6E', fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily }}>Video submitted</Text>
-                            </View>
-                          )}
-                          <ViewVideoButton deliverableId={item.id} />
-                        </>
-                      )
-                    })()}
-                  </Section>
-                )}
-              />
+              {visibleDeliverables.length === 0 ? (
+                !loadingDeliverables && !loadingAllDeliverables ? (
+                  <EmptyState title="No Videos Yet" subtitle="Assigned deliverables will appear in this tab." icon="video-outline" />
+                ) : null
+              ) : (
+                <CampaignVideoGrid
+                  deliverables={visibleDeliverables}
+                  brandName={campaign?.brandName}
+                  brandLogoUrl={campaign?.brandLogoUrl}
+                />
+              )}
             </View>
           ) : null}
 

@@ -43,12 +43,19 @@ export default function ResetPasswordPage() {
   const [invalid, setInvalid] = useState(false)
 
   useEffect(() => {
+    let settled = false
+    let graceTimer: ReturnType<typeof setTimeout> | undefined
+
     async function initSession(url: string) {
       const params = parseHashParams(url)
+      // Ignore non-recovery URLs instead of latching invalid — a valid warm link
+      // may still arrive via the listener below.
       if (params.type !== 'recovery' || !params.access_token || !params.refresh_token) {
-        setInvalid(true)
         return
       }
+      settled = true
+      if (graceTimer) clearTimeout(graceTimer)
+      setInvalid(false)
       const { error } = await supabase.auth.setSession({
         access_token: params.access_token,
         refresh_token: params.refresh_token,
@@ -56,17 +63,27 @@ export default function ResetPasswordPage() {
       if (error) {
         setInvalid(true)
       } else {
+        setInvalid(false)
         setReady(true)
       }
     }
 
     Linking.getInitialURL().then((url) => {
-      if (url) initSession(url)
-      else setInvalid(true)
+      if (url) void initSession(url)
     })
 
-    const sub = Linking.addEventListener('url', ({ url }) => initSession(url))
-    return () => sub.remove()
+    const sub = Linking.addEventListener('url', ({ url }) => { void initSession(url) })
+
+    // Only declare the link invalid if neither the launch URL nor a warm 'url'
+    // event produced a recovery session within a short grace window.
+    graceTimer = setTimeout(() => {
+      if (!settled) setInvalid(true)
+    }, 2500)
+
+    return () => {
+      sub.remove()
+      if (graceTimer) clearTimeout(graceTimer)
+    }
   }, [])
 
   const handleSubmit = async () => {

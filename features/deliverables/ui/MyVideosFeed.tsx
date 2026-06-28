@@ -152,10 +152,10 @@ function FeedVideoItem({ video, active, width, height }: { video: MyVideo; activ
 
 // Embedded video grid for the profile — tap a tile to open the immersive swipe feed.
 // pagePadding = the Screen's horizontal content padding (16 each side).
-export function MyVideosFeed({ pagePadding = 16 }: { pagePadding?: number }) {
+export function MyVideosFeed({ pagePadding = 16, title = 'My videos' }: { pagePadding?: number; title?: string }) {
   const { width, height } = useWindowDimensions()
   const insets = useSafeAreaInsets()
-  const { data, isLoading } = useQuery({ queryKey: ['my-videos'], queryFn: getMyVideos })
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['my-videos'], queryFn: getMyVideos, placeholderData: (prev) => prev })
   const videos = data || []
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -173,11 +173,24 @@ export function MyVideosFeed({ pagePadding = 16 }: { pagePadding?: number }) {
 
   return (
     <View style={{ gap: 10 }}>
-      <Text style={HEADER}>My videos</Text>
+      <Text style={HEADER}>{title}</Text>
 
       {isLoading ? (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>
           <ActivityIndicator color={redesign.color.purple} />
+        </View>
+      ) : isError && videos.length === 0 ? (
+        <View style={{ backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 26, paddingHorizontal: 22, alignItems: 'center', gap: 8, ...redesign.shadow.card }}>
+          <View style={{ width: 48, height: 48, borderRadius: 15, backgroundColor: 'rgba(220,38,38,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={24} color="#DC2626" />
+          </View>
+          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14.5, fontWeight: '800' }}>Couldn&apos;t load your videos</Text>
+          <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 19 }}>
+            Check your connection and try again.
+          </Text>
+          <Pressable onPress={() => refetch()} style={{ marginTop: 4, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 999, backgroundColor: redesign.color.ink }}>
+            <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '800' }}>Retry</Text>
+          </Pressable>
         </View>
       ) : videos.length === 0 ? (
         <View style={{ backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 26, paddingHorizontal: 22, alignItems: 'center', gap: 8, ...redesign.shadow.card }}>

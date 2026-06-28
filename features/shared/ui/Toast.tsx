@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Text, View } from 'react-native'
+import { AccessibilityInfo, Text, View } from 'react-native'
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
@@ -20,6 +20,9 @@ function emit(type: ToastType, message: string) {
   if (type === 'success') haptic.success()
   else if (type === 'error') haptic.error()
   else haptic.light()
+  // Announce to screen readers — the toast is otherwise silent to VoiceOver/
+  // TalkBack users (works on both iOS and Android, unlike accessibilityRole alone).
+  AccessibilityInfo.announceForAccessibility(message)
   _setToasts?.((prev) => [...prev.slice(-2), { id: ++nextId, type, message }])
 }
 
@@ -46,6 +49,7 @@ function ToastRow({ item, onDone }: { item: ToastItem; onDone: (id: number) => v
     <Animated.View
       entering={FadeInDown.springify().damping(22).stiffness(200).mass(0.8)}
       exiting={FadeOutDown.duration(200)}
+      accessibilityLiveRegion="polite"
       style={{
         flexDirection: 'row',
         alignItems: 'center',

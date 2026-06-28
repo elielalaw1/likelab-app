@@ -10,10 +10,22 @@ export type PickedVideo = {
   mimeType: string
 }
 
+// Thrown when the user has not granted photo-library access. Carries canAskAgain
+// so the caller can route a permanently-denied user to Settings instead of
+// showing a dead-end "Upload failed".
+export class MediaPermissionError extends Error {
+  canAskAgain: boolean
+  constructor(canAskAgain: boolean) {
+    super('Media library permission is required to select videos.')
+    this.name = 'MediaPermissionError'
+    this.canAskAgain = canAskAgain
+  }
+}
+
 export async function pickVideoFromLibrary(): Promise<PickedVideo | null> {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+  const { status, canAskAgain } = await ImagePicker.requestMediaLibraryPermissionsAsync()
   if (status !== 'granted') {
-    throw new Error('Media library permission is required to select videos.')
+    throw new MediaPermissionError(canAskAgain)
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({

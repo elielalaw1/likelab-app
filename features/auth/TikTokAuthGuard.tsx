@@ -71,6 +71,8 @@ export function TikTokAuthGuard() {
       // logged out or sitting on the login screen — redirecting then is wrong.
       if (!sessionRef.current) return
       const currentSegments = segmentsRef.current
+      // Already on the connect screen — don't stack a duplicate route.
+      if (currentSegments[0] === 'connect-tiktok') return
       const inAuthedApp =
         currentSegments[0] === '(tabs)' || !AUTH_ROUTE_SEGMENTS.has(currentSegments[0] ?? 'index')
       if (!inAuthedApp) return
@@ -80,12 +82,13 @@ export function TikTokAuthGuard() {
       lastTriggerAt.current = now
 
       void (async () => {
+        // We already matched a HARD TikTok auth-invalidation error (revoked /
+        // expired / invalid_grant) for a signed-in creator inside the app, with a
+        // 5s cooldown. Don't gate on the derived `tiktokConnected` flag — it stays
+        // truthy while tiktok_open_id is set — just refresh and prompt a reconnect.
         await queryClient.invalidateQueries({ queryKey: ['creator-profile'] })
-        const profile = queryClient.getQueryData<{ tiktokConnected?: boolean | null }>(['creator-profile'])
-        if (profile?.tiktokConnected === false) {
-          toast.error('TikTok disconnected — reconnect to keep using LikeLab.')
-          router.push('/connect-tiktok')
-        }
+        toast.error('TikTok disconnected — reconnect to keep using LikeLab.')
+        router.replace('/connect-tiktok')
       })()
     })
 

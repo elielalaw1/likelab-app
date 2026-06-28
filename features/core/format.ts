@@ -63,6 +63,16 @@ export function getDaysLeft(endDate?: string | null) {
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 }
 
+// True once the campaign's end instant has actually passed. getDaysLeft clamps
+// past deadlines to 0 (it can't tell "ends today" from "already ended"), so the
+// closed state is a separate check used to gate Apply and render "Closed".
+export function isCampaignClosed(endDate?: string | null): boolean {
+  if (!endDate) return false
+  const end = new Date(endDate)
+  if (Number.isNaN(end.getTime())) return false
+  return end.getTime() < Date.now()
+}
+
 const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   sweden: 'SE',
   sverige: 'SE',

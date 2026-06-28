@@ -7,6 +7,7 @@ import { router } from 'expo-router'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { signOutCreator } from '@/features/shared/hooks/useAuthSession'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { SectionCard } from '@/features/shared/ui/SectionCard'
@@ -39,6 +40,9 @@ function asForm(profile?: CreatorProfile | null) {
     displayName: profile?.displayName || '',
     phoneCountryCode: code,
     phoneDigits: digits,
+    // Preserve a leading '+' when the country code couldn't be inferred, so saving
+    // doesn't permanently drop it from the stored number.
+    phoneHadPlus: !code && rawPhone.trim().startsWith('+'),
     tiktokHandle: profile?.tiktokHandle || '',
     instagramHandle: profile?.instagramHandle || '',
     gender: profile?.gender || '',
@@ -236,14 +240,18 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
       return
     }
 
-    const phoneCombined = form.phoneDigits.trim() ? `${form.phoneCountryCode}${form.phoneDigits}` : ''
+    const phoneCombined = form.phoneDigits.trim()
+      ? `${form.phoneCountryCode || (form.phoneHadPlus ? '+' : '')}${form.phoneDigits}`
+      : ''
 
     try {
       await updateMutation.mutateAsync({
         displayName: form.displayName,
         phoneCountryCode: form.phoneCountryCode,
         phone: phoneCombined || null,
-        tiktokHandle: form.tiktokHandle.replace(/^@+/, ''),
+        // tiktokHandle is server-managed via connect/disconnect (no editable input
+        // here) — never include it in the save snapshot or it nulls the synced
+        // handle whenever the user saves any other field.
         instagramHandle: form.instagramHandle.replace(/^@+/, ''),
         gender: form.gender,
         ageRange: form.ageRange,
@@ -310,7 +318,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
   }, [queryClient])
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await signOutCreator()
     queryClient.clear()
     router.replace('/login')
   }

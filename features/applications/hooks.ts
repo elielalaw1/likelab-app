@@ -34,8 +34,33 @@ function useInvitationStatusMutation(
       await queryClient.cancelQueries({ queryKey: ['applications'] })
       const previous = queryClient.getQueryData<ApplicationsData>(['applications'])
       if (previous) {
+        const invitation = previous.invitations.find((inv) => inv.id === invitationId)
+        // On accept, immediately add a placeholder accepted application so an
+        // "Accepted campaign" card replaces the invitation instead of the card
+        // vanishing until the server row arrives. The deterministic optimistic id
+        // can't collide with the real server row, and onError rollback removes it.
+        const applications =
+          nextStatus === 'accepted' && invitation
+            ? [
+                {
+                  id: `optimistic-${invitationId}`,
+                  campaignId: invitation.campaignId,
+                  campaignTitle: invitation.campaignTitle,
+                  campaignImageUrl: invitation.campaignImageUrl,
+                  campaignBrandName: invitation.campaignBrandName,
+                  status: 'accepted' as const,
+                  rewardAmount: invitation.rewardAmount,
+                  rewardType: invitation.rewardType,
+                  startDate: invitation.startDate,
+                  endDate: invitation.endDate,
+                  createdAt: invitation.createdAt,
+                } satisfies CreatorApplication,
+                ...previous.applications,
+              ]
+            : previous.applications
         queryClient.setQueryData<ApplicationsData>(['applications'], {
           ...previous,
+          applications,
           invitations: previous.invitations.map((inv) =>
             inv.id === invitationId ? { ...inv, status: nextStatus } : inv
           ),

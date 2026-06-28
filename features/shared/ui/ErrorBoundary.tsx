@@ -1,7 +1,9 @@
 import { Component, ReactNode } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
+import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { redesign, typography } from '@/features/core/theme'
+import { queryClient } from '@/lib/query-client'
 
 type Props = { children: ReactNode }
 type State = { error: Error | null }
@@ -21,7 +23,18 @@ export class ErrorBoundary extends Component<Props, State> {
     if (__DEV__) console.error('[ErrorBoundary]', error)
   }
 
-  reset = () => this.setState({ error: null })
+  reset = () => {
+    // Navigate to a known-good root and drop any poisoned cached data before
+    // clearing the error — otherwise a deterministic render throw just re-renders
+    // the same broken route and traps the user on this screen.
+    try {
+      queryClient.clear()
+      router.replace('/(tabs)/overview')
+    } catch {
+      // ignore — still clear the error so the subtree re-renders
+    }
+    this.setState({ error: null })
+  }
 
   render() {
     const { error } = this.state

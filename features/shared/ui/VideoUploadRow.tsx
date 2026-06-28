@@ -1,25 +1,38 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Linking, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { haptic } from '@/features/shared/haptics'
-import { pickVideoFromLibrary } from '@/lib/video-picker'
-import { useSubmissionStatus, useUploadVideo } from '@/features/deliverables/hooks'
+import { MediaPermissionError, pickVideoFromLibrary } from '@/lib/video-picker'
+import { useLatestSubmission, useSubmissionStatus, useUploadVideo } from '@/features/deliverables/hooks'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { toast } from '@/features/shared/ui/Toast'
 
 type Props = {
   deliverableId: string
   submitLabel?: string
+  onDone?: () => void
 }
 
-export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: Props) {
+export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', onDone }: Props) {
   const { palette } = useTheme()
   const queryClient = useQueryClient()
   const [submissionId, setSubmissionId] = useState<string | null>(null)
   const { upload, stage, compressionProgress, error } = useUploadVideo()
   const { data: submission, isTimedOut } = useSubmissionStatus(submissionId ?? undefined)
+
+  // Recover an in-flight upload after a remount (creator navigated away during
+  // processing and came back): adopt the latest submission and resume polling
+  // instead of re-offering the Upload button, which risks a duplicate upload.
+  const { data: latestSubmission } = useLatestSubmission(submissionId ? undefined : deliverableId)
+  useEffect(() => {
+    if (submissionId) return
+    if (latestSubmission && (latestSubmission.status === 'uploading' || latestSubmission.status === 'processing')) {
+      setSubmissionId(latestSubmission.id)
+    }
+  }, [latestSubmission, submissionId])
 
   // When the backend finishes processing, refetch the parent deliverable so the
   // row flips out of the upload state without a manual pull-to-refresh.
@@ -28,11 +41,15 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
       // ['deliverables'] prefix-matches ['deliverables','campaign']; also refresh the profile feed.
       queryClient.invalidateQueries({ queryKey: ['deliverables'] })
       queryClient.invalidateQueries({ queryKey: ['my-videos'] })
+      // Prominent confirmation — the inline "Video submitted" is easy to miss after a
+      // long upload, so surface a success banner the creator can't miss.
+      toast.success('Video uploaded — submitted for review')
+      onDone?.()
     } else if (submission?.status === 'failed') {
       // Keep the raw server error in the dev logs; the creator sees a friendly message.
       console.warn('[VideoUploadRow] server processing failed:', submission?.errorMessage)
     }
-  }, [submission?.status, submission?.errorMessage, queryClient])
+  }, [submission?.status, submission?.errorMessage, queryClient, onDone])
 
   const serverStatus = submission?.status
   const isDone = serverStatus === 'submitted'
@@ -63,6 +80,19 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video' }: 
       haptic.success()
     } catch (uploadError) {
       haptic.warning()
+      if (uploadError instanceof MediaPermissionError) {
+        Alert.alert(
+          'Allow photo access',
+          'LikeLab needs access to your photo library to upload your video.',
+          uploadError.canAskAgain
+            ? [{ text: 'OK' }]
+            : [
+                { text: 'Not now', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => { void Linking.openSettings() } },
+              ]
+        )
+        return
+      }
       Alert.alert(
         'Upload failed',
         uploadError instanceof Error ? uploadError.message : 'Could not upload your video. Please try again.'

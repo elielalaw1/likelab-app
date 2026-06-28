@@ -35,10 +35,17 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 }
 
+// Remembers THIS device's most recently registered token so deletePushToken can
+// avoid clearing the shared column when it now holds a different device's token.
+let lastRegisteredToken: string | null = null
+
 export async function savePushToken(token: string, userId: string): Promise<void> {
-  // supabase-js resolves (not throws) on a query error, so capture `error`
-  // explicitly — otherwise a failed save leaves the user with notifications
-  // silently disabled and no trace to debug.
+  lastRegisteredToken = token
+
+  // Live stores the push token on creator_profiles (single token per user). The
+  // multi-device `device_tokens` table only exists on Test, so we write the
+  // canonical Live column here. Re-introduce the device_tokens upsert once that
+  // table is published to Live (see backend-contract notes).
   const { error } = await supabase
     .from('creator_profiles')
     .update({ push_token: token })
@@ -46,10 +53,16 @@ export async function savePushToken(token: string, userId: string): Promise<void
   if (error) console.warn('[push] failed to save push token:', error.message)
 }
 
-export async function deletePushToken(userId: string): Promise<void> {
-  const { error } = await supabase
+export async function deletePushToken(userId: string, token?: string): Promise<void> {
+  const deviceToken = token ?? lastRegisteredToken
+
+  // Clear the Live push token, but only if it still holds THIS device's token
+  // (avoids one device's logout clobbering a token another device just wrote).
+  let query = supabase
     .from('creator_profiles')
     .update({ push_token: null })
     .eq('user_id', userId)
+  if (deviceToken) query = query.eq('push_token', deviceToken)
+  const { error } = await query
   if (error) console.warn('[push] failed to clear push token:', error.message)
 }

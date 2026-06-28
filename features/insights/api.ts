@@ -20,6 +20,9 @@ export type InsightsSummary = {
   bestRank: number | null
   campaignsTracked: number
   perCampaign: CampaignInsight[]
+  // True when at least one (but not all) campaign's leaderboard RPC failed, so the
+  // shown totals understate reality and the UI can say so.
+  partial: boolean
 }
 
 // Aggregates per-campaign performance from the leaderboard RPC across every accepted
@@ -33,12 +36,14 @@ export async function getInsights(): Promise<InsightsSummary> {
   const { applications } = await getApplications()
   const accepted = applications.filter((a) => a.status === 'accepted')
 
+  let failedCount = 0
   const results = await Promise.all(
     accepted.map(async (app): Promise<CampaignInsight> => {
       const { data, error } = await supabase.rpc('get_campaign_leaderboard_position', { p_campaign_id: app.campaignId })
       if (error) {
         // Don't fail the whole insights screen for one campaign — log it and fall
         // back to a no-data row so the campaign still appears (rather than vanishing).
+        failedCount++
         console.warn(`[insights] leaderboard RPC failed for campaign ${app.campaignId}:`, error.message)
       }
       const row = Array.isArray(data) && data.length > 0 ? data[0] : null
@@ -55,6 +60,13 @@ export async function getInsights(): Promise<InsightsSummary> {
     })
   )
 
+  // If there were accepted campaigns but EVERY leaderboard RPC failed, surface an
+  // error rather than collapsing into a "No data yet" empty state that looks like a
+  // genuinely empty account.
+  if (accepted.length > 0 && failedCount === accepted.length) {
+    throw new Error('Could not load campaign performance. Please try again.')
+  }
+
   // Keep only campaigns that actually have a tracked position / engagement.
   const perCampaign = results
     .filter((r) => r.rank != null || r.views > 0 || r.likes > 0)
@@ -65,5 +77,12 @@ export async function getInsights(): Promise<InsightsSummary> {
   const ranks = perCampaign.map((r) => r.rank).filter((r): r is number => r != null)
   const bestRank = ranks.length ? Math.min(...ranks) : null
 
-  return { totalViews, totalLikes, bestRank, campaignsTracked: perCampaign.length, perCampaign }
+  return {
+    totalViews,
+    totalLikes,
+    bestRank,
+    campaignsTracked: perCampaign.length,
+    perCampaign,
+    partial: failedCount > 0,
+  }
 }

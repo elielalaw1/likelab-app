@@ -13,8 +13,8 @@ import { useCallback, useMemo } from 'react'
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { DeliverableStatus } from '@/features/core/types'
-import { approvalChip } from '@/features/campaigns/phase'
 import { CountUp } from '@/features/motion/springs'
+import { isAwaitingLink } from '@/features/deliverables/api'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = {
   submitted:     { label: 'In review',  color: '#6366F1', icon: 'clock-outline' },
@@ -106,22 +106,23 @@ export default function DeliverablesPage() {
     return Array.from(grouped.values())
   }, [data, campaignTotals])
 
+  // Approved deliverables that still need the creator to post on TikTok and paste
+  // the link — surfaced as an explicit CTA instead of hiding in History.
+  const readyToPost = useMemo(() => {
+    const grouped = new Map<string, { campaignId: string; campaignTitle: string; platform: string; count: number }>()
+    for (const item of data || []) {
+      if (!isAwaitingLink(item)) continue
+      const existing = grouped.get(item.campaignId)
+      if (existing) { existing.count += 1; continue }
+      grouped.set(item.campaignId, { campaignId: item.campaignId, campaignTitle: item.campaignTitle, platform: item.platform || 'tiktok', count: 1 })
+    }
+    return Array.from(grouped.values())
+  }, [data])
+
   const history = useMemo(() =>
-    (data || []).filter((item) => HISTORY_STATUSES.includes(item.status as DeliverableStatus)),
+    (data || []).filter((item) => HISTORY_STATUSES.includes(item.status as DeliverableStatus) && !isAwaitingLink(item)),
     [data]
   )
-
-  // 1-based video number per campaign, in list order ("TikTok · Video 2").
-  const historyVideoNo = useMemo(() => {
-    const counts = new Map<string, number>()
-    const result = new Map<string, number>()
-    for (const item of history) {
-      const n = (counts.get(item.campaignId) || 0) + 1
-      counts.set(item.campaignId, n)
-      result.set(item.id, n)
-    }
-    return result
-  }, [history])
 
   const openCampaignVideos = (campaignId: string) =>
     router.push({ pathname: '/campaigns/[id]', params: { id: campaignId, tab: 'videos' } })
@@ -138,6 +139,7 @@ export default function DeliverablesPage() {
           Your active work and history
         </Text>
       </Animated.View>
+
 
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load deliverables right now.</Text> : null}
 
@@ -247,71 +249,75 @@ export default function DeliverablesPage() {
         }}
       />
 
-      {/* History */}
+      {/* Ready to post — approved by the brand, just needs the TikTok link */}
+      {readyToPost.length > 0 ? (
+        <Animated.View entering={FadeInDown.delay(120).duration(300)} style={{ gap: 12 }}>
+          <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase' }}>
+            Ready to post
+          </Text>
+          {readyToPost.map((item, index) => (
+            <Animated.View key={item.campaignId} entering={FadeInDown.delay(index * 40).duration(250)}>
+              <Pressable
+                onPress={() => openCampaignVideos(item.campaignId)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(16,159,110,0.45)', padding: 14, ...redesign.shadow.card }}
+              >
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(16,159,110,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialCommunityIcons name="check-decagram" size={20} color="#0F9F6E" />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }} numberOfLines={1}>
+                    {item.campaignTitle}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600', color: '#0F9F6E' }} numberOfLines={1}>
+                    Approved — post on TikTok &amp; paste the link
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {item.count > 1 ? (
+                    <View style={{ minWidth: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(16,159,110,0.16)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 }}>
+                      <Text style={{ color: '#0F9F6E', fontSize: 11, fontWeight: '800', fontFamily: typography.fontFamily }}>{item.count}</Text>
+                    </View>
+                  ) : null}
+                  <MaterialCommunityIcons name="arrow-right" size={18} color={redesign.color.muted} />
+                </View>
+              </Pressable>
+            </Animated.View>
+          ))}
+        </Animated.View>
+      ) : null}
+
+      {/* History — your past work, calm and scannable */}
       {history.length > 0 ? (
-        <Animated.View entering={FadeInDown.delay(200).duration(300)} style={{ gap: 12 }}>
+        <Animated.View entering={FadeInDown.delay(180).duration(300)} style={{ gap: 12 }}>
           <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase' }}>
             History
           </Text>
-          {history.map((item, index) => {
-            // Once the TikTok link is in, the deliverable is done — show "Live", not the raw
-            // (often still 'submitted'/'pending_review') status.
+          {history.map((item) => {
             const isLive = !!item.url && /^https?:\/\//i.test(item.url)
             const cfg = isLive
               ? { label: 'Live', color: '#0EA5E9', icon: 'star-circle-outline' as const }
               : STATUS_CONFIG[item.status] || { label: item.status, color: redesign.color.muted, icon: 'circle-outline' as const }
-            const platform = item.platform ? `${item.platform.charAt(0).toUpperCase()}${item.platform.slice(1)}` : 'TikTok'
             return (
-              <Animated.View key={item.id} entering={FadeInDown.delay(index * 40).duration(250)}>
-                <Pressable
-                  onPress={() => openCampaignVideos(item.campaignId)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 14,
-                    backgroundColor: redesign.color.card,
-                    borderRadius: 18,
-                    borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: redesign.color.hairlineStrong,
-                    padding: 14,
-                    ...redesign.shadow.card,
-                  }}
-                >
-                  {/* Status icon */}
-                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${cfg.color}14`, alignItems: 'center', justifyContent: 'center' }}>
-                    <MaterialCommunityIcons name={cfg.icon} size={20} color={cfg.color} />
-                  </View>
-
-                  {/* Info */}
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }} numberOfLines={1}>
-                      {item.campaignTitle}
-                    </Text>
-                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.muted }}>
-                      {platform} · Video {historyVideoNo.get(item.id) ?? 1}
-                    </Text>
-                  </View>
-
-                  {/* Approval chip (only while parent campaign is reviewing/posting) */}
-                  {(() => {
-                    const chip = isLive ? null : approvalChip(item.campaignPhase, item.approvalStatus, item.readyForPosting)
-                    return chip ? (
-                      <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: chip.bg }}>
-                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: chip.text }}>
-                          {chip.label}
-                        </Text>
-                      </View>
-                    ) : null
-                  })()}
-
-                  {/* Status pill */}
-                  <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: `${cfg.color}14` }}>
-                    <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: cfg.color }}>
-                      {cfg.label}
-                    </Text>
-                  </View>
-                </Pressable>
-              </Animated.View>
+              <Pressable
+                key={item.id}
+                onPress={() => openCampaignVideos(item.campaignId)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 14, ...redesign.shadow.card }}
+              >
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${cfg.color}14`, alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialCommunityIcons name={cfg.icon} size={20} color={cfg.color} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }} numberOfLines={1}>
+                    {item.campaignTitle}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.muted }}>
+                    {item.platform ? `${item.platform.charAt(0).toUpperCase()}${item.platform.slice(1)}` : 'TikTok'}
+                  </Text>
+                </View>
+                <View style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: `${cfg.color}14` }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700', color: cfg.color }}>{cfg.label}</Text>
+                </View>
+              </Pressable>
             )
           })}
         </Animated.View>

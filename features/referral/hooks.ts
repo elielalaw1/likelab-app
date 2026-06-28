@@ -11,6 +11,10 @@ export function useReferral() {
     staleTime: 30_000,
     gcTime: 30 * 60 * 1000,
     refetchOnMount: true,
+    // Auto-clear the "setting up your invite code…" pending state: poll briefly
+    // while the backend code hasn't landed yet, then stop.
+    refetchInterval: (query) => (query.state.data && query.state.data.hasBackendCode === false ? 4000 : false),
+    refetchIntervalInBackground: false,
     placeholderData: (previous) => previous,
   })
 }

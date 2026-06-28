@@ -73,19 +73,11 @@ export async function authorizeTikTok(): Promise<TikTokAuthorizationResult | nul
     // reject if it can't read a matching persisted state.
   }
 
-  // Register the state with the backend (table `tiktok_oauth_states`, owner-scoped,
-  // 10-min TTL) so the `exchange-tiktok-code` edge function can validate it
-  // server-side and burn it (single-use) — the CSRF backstop. The exchange always
-  // sends `state`, so this row must exist for the server to accept the code.
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id
-    if (userId) {
-      await supabase.from('tiktok_oauth_states').insert({ state, user_id: userId })
-    }
-  } catch {
-    // Non-fatal here; a failed insert surfaces as a rejected exchange the user can retry.
-  }
+  // NOTE: the `tiktok_oauth_states` CSRF-backstop table only exists on Test, not
+  // Live, so we don't register the state row here (the insert would just fail).
+  // `state` is still generated and sent through the OAuth round-trip below for
+  // local round-trip matching. Re-introduce the server-side registration once the
+  // table + validating `exchange-tiktok-code` are published to Live together.
 
   const params = new URLSearchParams({
     client_key: CLIENT_KEY,

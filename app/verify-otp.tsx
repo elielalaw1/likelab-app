@@ -17,15 +17,33 @@ import { consumePendingAuth } from '@/lib/pending-auth'
 import { updateCreatorProfile } from '@/features/profile/api'
 import { redesign, typography } from '@/features/core/theme'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { toast } from '@/features/shared/ui/Toast'
 
 const CODE_LENGTH = 6
 const RESEND_COOLDOWN_SECONDS = 60
+
+// supabase.functions.invoke sets `error` for transport (FunctionsFetchError) and
+// HTTP (FunctionsHttpError) failures — neither means "wrong code". Surface a
+// connectivity message for network errors, and the server's real error for HTTP.
+async function describeFunctionError(fnError: unknown, fallback: string): Promise<string> {
+  const e = fnError as { name?: string; message?: string; context?: { json?: () => Promise<{ error?: string }> } }
+  const isNetwork = e?.name === 'FunctionsFetchError' || /network|fetch|timeout|abort/i.test(e?.message ?? '')
+  if (isNetwork) return 'Connection problem — check your network and try again.'
+  if (e?.context?.json) {
+    try {
+      const body = await e.context.json()
+      if (body?.error) return body.error
+    } catch {
+      // fall through to fallback
+    }
+  }
+  return fallback
+}
 
 export default function VerifyOtpPage() {
   const { email } = useLocalSearchParams<{ email: string }>()
   const pendingRef = useRef(consumePendingAuth())
   const passwordRef = useRef(pendingRef.current?.password ?? null)
-  const phoneRef = useRef(pendingRef.current?.phone ?? null)
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''))
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
@@ -73,7 +91,11 @@ export default function VerifyOtpPage() {
       const { data, error: fnError } = await supabase.functions.invoke('verify-email-otp', {
         body: { email, code },
       })
-      if (fnError || !data?.success) {
+      if (fnError) {
+        setError(await describeFunctionError(fnError, 'Something went wrong. Please try again.'))
+        return
+      }
+      if (!data?.success) {
         setError(data?.error ?? 'Invalid or expired code.')
         return
       }
@@ -98,7 +120,15 @@ export default function VerifyOtpPage() {
         if (pending?.county) profileUpdate.county = pending.county
         if (pending?.city) profileUpdate.city = pending.city
         if (Object.keys(profileUpdate).length > 0) {
-          await updateCreatorProfile(profileUpdate as Parameters<typeof updateCreatorProfile>[0]).catch(() => null)
+          try {
+            await updateCreatorProfile(profileUpdate as Parameters<typeof updateCreatorProfile>[0])
+          } catch (profileError) {
+            // Don't lose this silently — the signup details (incl. phone/county/city
+            // not covered by the completion card) failed to persist. Tell the user
+            // and let them finish in Settings rather than pretending it saved.
+            console.warn('[verify-otp] profile save after signup failed:', profileError)
+            toast.error("We couldn't save part of your profile — you can finish it in Settings.")
+          }
         }
         router.replace('/connect-tiktok')
         return
@@ -122,7 +152,11 @@ export default function VerifyOtpPage() {
       const { data, error: fnError } = await supabase.functions.invoke('resend-verification', {
         body: { email },
       })
-      if (fnError || !data?.success) {
+      if (fnError) {
+        setError(await describeFunctionError(fnError, 'Could not resend code. Please try again.'))
+        return
+      }
+      if (!data?.success) {
         setError(data?.error ?? 'Could not resend code.')
         return
       }

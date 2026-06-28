@@ -8,7 +8,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { supabase } from '@/lib/supabase'
 import { useCampaign } from '@/features/campaigns/hooks'
-import { getDaysLeft, formatRewardType } from '@/features/core/format'
+import { getDaysLeft, isCampaignClosed, formatRewardType } from '@/features/core/format'
 import { redesign, typography } from '@/features/core/theme'
 
 type Position = { rank: number; total_creators: number; my_views: number; my_likes: number; top_views: number }
@@ -125,7 +125,7 @@ export default function LeaderboardPage() {
                   <View style={{ alignItems: 'flex-end', gap: 6 }}>
                     <MicroLabel>Ends in</MicroLabel>
                     <Text style={{ fontFamily: typography.fontFamily, fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5, fontVariant: ['tabular-nums'] }}>
-                      {endsIn == null ? 'Open' : `${endsIn}d`}
+                      {endsIn == null ? 'Open' : isCampaignClosed(campaign?.endDate) ? 'Closed' : endsIn === 0 ? 'Last day' : `${endsIn}d`}
                     </Text>
                   </View>
                 </View>

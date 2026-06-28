@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getDeliverableFeedback, getDeliverables, getLatestSubmission, getSubmissionById, getUnreadFeedbackCounts, markFeedbackRead, submitDeliverableUrl, submitLink, uploadVideo } from '@/features/deliverables/api'
+import { getDeliverableFeedback, getDeliverables, getLatestSubmission, getSubmissionById, getUnreadFeedbackCounts, isAwaitingLink, markFeedbackRead, submitLink, uploadVideo } from '@/features/deliverables/api'
 import { VideoCompressionOptions } from '@/lib/video-compression'
 
 const queryPerf = {
@@ -22,7 +22,7 @@ export function useDeliverables() {
 export function useDeliverablesBadgeCount() {
   const { data } = useDeliverables()
   return useMemo(
-    () => (data || []).filter((d) => d.status === 'pending' || d.status === 'revision_requested').length,
+    () => (data || []).filter((d) => d.status === 'pending' || d.status === 'revision_requested' || isAwaitingLink(d)).length,
     [data]
   )
 }
@@ -32,8 +32,15 @@ export function useDeliverableFeedback(deliverableId?: string) {
     queryKey: ['deliverable-feedback', deliverableId],
     queryFn: () => getDeliverableFeedback(deliverableId || ''),
     enabled: Boolean(deliverableId),
-    staleTime: 60 * 1000,
+    staleTime: 15 * 1000,
     gcTime: 30 * 60 * 1000,
+    // Realtime for `deliverable_feedback` isn't in the Live publication, so brand
+    // feedback sent while the app is open never invalidates this query. Poll as the
+    // fallback so a new thread/message surfaces without a manual pull-to-refresh,
+    // and refetch when the screen/app regains focus.
+    refetchInterval: 15 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   })
 }
 
@@ -44,6 +51,9 @@ export function useUnreadFeedbackCounts() {
     queryFn: getUnreadFeedbackCounts,
     ...queryPerf,
     placeholderData: (previous) => previous,
+    // Same realtime gap as the thread above — poll so the unread badge appears
+    // even when no realtime event fires on Live.
+    refetchInterval: 30 * 1000,
   })
 }
 
@@ -55,18 +65,6 @@ export function useMarkFeedbackRead() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deliverable-feedback'] })
       queryClient.invalidateQueries({ queryKey: ['feedback-unread'] })
-    },
-  })
-}
-
-export function useSubmitDeliverable() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: submitDeliverableUrl,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deliverables'] })
-      queryClient.invalidateQueries({ queryKey: ['deliverables', 'campaign'] })
     },
   })
 }
@@ -127,7 +125,13 @@ export function useUploadVideo() {
           // type on the passthrough/fallback path).
           fileName: compressed.fileName,
           fileSize: compressed.estimatedSize,
-          mimeType: compressed.mime,
+          // On the passthrough/fallback path the compressor can't sniff the type
+          // and returns 'application/octet-stream' — prefer the picker's real
+          // mime so Storage records a correct video Content-Type.
+          mimeType:
+            compressed.mime && compressed.mime !== 'application/octet-stream'
+              ? compressed.mime
+              : params.mimeType ?? compressed.mime,
         })
 
         setStage('processing')

@@ -6,9 +6,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { redesign, typography } from '@/features/core/theme'
-import { useApplications } from '@/features/applications/hooks'
-import { computeTier, getTierLadder, type TierLadderEntry } from '@/features/profile/tiers'
-import { TierProgressCard, TierRing } from '@/features/profile/ui/TierBadge'
+import { useReputation } from '@/features/profile/hooks'
+import { getTierLadder, type TierLadderEntry } from '@/features/profile/tiers'
+import { ReputationCard, TierProgressCard, TierRing } from '@/features/profile/ui/TierBadge'
 
 const glyph = (name: string) => name as keyof typeof MaterialCommunityIcons.glyphMap
 
@@ -16,9 +16,9 @@ function LadderRow({ entry, index }: { entry: TierLadderEntry; index: number }) 
   const { tier, achieved, current } = entry
   const locked = !achieved
   const requirement =
-    tier.minApplications === 0
+    tier.minCompleted === 0
       ? 'Starting level — everyone begins here'
-      : `Apply to ${tier.minApplications} campaign${tier.minApplications === 1 ? '' : 's'}`
+      : `Complete ${tier.minCompleted} deliverable${tier.minCompleted === 1 ? '' : 's'}`
 
   return (
     <Animated.View
@@ -69,10 +69,8 @@ function LadderRow({ entry, index }: { entry: TierLadderEntry; index: number }) 
 }
 
 export default function TiersPage() {
-  const { data } = useApplications()
-  const applied = data?.applications.length ?? 0
-  const progress = useMemo(() => computeTier({ appliedCampaigns: applied }), [applied])
-  const ladder = useMemo(() => getTierLadder(applied), [applied])
+  const { reputation, tier: progress } = useReputation()
+  const ladder = useMemo(() => getTierLadder(reputation.completed), [reputation.completed])
 
   return (
     <Screen tabAware={false} bgColor={redesign.color.bg}>
@@ -95,11 +93,13 @@ export default function TiersPage() {
           Creator levels
         </Text>
         <Text style={{ fontSize: 14.5, fontWeight: '500', color: redesign.color.muted, fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
-          Apply to more campaigns to climb the ladder and earn your next emblem.
+          Complete deliverables to climb the ladder and build your reputation.
         </Text>
       </Animated.View>
 
       <TierProgressCard progress={progress} />
+
+      <ReputationCard reputation={reputation} tint={progress.tier.color} />
 
       <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily, marginTop: 2 }}>
         All levels

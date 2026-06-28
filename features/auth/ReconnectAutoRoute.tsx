@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { router } from 'expo-router'
+import { router, useSegments } from 'expo-router'
 import * as SecureStore from 'expo-secure-store'
 import { useCreatorProfile } from '@/features/profile/hooks'
 
@@ -13,10 +13,14 @@ const COOLDOWN_MS = 24 * 60 * 60 * 1000
  */
 export function ReconnectAutoRoute() {
   const { data: profile } = useCreatorProfile()
+  const segments = useSegments()
   const triggeredThisMount = useRef(false)
 
   useEffect(() => {
     if (!profile || triggeredThisMount.current) return
+    // Only nudge from a main tab screen — never yank the user out of a deep
+    // sub-flow (campaign detail, upload, settings, an open modal, …).
+    if (segments[0] !== '(tabs)') return
 
     const needsReconnect =
       profile.tiktokConnected &&
@@ -35,7 +39,7 @@ export function ReconnectAutoRoute() {
       await SecureStore.setItemAsync(RECONNECT_PROMPT_KEY, String(Date.now())).catch(() => {})
       router.push('/connect-tiktok')
     })()
-  }, [profile])
+  }, [profile, segments])
 
   return null
 }

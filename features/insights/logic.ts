@@ -80,7 +80,10 @@ export function buildChart(values: number[], width: number, height: number, pad 
   const last = points[points.length - 1]
   const area = `${line} L ${round(last.x)} ${height} L ${round(first.x)} ${height} Z`
 
-  return { points, linePath: line, areaPath: area, length }
+  // Over-estimate the on-screen length: a cubic segment is always ≥ its chord, so
+  // the chord-sum under-shoots and the draw-on animation stops short of the newest
+  // point. Padding is harmless — a stroke can't extend past its own path end.
+  return { points, linePath: line, areaPath: area, length: length * 1.25 + 8 }
 }
 
 function round(n: number) {

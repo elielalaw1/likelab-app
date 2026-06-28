@@ -1,12 +1,15 @@
-// Creator tier / status ladder — a purely cosmetic, motivational progression
-// shown inside the app. No backend gating: tier is computed CLIENT-SIDE from
-// data already on the profile, and the "unlocks" (e.g. invite-only campaigns)
-// are aspirational flavour to drive engagement, not enforced access control.
+// Creator tier / status ladder — a motivational progression shown inside the app.
+// Tier is computed CLIENT-SIDE from data already on the device.
 //
-// Progression axis = campaigns the creator has APPLIED to (engagement). Applying
-// to the very first campaign lifts them off "Newcomer" into Rookie — an early,
-// visible reward. Pure + render-free so thresholds stay unit-testable
-// (see __tests__/tiers.test.ts).
+// Progression axis = deliverables the creator has COMPLETED (approved/published).
+// This deliberately rewards finishing good WORK, not applying — an applications-
+// based ladder trained creators to spam applications for status. Standing earned
+// here is non-monetary and non-zero-sum: it's the creator's track record, the
+// thing that gives them a reason to keep performing between campaigns. Completing
+// the first deliverable lifts them off "Newcomer" into Rookie — an early, visible
+// reward. See features/profile/reputation.ts for the richer signal breakdown that
+// shares this same "completed deliverable" definition. Pure + render-free so
+// thresholds stay unit-testable (see __tests__/tiers.test.ts).
 
 export type TierId =
   | 'newcomer'
@@ -35,69 +38,71 @@ export type Tier = {
   // MaterialCommunityIcons glyph name for the emblem (cast in the UI layer to
   // keep this file free of renderer imports).
   emblem: string
-  // Minimum campaigns applied-to required to reach this tier (inclusive).
-  minApplications: number
+  // Minimum completed deliverables required to reach this tier (inclusive).
+  minCompleted: number
 }
 
-// Ascending ladder. Level 1 (Newcomer) is the pre-application default; level 2
-// (Rookie) is earned by the first application; Legend is the holographic capstone.
+// Ascending ladder. Level 1 (Newcomer) is the pre-completion default; level 2
+// (Rookie) is earned by the first completed deliverable; Legend is the
+// holographic capstone. Thresholds are scaled for completed WORK (much scarcer
+// than applications), so the early levels come quickly and the top is a grind.
 export const TIERS: readonly Tier[] = [
-  { id: 'newcomer',     level: 1,  label: 'Newcomer',              short: 'New',      color: '#9AA0AD', ring: ['#CBD0D8', '#9AA0AD'],                     emblem: 'sprout-outline',   minApplications: 0 },
-  { id: 'rookie',       level: 2,  label: 'Rookie creator',        short: 'Rookie',   color: '#4FA86B', ring: ['#8FD6A6', '#4FA86B'],                     emblem: 'sprout',           minApplications: 1 },
-  { id: 'rising',       level: 3,  label: 'Rising creator',        short: 'Rising',   color: '#1FC8E8', ring: ['#7FE3F3', '#1FC8E8'],                     emblem: 'trending-up',      minApplications: 3 },
-  { id: 'contender',    level: 4,  label: 'Contender creator',     short: 'Contender',color: '#F2994A', ring: ['#FFC78A', '#F2994A'],                     emblem: 'fire',             minApplications: 6 },
-  { id: 'established',  level: 5,  label: 'Established creator',    short: 'Estab.',   color: '#5B8DEF', ring: ['#9DBCFF', '#5B8DEF'],                     emblem: 'star-four-points', minApplications: 10 },
-  { id: 'seasoned',     level: 6,  label: 'Seasoned creator',      short: 'Seasoned', color: '#B0764A', ring: ['#E4B483', '#B0764A'],                     emblem: 'shield-star',      minApplications: 15 },
-  { id: 'pro',          level: 7,  label: 'Pro creator',           short: 'Pro',      color: '#8A9099', ring: ['#DBE0E8', '#9AA0AD'],                     emblem: 'medal',            minApplications: 22 },
-  { id: 'professional', level: 8,  label: 'Professional creator',  short: 'Pro+',     color: '#D9A21B', ring: ['#FFE39A', '#F2A93C'],                     emblem: 'trophy',           minApplications: 32 },
-  { id: 'elite',        level: 9,  label: 'Elite creator',         short: 'Elite',    color: '#F25CC1', ring: ['#7A3FF2', '#F25CC1'],                     emblem: 'crown',            minApplications: 45 },
-  { id: 'legend',       level: 10, label: 'Legend creator',        short: 'Legend',   color: '#7A3FF2', ring: ['#F5C73C', '#F25CC1', '#7A3FF2', '#1FC8E8'], emblem: 'diamond-stone',    minApplications: 60 },
+  { id: 'newcomer',     level: 1,  label: 'Newcomer',              short: 'New',      color: '#9AA0AD', ring: ['#CBD0D8', '#9AA0AD'],                     emblem: 'sprout-outline',   minCompleted: 0 },
+  { id: 'rookie',       level: 2,  label: 'Rookie creator',        short: 'Rookie',   color: '#4FA86B', ring: ['#8FD6A6', '#4FA86B'],                     emblem: 'sprout',           minCompleted: 1 },
+  { id: 'rising',       level: 3,  label: 'Rising creator',        short: 'Rising',   color: '#1FC8E8', ring: ['#7FE3F3', '#1FC8E8'],                     emblem: 'trending-up',      minCompleted: 2 },
+  { id: 'contender',    level: 4,  label: 'Contender creator',     short: 'Contender',color: '#F2994A', ring: ['#FFC78A', '#F2994A'],                     emblem: 'fire',             minCompleted: 4 },
+  { id: 'established',  level: 5,  label: 'Established creator',    short: 'Estab.',   color: '#5B8DEF', ring: ['#9DBCFF', '#5B8DEF'],                     emblem: 'star-four-points', minCompleted: 6 },
+  { id: 'seasoned',     level: 6,  label: 'Seasoned creator',      short: 'Seasoned', color: '#B0764A', ring: ['#E4B483', '#B0764A'],                     emblem: 'shield-star',      minCompleted: 9 },
+  { id: 'pro',          level: 7,  label: 'Pro creator',           short: 'Pro',      color: '#8A9099', ring: ['#DBE0E8', '#9AA0AD'],                     emblem: 'medal',            minCompleted: 13 },
+  { id: 'professional', level: 8,  label: 'Professional creator',  short: 'Pro+',     color: '#D9A21B', ring: ['#FFE39A', '#F2A93C'],                     emblem: 'trophy',           minCompleted: 18 },
+  { id: 'elite',        level: 9,  label: 'Elite creator',         short: 'Elite',    color: '#F25CC1', ring: ['#7A3FF2', '#F25CC1'],                     emblem: 'crown',            minCompleted: 25 },
+  { id: 'legend',       level: 10, label: 'Legend creator',        short: 'Legend',   color: '#7A3FF2', ring: ['#F5C73C', '#F25CC1', '#7A3FF2', '#1FC8E8'], emblem: 'diamond-stone',    minCompleted: 35 },
 ] as const
 
 export type TierInput = {
-  // Number of campaigns the creator has applied to (any status).
-  appliedCampaigns: number
+  // Number of deliverables the creator has completed (approved/published).
+  completedDeliverables: number
 }
 
 export type TierProgress = {
   tier: Tier
   // The tier above the current one, or null at the top of the ladder.
   next: Tier | null
-  // Applications accumulated within the CURRENT tier band (>= 0).
+  // Completed deliverables accumulated within the CURRENT tier band (>= 0).
   current: number
-  // Applications spanning the current band → next threshold, or null at top.
+  // Completed deliverables spanning the current band → next threshold, or null at top.
   target: number | null
-  // Applications still required to level up (0 at top).
+  // Completed deliverables still required to level up (0 at top).
   remaining: number
   // Fill ratio of the current tier band, 0..1 (1 at top).
   fraction: number
-  // Total applications counted (normalised, never negative).
-  appliedCampaigns: number
+  // Total completed deliverables counted (normalised, never negative).
+  completedDeliverables: number
 }
 
 // Resolves the current tier + progress toward the next one from how many
-// campaigns the creator has applied to. Defensive against junk input.
+// deliverables the creator has completed. Defensive against junk input.
 export function computeTier(input: TierInput): TierProgress {
-  const applied = Number.isFinite(input.appliedCampaigns) ? Math.max(0, Math.floor(input.appliedCampaigns)) : 0
+  const completed = Number.isFinite(input.completedDeliverables) ? Math.max(0, Math.floor(input.completedDeliverables)) : 0
 
   // Highest tier whose threshold the creator has met.
   let index = 0
   for (let i = 0; i < TIERS.length; i++) {
-    if (applied >= TIERS[i].minApplications) index = i
+    if (completed >= TIERS[i].minCompleted) index = i
   }
   const tier = TIERS[index]
   const next = index < TIERS.length - 1 ? TIERS[index + 1] : null
 
   if (!next) {
-    return { tier, next: null, current: applied - tier.minApplications, target: null, remaining: 0, fraction: 1, appliedCampaigns: applied }
+    return { tier, next: null, current: completed - tier.minCompleted, target: null, remaining: 0, fraction: 1, completedDeliverables: completed }
   }
 
-  const span = next.minApplications - tier.minApplications
-  const into = applied - tier.minApplications
+  const span = next.minCompleted - tier.minCompleted
+  const into = completed - tier.minCompleted
   const fraction = span > 0 ? Math.min(1, Math.max(0, into / span)) : 0
-  const remaining = Math.max(0, next.minApplications - applied)
+  const remaining = Math.max(0, next.minCompleted - completed)
 
-  return { tier, next, current: into, target: span, remaining, fraction, appliedCampaigns: applied }
+  return { tier, next, current: into, target: span, remaining, fraction, completedDeliverables: completed }
 }
 
 export type TierLadderEntry = {
@@ -112,12 +117,12 @@ export type TierLadderEntry = {
 
 // The full ladder annotated with the creator's progress — for the "Creator
 // levels" screen where every tier and its requirement is listed.
-export function getTierLadder(appliedCampaigns: number): TierLadderEntry[] {
-  const { tier: currentTier, next } = computeTier({ appliedCampaigns })
-  const applied = Number.isFinite(appliedCampaigns) ? Math.max(0, Math.floor(appliedCampaigns)) : 0
+export function getTierLadder(completedDeliverables: number): TierLadderEntry[] {
+  const { tier: currentTier, next } = computeTier({ completedDeliverables })
+  const completed = Number.isFinite(completedDeliverables) ? Math.max(0, Math.floor(completedDeliverables)) : 0
   return TIERS.map((tier) => ({
     tier,
-    achieved: applied >= tier.minApplications,
+    achieved: completed >= tier.minCompleted,
     current: tier.id === currentTier.id,
     isNext: next != null && tier.id === next.id,
   }))

@@ -5,20 +5,12 @@ import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { haptic } from '@/features/shared/haptics'
 import { useSubmitLink } from '@/features/deliverables/hooks'
+import { isValidTikTokUrl } from '@/lib/validate-tiktok-url'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 type Props = {
   deliverableId: string
   submitLabel?: string
-}
-
-function isValidUrl(value: string) {
-  try {
-    const parsed = new URL(value.trim())
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-  } catch {
-    return false
-  }
 }
 
 export function LinkSubmitRow({ deliverableId, submitLabel = 'Submit link' }: Props) {
@@ -27,11 +19,11 @@ export function LinkSubmitRow({ deliverableId, submitLabel = 'Submit link' }: Pr
   const { mutateAsync, isPending } = useSubmitLink()
 
   const trimmed = url.trim()
-  const canSubmit = !isPending && isValidUrl(trimmed)
+  const canSubmit = !isPending && isValidTikTokUrl(trimmed)
 
   const handleSubmit = async () => {
-    if (!isValidUrl(trimmed)) {
-      Alert.alert('Invalid link', 'Please paste a valid link starting with https://')
+    if (!isValidTikTokUrl(trimmed)) {
+      Alert.alert('Invalid TikTok link', 'Please paste the full link to your TikTok video — it should start with https:// and contain tiktok.com.')
       return
     }
     haptic.light()

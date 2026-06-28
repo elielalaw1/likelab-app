@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { TextInput, TextProps } from 'react-native'
 import Animated, {
   Easing,
@@ -44,8 +44,15 @@ type CountUpProps = {
 
 export function CountUp({ value, duration = timings.slow, style, prefix = '', suffix = '' }: CountUpProps) {
   const shared = useSharedValue(0)
+  const mounted = useRef(false)
   useEffect(() => {
-    shared.value = 0
+    // First mount counts up from 0; afterwards animate the delta from the current
+    // value instead of snapping back to 0 (which flickered live stats to zero on
+    // every refresh).
+    if (!mounted.current) {
+      mounted.current = true
+      shared.value = 0
+    }
     shared.value = withTiming(value, { duration, easing: Easing.out(Easing.cubic) })
   }, [value, duration, shared])
   const animatedProps = useAnimatedProps(() => ({

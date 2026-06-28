@@ -235,8 +235,18 @@ export function ProfileCoachmarks({ steps, scrollRef, contentY }: {
         </>
       ) : (
         // Measuring the next element — dim the screen so the jump isn't jarring,
-        // and swallow taps until the spotlight lands.
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: DIM }]} onPress={() => {}} />
+        // and swallow taps until the spotlight lands. Always keep a Skip escape so a
+        // measurement that never resolves can't soft-lock the user on a dim,
+        // tap-swallowing screen.
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: DIM }]} onPress={() => {}}>
+          <Pressable
+            onPress={skip}
+            hitSlop={10}
+            style={{ position: 'absolute', top: 60, right: 18, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)' }}
+          >
+            <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '800', color: '#fff' }}>Skip</Text>
+          </Pressable>
+        </Pressable>
       )}
     </View>
   )

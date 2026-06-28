@@ -199,9 +199,15 @@ export function CreatorPendingGate({ state }: Props) {
             {rejected ? (
               <Pressable
                 onPress={() => {
+                  // Start each appeal fresh — otherwise a previous reason/date/time
+                  // lingers and could be re-submitted.
                   setAppealStep(1)
                   setAppealOpen(true)
                   setBookingError('')
+                  setAppealReason('')
+                  setSelectedDate('')
+                  setSelectedTime('')
+                  setBookingLoading(false)
                 }}
                 style={{
                   minHeight: 40,
@@ -392,7 +398,9 @@ export function CreatorPendingGate({ state }: Props) {
             {appealStep === 3 ? (
               <View style={{ gap: 10 }}>
                 <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 20, fontFamily: typography.fontFamily }}>
-                  Your appeal draft is ready. A meeting booking integration can submit this to the backend once wired.
+                  {selectedDate && selectedTime
+                    ? `Your appeal call is booked for ${formatDateLabel(selectedDate)} at ${selectedTime}. Our team will review your appeal and follow up.`
+                    : 'Your appeal has been submitted. Our team will review it and follow up.'}
                 </Text>
                 <View style={{ borderRadius: 12, borderWidth: 1, borderColor: palette.borderColor, padding: 10, gap: 6 }}>
                   <Text style={{ color: palette.text, fontSize: 12, fontWeight: '700', fontFamily: typography.fontFamily }}>Reason</Text>

@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { applyToCampaign, getCampaignById, getCampaignDeliverables, getCampaigns } from '@/features/campaigns/api'
 import { supabase } from '@/lib/supabase'
+import { toast } from '@/features/shared/ui/Toast'
 
 const queryPerf = {
   staleTime: 6 * 60 * 60 * 1000,
@@ -21,6 +22,10 @@ export function useCampaigns() {
 
 export function useCampaign(campaignId?: string) {
   const queryClient = useQueryClient()
+  // Unique per hook instance so the detail screen and a stacked leaderboard
+  // screen don't share one channel topic (removeChannel on one would tear down
+  // the other's live updates).
+  const instanceId = useId()
 
   const query = useQuery({
     queryKey: ['campaigns', campaignId],
@@ -39,7 +44,7 @@ export function useCampaign(campaignId?: string) {
     if (!campaignId) return
 
     const channel = supabase
-      .channel(`campaign-${campaignId}`)
+      .channel(`campaign-${campaignId}-${instanceId}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'campaigns', filter: `id=eq.${campaignId}` },
@@ -54,7 +59,7 @@ export function useCampaign(campaignId?: string) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [campaignId, queryClient])
+  }, [campaignId, queryClient, instanceId])
 
   return query
 }
@@ -98,9 +103,12 @@ export function useApplyToCampaign() {
       }
       return { prevList, prevDetail, campaignId }
     },
-    onError: (_err, campaignId, context) => {
+    onError: (err, campaignId, context) => {
       if (context?.prevList) queryClient.setQueryData(['campaigns'], context.prevList)
       if (context?.prevDetail) queryClient.setQueryData(['campaigns', campaignId], context.prevDetail)
+      // Surface failures centrally so every caller (Discover quick-apply included)
+      // reports a failed apply instead of flashing a false success.
+      toast.error(err instanceof Error ? err.message : 'Could not apply')
     },
     onSettled: (_data, _err, campaignId) => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })

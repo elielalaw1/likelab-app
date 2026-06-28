@@ -182,7 +182,11 @@ export function VideoReviewActions({ deliverableId }: { deliverableId: string })
   if (replacing) {
     return (
       <View style={{ gap: 8 }}>
-        <VideoUploadRow deliverableId={deliverableId} submitLabel="Upload new video" />
+        <VideoUploadRow
+          deliverableId={deliverableId}
+          submitLabel="Upload new video"
+          onDone={() => { refresh(); setTimeout(() => setReplacing(false), 1200) }}
+        />
         <Pressable onPress={() => setReplacing(false)} style={{ alignSelf: 'center', paddingVertical: 6 }}>
           <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600' }}>Cancel</Text>
         </Pressable>

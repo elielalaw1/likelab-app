@@ -1,5 +1,6 @@
 import { File } from 'expo-file-system'
-import { supabase } from '@/lib/supabase'
+import { uploadAsync, FileSystemUploadType } from 'expo-file-system/legacy'
+import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase'
 import { Deliverable, DeliverableFeedback, DeliverableSubmission, mapFeedbackRow, mapSubmissionRow } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
 
@@ -30,28 +31,15 @@ export async function getDeliverables() {
       platform: textValue(row, ['platform']) || 'tiktok',
       type: textValue(row, ['type']),
       url: textValue(row, ['url']),
-      notes: textValue(row, ['notes']),
       flagReason: textValue(row, ['flag_reason']),
       campaignBrandName: null,
     }
   })
 }
 
-export async function submitDeliverableUrl(params: { deliverableId: string; url: string }) {
-  const userId = await getCurrentUserId()
-
-  const { error } = await supabase
-    .from('deliverables')
-    .update({
-      url: params.url,
-      status: 'submitted',
-      platform: 'tiktok',
-    })
-    .eq('id', params.deliverableId)
-    .eq('creator_id', userId)
-
-  if (error) throw new Error(error.message)
-}
+// isAwaitingLink lives in ./logic (pure, unit-tested); re-exported here so the
+// existing importers keep their import path.
+export { isAwaitingLink } from '@/features/deliverables/logic'
 
 export async function submitLink(params: { deliverableId: string; url: string }): Promise<DeliverableSubmission> {
   const userId = await getCurrentUserId()
@@ -97,20 +85,49 @@ export async function uploadVideo(params: {
   const safeName = params.fileName.replace(/[^\w.-]+/g, '_')
   const storagePath = `${userId}/${Date.now()}_${params.deliverableId}_${safeName}`
 
-  // Read the real bytes via expo-file-system. fetch(uri).blob() on a local
-  // file:// URI returns a 0-byte blob in React Native, which uploads an empty
-  // file and makes the edge function reject it ("video file is empty").
   const fileUri = params.fileUri.startsWith('file://') ? params.fileUri : `file://${params.fileUri}`
-  const bytes = await new File(fileUri).bytes()
-  if (!bytes || bytes.byteLength === 0) {
+
+  // Empty/unreadable guard using metadata ONLY — never materialize the whole
+  // video into a JS Uint8Array (that OOMs on long clips).
+  let fileSizeBytes = 0
+  try {
+    fileSizeBytes = new File(fileUri).size ?? 0
+  } catch {
+    fileSizeBytes = 0
+  }
+  if (!fileSizeBytes) {
     throw new Error('The selected video file is empty or unreadable. Please pick the video again.')
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from('deliverable-videos')
-    .upload(storagePath, bytes, { contentType: mimeType, upsert: true })
+  // Stream the bytes straight from disk to Supabase Storage's REST endpoint via
+  // the native upload task. This keeps the file out of the JS heap (no OOM on
+  // long videos) and also sidesteps the 0-byte-blob issue that fetch(uri).blob()
+  // hits for file:// URIs in React Native.
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
+  if (!accessToken) {
+    throw new Error('You are signed out. Please sign in again and retry the upload.')
+  }
 
-  if (uploadError) throw new Error(uploadError.message)
+  const encodedPath = storagePath.split('/').map(encodeURIComponent).join('/')
+  const uploadResult = await uploadAsync(
+    `${supabaseUrl}/storage/v1/object/deliverable-videos/${encodedPath}`,
+    fileUri,
+    {
+      httpMethod: 'POST',
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: supabaseAnonKey,
+        'Content-Type': mimeType,
+        'x-upsert': 'true',
+        'cache-control': '3600',
+      },
+    }
+  )
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    throw new Error(`Video upload failed (status ${uploadResult.status}). Please try again.`)
+  }
 
   const { data, error } = await supabase
     .from('deliverable_submissions')

@@ -2,9 +2,9 @@ import { Text, View } from 'react-native'
 import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 
-type Props = { status?: string | null }
+type Props = { status?: string | null; context?: 'campaign' | 'deliverable' }
 
-export function StatusBadge({ status }: Props) {
+export function StatusBadge({ status, context }: Props) {
   const { palette } = useTheme()
 
   const statusMap: Record<string, { bg: string; text: string; label: string }> = {
@@ -35,7 +35,14 @@ export function StatusBadge({ status }: Props) {
 
   const raw = (status || '').toLowerCase().trim()
   const mapped = statusMap[raw]
-  const label = mapped?.label || raw.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN'
+  let label = mapped?.label || raw.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN'
+  // The shared map is campaign-centric ('approved'/'published' → 'ACTIVE'). For a
+  // deliverable those statuses mean something different, so relabel them here
+  // without disturbing the campaign vocabulary.
+  if (context === 'deliverable') {
+    if (raw === 'approved') label = 'APPROVED'
+    else if (raw === 'published') label = 'POSTED'
+  }
 
   return (
     <View

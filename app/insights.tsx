@@ -15,7 +15,6 @@ import Animated, {
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useQueryClient } from '@tanstack/react-query'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
@@ -88,10 +87,10 @@ function TrendBadge({ trend }: { trend: Trend }) {
     >
       <MaterialCommunityIcons name={up ? 'trending-up' : 'trending-down'} size={15} color={tint} />
       <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '800', color: tint, fontVariant: ['tabular-nums'] }}>
-        {up ? '+' : ''}{trend.percent}% views
+        {up ? '+' : ''}{trend.percent}%
       </Text>
       <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: redesign.color.muted }}>
-        vs last campaign
+        latest vs previous campaign
       </Text>
     </Animated.View>
   )
@@ -328,13 +327,13 @@ function CampaignRow({ item, index }: { item: CampaignInsight; index: number }) 
 }
 
 export default function InsightsPage() {
-  const queryClient = useQueryClient()
   const { data, isLoading, error, refetch } = useInsights()
 
   const onRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['insights'] })
+    // refetch() force-refetches the visible query regardless of staleTime — no need
+    // to also invalidate (that double-fetched the whole aggregation).
     await refetch()
-  }, [queryClient, refetch])
+  }, [refetch])
 
   // Chronological view of the campaigns (oldest → newest) for the trend chart
   // and the "vs last campaign" comparison. perCampaign itself is views-desc.
@@ -344,10 +343,15 @@ export default function InsightsPage() {
   )
   const chartValues = useMemo(() => chronological.map((c) => c.views), [chronological])
   const trend = useMemo<Trend | null>(() => {
-    if (chronological.length === 0) return null
+    if (chronological.length < 2) return null
     const latest = chronological[chronological.length - 1]
     const previous = chronological[chronological.length - 2]
-    return computeTrend(latest.views, previous?.views ?? null)
+    // Only compare two campaigns that BOTH have meaningful view counts — otherwise
+    // a freshly-launched campaign (few/0 views) yields a misleading large negative.
+    // This is a campaign-vs-campaign comparison of lifetime views, not a time trend.
+    const FLOOR = 100
+    if (latest.views < FLOOR || previous.views < FLOOR) return null
+    return computeTrend(latest.views, previous.views)
   }, [chronological])
 
   const topPerformer = data?.perCampaign[0]
@@ -397,6 +401,14 @@ export default function InsightsPage() {
           />
         ) : (
           <>
+            {data.partial ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 }}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={14} color={redesign.color.faint} />
+                <Text style={{ flex: 1, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.faint, lineHeight: 17 }}>
+                  Some campaigns couldn&apos;t be loaded — totals may be incomplete.
+                </Text>
+              </View>
+            ) : null}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <SummaryCell label="Total views" value={data.totalViews} mode="count" delay={120} />
               <SummaryCell label="Total likes" value={data.totalLikes} mode="count" delay={200} />

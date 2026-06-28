@@ -1,23 +1,23 @@
 import { Image as ExpoImage } from 'expo-image'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { Campaign } from '@/features/core/types'
 import { useEffect, useRef, useState } from 'react'
-import { formatRewardType } from '@/features/core/format'
+import { formatRewardType, getDaysLeft, isCampaignClosed } from '@/features/core/format'
 import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
 import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { useTheme } from '@/features/core/useTheme'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { PressableScale } from '@/features/shared/ui/PressableScale'
-import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, ReduceMotion } from 'react-native-reanimated'
+import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, cancelAnimation } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 
 type Props = {
   campaign: Campaign
   onPress?: () => void
-  onApply?: () => false | void
+  onApply?: () => boolean | void | Promise<boolean | void>
   badge?: number
   compact?: boolean
   index?: number
@@ -28,17 +28,8 @@ function formatPlatform(platform?: string | null) {
   return platform.replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-// Returns null when there's no end date (open-ended), -1 when the end date has
-// passed (closed), otherwise the whole number of days remaining (min 1).
-function daysRemaining(endDate?: string | null): number | null {
-  if (!endDate) return null
-  const diff = new Date(endDate).getTime() - Date.now()
-  if (diff <= 0) return -1
-  return Math.ceil(diff / (1000 * 60 * 60 * 24))
-}
-
 function isExpired(campaign: Campaign): boolean {
-  return daysRemaining(campaign.endDate) === -1
+  return isCampaignClosed(campaign.endDate)
 }
 
 function canApply(campaign: Campaign): boolean {
@@ -53,9 +44,10 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
   'use no memo'
   const { palette } = useTheme()
   const brandSheetRef = useRef<BottomSheetModal>(null)
-  const [applyState, setApplyState] = useState<'idle' | 'applied' | 'blocked'>('idle')
+  const [applyState, setApplyState] = useState<'idle' | 'pending' | 'applied' | 'blocked'>('idle')
   const applyingRef = useRef(false)
-  const days = daysRemaining(campaign.endDate)
+  const days = getDaysLeft(campaign.endDate)
+  const closed = isExpired(campaign)
   const showApply = canApply(campaign) && !!onApply
   const hasSocials = !!(campaign.brandInstagram || campaign.brandTiktok)
   const hasUrgentDeliverables = !!badge && badge > 0
@@ -63,12 +55,20 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
   const shimmer = useSharedValue(0)
   const [btnWidth, setBtnWidth] = useState(0)
   useEffect(() => {
+    // Only animate while the Apply pill is actually shown — the card otherwise
+    // ran a perpetual UI-thread loop on every mounted row. Default reduceMotion
+    // (System) honors the OS "Reduce Motion" setting.
+    if (!showApply) return
     shimmer.value = withRepeat(
-      withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin), reduceMotion: ReduceMotion.Never }),
+      withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sin) }),
       -1,
       false,
     )
-  }, [shimmer])
+    return () => {
+      cancelAnimation(shimmer)
+      shimmer.value = 0
+    }
+  }, [shimmer, showApply])
 
   const shimmerStyle = useAnimatedStyle(() => {
     const distance = btnWidth + 120
@@ -77,7 +77,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
     }
   })
 
-  function handleApply() {
+  async function handleApply() {
     if (!onApply) return
     // Guard against rapid double-taps firing onApply() more than once.
     if (applyingRef.current || applyState !== 'idle') return
@@ -88,11 +88,30 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
       haptic.warning()
       setApplyState('blocked')
       setTimeout(() => { setApplyState('idle'); applyingRef.current = false }, 2500)
-    } else {
-      haptic.success()
-      setApplyState('applied')
-      setTimeout(() => { setApplyState('idle'); applyingRef.current = false }, 2500)
+      return
     }
+    // Async callers (Discover quick-apply) return a promise that resolves false
+    // on failure — only show "Applied!" once the round-trip actually succeeds.
+    if (result && typeof (result as Promise<unknown>).then === 'function') {
+      setApplyState('pending')
+      try {
+        const ok = await result
+        if (ok === false) {
+          haptic.warning()
+          setApplyState('idle')
+          applyingRef.current = false
+          return
+        }
+      } catch {
+        haptic.warning()
+        setApplyState('idle')
+        applyingRef.current = false
+        return
+      }
+    }
+    haptic.success()
+    setApplyState('applied')
+    setTimeout(() => { setApplyState('idle'); applyingRef.current = false }, 2500)
   }
 
 
@@ -168,7 +187,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           {campaign.title}
         </Text>
         <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '500' }} numberOfLines={1}>
-          {[reward || null, formatPlatform(campaign.platforms?.[0]), days != null && (days < 0 ? 'Closed' : `${days}d left`)].filter(Boolean).join('  ·  ')}
+          {[reward || null, formatPlatform(campaign.platforms?.[0]), closed ? 'Closed' : days == null ? null : days === 0 ? 'Last day' : `${days}d left`].filter(Boolean).join('  ·  ')}
         </Text>
       </View>
     </View>
@@ -253,7 +272,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           <View style={{ flex: 1, borderRadius: redesign.radius.cell, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairline }}>
             <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '800', letterSpacing: 1.0, textTransform: 'uppercase', marginBottom: 4 }}>Closes</Text>
             <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
-              {days == null ? 'Open' : days < 0 ? 'Closed' : `${days}d`}
+              {closed ? 'Closed' : days == null ? 'Open' : days === 0 ? 'Last day' : `${days}d`}
             </Text>
           </View>
         </View>
@@ -313,6 +332,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               <>
                 <MaterialCommunityIcons name="clock-alert-outline" size={18} color="#fff" />
                 <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Awaiting approval</Text>
+              </>
+            ) : applyState === 'pending' ? (
+              <>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applying…</Text>
               </>
             ) : (
               <>

@@ -2,8 +2,7 @@ import { useApplications } from '@/features/applications/hooks'
 import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
-import { useCreatorProfile } from '@/features/profile/hooks'
-import { computeTier } from '@/features/profile/tiers'
+import { useCreatorProfile, useReputation } from '@/features/profile/hooks'
 import { TierEmblem, TierRow } from '@/features/profile/ui/TierBadge'
 import { useReferral } from '@/features/referral/hooks'
 import { referralMilestone } from '@/features/referral/logic'
@@ -17,7 +16,7 @@ import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { Screen } from '@/features/shared/ui/Screen'
 import { GlassCard } from '@/features/shared/ui/GlassCard'
-import { supabase } from '@/lib/supabase'
+import { signOutCreator } from '@/features/shared/hooks/useAuthSession'
 import { Image as ExpoImage } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -115,15 +114,12 @@ export function ProfileOverview() {
     }
   }, [applicationsData?.applications, deliverables])
 
-  // Cosmetic creator tier — driven by how many campaigns the creator has applied
-  // to. Computed client-side from already-loaded data (see features/profile/tiers.ts).
-  const tierProgress = useMemo(
-    () => computeTier({ appliedCampaigns: applicationsData?.applications.length ?? 0 }),
-    [applicationsData?.applications],
-  )
+  // Creator tier — driven by completed deliverables (see useReputation). Standing
+  // is earned by finishing good work, not by applying.
+  const { tier: tierProgress } = useReputation()
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await signOutCreator()
     queryClient.clear()
     router.replace('/login')
   }

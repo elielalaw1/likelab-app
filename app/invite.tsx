@@ -23,9 +23,13 @@ import { redesign, typography } from '@/features/core/theme'
 import { useReferral } from '@/features/referral/hooks'
 import { buildShareMessage, referralMilestone } from '@/features/referral/logic'
 import { ConnectorBadge } from '@/features/referral/ui/ConnectorBadge'
+import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
+import { useQueryClient } from '@tanstack/react-query'
+import * as SecureStore from 'expo-secure-store'
 
 const AnimatedText = Animated.createAnimatedComponent(TextInput)
 const INK_CARD = '#141420'
+const CONNECTOR_CELEBRATED_PREFIX = 'likelab_connector_celebrated_'
 
 // Count that ticks up to its target on mount (UI-thread, no re-render).
 function AnimatedCount({ value, style }: { value: number; style: object }) {
@@ -88,26 +92,46 @@ function MilestoneCard({ joinedCount }: { joinedCount: number }) {
 
 export default function InvitePage() {
   const { width } = useWindowDimensions()
+  const queryClient = useQueryClient()
+  const { session } = useAuthSession()
+  const userId = session?.user?.id
   const { data } = useReferral()
   const [copied, setCopied] = useState(false)
   const [celebrate, setCelebrate] = useState(0) // bump to retrigger confetti
   const reachedRef = useRef(false)
+  const [celebrationLoaded, setCelebrationLoaded] = useState(false)
 
   const code = data?.code ?? '······'
   // Only a real backend-issued code can be redeemed by an invitee, so never let
   // the local hash fallback reach the clipboard/share sheet.
   const shareable = data?.hasBackendCode === true
 
+  const onRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['referral'] })
+  }, [queryClient])
+
+  // Load the persisted "already celebrated" flag so the Connector confetti fires
+  // once EVER per user, not on every visit to this screen.
+  useEffect(() => {
+    if (!userId) { setCelebrationLoaded(true); return }
+    let cancelled = false
+    SecureStore.getItemAsync(`${CONNECTOR_CELEBRATED_PREFIX}${userId}`)
+      .then((v) => { if (!cancelled) { if (v) reachedRef.current = true; setCelebrationLoaded(true) } })
+      .catch(() => { if (!cancelled) setCelebrationLoaded(true) })
+    return () => { cancelled = true }
+  }, [userId])
+
   // Celebrate once when the Connector milestone is first reached.
   useEffect(() => {
-    if (!data) return
+    if (!data || !celebrationLoaded) return
     const reached = referralMilestone(data.joinedCount).reached
     if (reached && !reachedRef.current) {
       reachedRef.current = true
       setCelebrate((n) => n + 1)
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      if (userId) void SecureStore.setItemAsync(`${CONNECTOR_CELEBRATED_PREFIX}${userId}`, '1').catch(() => {})
     }
-  }, [data])
+  }, [data, celebrationLoaded, userId])
 
   const onCopy = useCallback(async () => {
     if (!data?.code || !shareable) return
@@ -131,7 +155,7 @@ export default function InvitePage() {
   }, [data?.code, shareable])
 
   return (
-    <Screen tabAware={false} bgColor={redesign.color.bg}>
+    <Screen tabAware={false} onRefresh={onRefresh} bgColor={redesign.color.bg}>
       <AppHeader />
 
       {celebrate > 0 ? (
