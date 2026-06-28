@@ -5,6 +5,8 @@ import { FloatingTabBarVisibilityProvider } from '@/features/navigation/Floating
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs'
 import { withLayoutContext } from 'expo-router'
 import { CreatorProfileLiveSync } from '@/features/profile/CreatorProfileLiveSync'
+import { WhatsNewHost } from '@/features/whatsnew/WhatsNewModal'
+import { LevelUpHost } from '@/features/levelup/LevelUpCelebration'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
 import { TutorialOverlay } from '@/features/onboarding/TutorialOverlay'
 import { WelcomePendingOverlay } from '@/features/onboarding/WelcomePendingOverlay'
@@ -80,6 +82,8 @@ export default function TabsLayout() {
       <CreatorOnboardingGate />
       <WelcomePendingOverlay />
       <TutorialOverlay />
+      <WhatsNewHost />
+      <LevelUpHost />
     </FloatingTabBarVisibilityProvider>
   )
 }

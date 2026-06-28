@@ -7,8 +7,8 @@ import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { redesign, typography } from '@/features/core/theme'
 import { useReputation } from '@/features/profile/hooks'
-import { getTierLadder, type TierLadderEntry } from '@/features/profile/tiers'
-import { ReputationCard, TierProgressCard, TierRing } from '@/features/profile/ui/TierBadge'
+import { getTierLadder, XP_THRESHOLDS, type TierLadderEntry } from '@/features/profile/tiers'
+import { TierProgressCard, TierRing } from '@/features/profile/ui/TierBadge'
 
 const glyph = (name: string) => name as keyof typeof MaterialCommunityIcons.glyphMap
 
@@ -16,9 +16,9 @@ function LadderRow({ entry, index }: { entry: TierLadderEntry; index: number }) 
   const { tier, achieved, current } = entry
   const locked = !achieved
   const requirement =
-    tier.minCompleted === 0
+    tier.level === 1
       ? 'Starting level — everyone begins here'
-      : `Complete ${tier.minCompleted} deliverable${tier.minCompleted === 1 ? '' : 's'}`
+      : `Reach ${XP_THRESHOLDS[tier.level - 1].toLocaleString()} XP`
 
   return (
     <Animated.View
@@ -69,8 +69,8 @@ function LadderRow({ entry, index }: { entry: TierLadderEntry; index: number }) 
 }
 
 export default function TiersPage() {
-  const { reputation, tier: progress } = useReputation()
-  const ladder = useMemo(() => getTierLadder(reputation.completed), [reputation.completed])
+  const { tier: progress } = useReputation()
+  const ladder = useMemo(() => getTierLadder(progress.level), [progress.level])
 
   return (
     <Screen tabAware={false} bgColor={redesign.color.bg}>
@@ -93,13 +93,11 @@ export default function TiersPage() {
           Creator levels
         </Text>
         <Text style={{ fontSize: 14.5, fontWeight: '500', color: redesign.color.muted, fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
-          Complete deliverables to climb the ladder and build your reputation.
+          Earn XP from approved work to climb the ladder.
         </Text>
       </Animated.View>
 
       <TierProgressCard progress={progress} />
-
-      <ReputationCard reputation={reputation} tint={progress.tier.color} />
 
       <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily, marginTop: 2 }}>
         All levels

@@ -59,50 +59,49 @@ export const TIERS: readonly Tier[] = [
   { id: 'legend',       level: 10, label: 'Legend creator',        short: 'Legend',   color: '#7A3FF2', ring: ['#F5C73C', '#F25CC1', '#7A3FF2', '#1FC8E8'], emblem: 'diamond-stone',    minCompleted: 35 },
 ] as const
 
-export type TierInput = {
-  // Number of deliverables the creator has completed (approved/published).
-  completedDeliverables: number
-}
+// XP required to reach each level (index 0 = L1 … index 9 = L10). Mirrors the
+// backend `public.level_for_xp` ladder so the client can draw progress toward the
+// next level. The backend is the source of truth for `level`; these thresholds
+// only drive the local progress bar.
+export const XP_THRESHOLDS = [0, 50, 150, 350, 700, 1200, 2000, 3200, 5000, 8000] as const
 
 export type TierProgress = {
   tier: Tier
   // The tier above the current one, or null at the top of the ladder.
   next: Tier | null
-  // Completed deliverables accumulated within the CURRENT tier band (>= 0).
+  // XP accumulated within the CURRENT level band (>= 0).
   current: number
-  // Completed deliverables spanning the current band → next threshold, or null at top.
+  // XP span of the current band → next level, or null at the top.
   target: number | null
-  // Completed deliverables still required to level up (0 at top).
+  // XP still needed to reach the next level (0 at top).
   remaining: number
-  // Fill ratio of the current tier band, 0..1 (1 at top).
+  // Fill ratio of the current band, 0..1 (1 at top).
   fraction: number
-  // Total completed deliverables counted (normalised, never negative).
-  completedDeliverables: number
+  // Total account XP + the resolved level (1..10), from the backend.
+  xp: number
+  level: number
 }
 
-// Resolves the current tier + progress toward the next one from how many
-// deliverables the creator has completed. Defensive against junk input.
-export function computeTier(input: TierInput): TierProgress {
-  const completed = Number.isFinite(input.completedDeliverables) ? Math.max(0, Math.floor(input.completedDeliverables)) : 0
-
-  // Highest tier whose threshold the creator has met.
-  let index = 0
-  for (let i = 0; i < TIERS.length; i++) {
-    if (completed >= TIERS[i].minCompleted) index = i
-  }
-  const tier = TIERS[index]
-  const next = index < TIERS.length - 1 ? TIERS[index + 1] : null
+// Builds tier + progress from the creator's REAL account XP/level (from the backend
+// `creator_levels` view). `level` is authoritative; `xp` drives the bar. Defensive
+// against junk input.
+export function computeLevelProgress(xp: number, level: number): TierProgress {
+  const x = Number.isFinite(xp) ? Math.max(0, Math.floor(xp)) : 0
+  const lvl = Number.isFinite(level) ? Math.min(TIERS.length, Math.max(1, Math.floor(level))) : 1
+  const tier = TIERS[lvl - 1]
+  const next = lvl < TIERS.length ? TIERS[lvl] : null
 
   if (!next) {
-    return { tier, next: null, current: completed - tier.minCompleted, target: null, remaining: 0, fraction: 1, completedDeliverables: completed }
+    return { tier, next: null, current: x - XP_THRESHOLDS[lvl - 1], target: null, remaining: 0, fraction: 1, xp: x, level: lvl }
   }
 
-  const span = next.minCompleted - tier.minCompleted
-  const into = completed - tier.minCompleted
+  const base = XP_THRESHOLDS[lvl - 1]
+  const span = XP_THRESHOLDS[lvl] - base
+  const into = Math.max(0, x - base)
   const fraction = span > 0 ? Math.min(1, Math.max(0, into / span)) : 0
-  const remaining = Math.max(0, next.minCompleted - completed)
+  const remaining = Math.max(0, XP_THRESHOLDS[lvl] - x)
 
-  return { tier, next, current: into, target: span, remaining, fraction, completedDeliverables: completed }
+  return { tier, next, current: into, target: span, remaining, fraction, xp: x, level: lvl }
 }
 
 export type TierLadderEntry = {
@@ -117,13 +116,12 @@ export type TierLadderEntry = {
 
 // The full ladder annotated with the creator's progress — for the "Creator
 // levels" screen where every tier and its requirement is listed.
-export function getTierLadder(completedDeliverables: number): TierLadderEntry[] {
-  const { tier: currentTier, next } = computeTier({ completedDeliverables })
-  const completed = Number.isFinite(completedDeliverables) ? Math.max(0, Math.floor(completedDeliverables)) : 0
+export function getTierLadder(level: number): TierLadderEntry[] {
+  const lvl = Number.isFinite(level) ? Math.min(TIERS.length, Math.max(1, Math.floor(level))) : 1
   return TIERS.map((tier) => ({
     tier,
-    achieved: completed >= tier.minCompleted,
-    current: tier.id === currentTier.id,
-    isNext: next != null && tier.id === next.id,
+    achieved: tier.level <= lvl,
+    current: tier.level === lvl,
+    isNext: tier.level === lvl + 1,
   }))
 }

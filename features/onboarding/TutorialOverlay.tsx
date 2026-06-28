@@ -11,6 +11,7 @@ import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
 import { onReplayTutorial } from '@/features/onboarding/tutorialControl'
 import { startProfileTour } from '@/features/onboarding/profileTourControl'
+import { VideoGridPreview } from '@/features/shared/ui/VideoGridPreview'
 import { router } from 'expo-router'
 
 const SEEN_PREFIX = 'tutorial_seen_approval:'
@@ -70,20 +71,28 @@ function MockAccepted() {
 
 function MockSubmit({ arrow }: { arrow: object }) {
   return (
-    <View style={{ width: 240, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, padding: 14, gap: 10, ...redesign.shadow.card }}>
-      <Text style={{ fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontFamily: typography.fontFamily }}>DROP YOUR TIKTOK LINK</Text>
+    <View style={{ width: 244, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, padding: 14, gap: 11, ...redesign.shadow.card }}>
+      {/* Approved → post-the-link instruction, matching the deliverable action sheet */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+        <MaterialCommunityIcons name="check-decagram" size={16} color={redesign.color.successText} />
+        <Text style={{ fontSize: 11.5, fontWeight: '700', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Approved — post it &amp; paste the link</Text>
+      </View>
       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
         <View style={{ flex: 1, height: 38, borderRadius: 12, borderWidth: 1, borderColor: redesign.color.hairlineStrong, backgroundColor: redesign.color.bg, justifyContent: 'center', paddingHorizontal: 10 }}>
-          <Text style={{ fontSize: 12, color: redesign.color.faint, fontFamily: typography.fontFamily }}>Paste your link…</Text>
+          <Text style={{ fontSize: 12, color: redesign.color.faint, fontFamily: typography.fontFamily }}>tiktok.com/@you/…</Text>
         </View>
         <View>
           <Animated.View style={[{ position: 'absolute', top: -32, alignSelf: 'center', zIndex: 2 }, arrow]}>
             <MaterialCommunityIcons name="arrow-down-bold" size={28} color={redesign.color.purple} />
           </Animated.View>
           <View style={{ width: 44, height: 38, borderRadius: 12, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name="arrow-up" size={18} color="#fff" />
+            <MaterialCommunityIcons name="link-variant" size={17} color="#fff" />
           </View>
         </View>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+        <MaterialCommunityIcons name="check-circle" size={13} color={redesign.color.successText} />
+        <Text style={{ fontSize: 9, fontWeight: '800', letterSpacing: 0.6, color: redesign.color.successText, fontFamily: typography.fontFamily }}>LIVE ON TIKTOK</Text>
       </View>
     </View>
   )
@@ -125,36 +134,39 @@ function MockWelcome() {
   )
 }
 
-type Slide = { title: string; body: string; mock: (arrow: object, arrowH: object) => React.ReactNode }
-
-function MockReview() {
+function MockLevels() {
   return (
-    <View style={{ width: 220, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, overflow: 'hidden', ...redesign.shadow.card }}>
-      <View style={{ height: 92, alignItems: 'center', justifyContent: 'center' }}>
-        <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0, opacity: 0.45 }} />
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.85)', alignItems: 'center', justifyContent: 'center' }}>
-          <MaterialCommunityIcons name="play" size={22} color={redesign.color.ink} />
-        </View>
-        <View style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: redesign.color.successBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
-          <MaterialCommunityIcons name="check-decagram" size={12} color={redesign.color.successText} />
-          <Text style={{ color: redesign.color.successText, fontSize: 9, fontWeight: '800', fontFamily: typography.fontFamily }}>APPROVED</Text>
+    <View style={{ width: 230, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, padding: 16, gap: 12, ...redesign.shadow.card }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 44, height: 44, borderRadius: 15, padding: 2.5, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ flex: 1, alignSelf: 'stretch', borderRadius: 12.5, backgroundColor: redesign.color.card, alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="trending-up" size={20} color={redesign.color.cyan} />
+          </View>
+        </LinearGradient>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13.5, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>Rising creator</Text>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily }}>200 XP to Contender</Text>
         </View>
       </View>
-      <View style={{ padding: 12, gap: 6 }}>
-        <Text style={{ fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontFamily: typography.fontFamily }}>BRAND REVIEW</Text>
-        <Text style={{ fontSize: 12.5, fontWeight: '600', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Green light — ready to post 🎬</Text>
+      <View style={{ height: 7, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
+        <View style={{ height: '100%', width: '62%', borderRadius: 999, overflow: 'hidden' }}>
+          <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+        </View>
       </View>
     </View>
   )
 }
 
+type Slide = { title: string; body: string; mock: (arrow: object, arrowH: object) => React.ReactNode }
+
 const SLIDES: Slide[] = [
   { title: 'You’re approved! 🎉', body: 'Welcome to LikeLab. Here’s how it works in a few quick steps.', mock: () => <MockWelcome /> },
   { title: 'Discover & apply', body: 'Browse open campaigns and tap Apply on the ones that fit you.', mock: (a) => <MockDiscover arrow={a} /> },
   { title: 'Get selected', body: 'Brands review creators and pick their favourites — you’ll be notified when you’re in.', mock: () => <MockAccepted /> },
-  { title: 'Film & get approved', body: 'Upload your video in the app. The brand reviews it and gives the green light (or asks for tweaks).', mock: () => <MockReview /> },
+  { title: 'Film & get approved', body: 'Upload your video in the app and follow the clear steps — upload, review, post, live. The brand gives the green light (or asks for tweaks).', mock: () => <VideoGridPreview /> },
   { title: 'Post & go live', body: 'Once approved, post it on TikTok and drop the link in the app to confirm it’s live.', mock: (a) => <MockSubmit arrow={a} /> },
   { title: 'Compete & earn', body: 'Your views feed the live leaderboard as they grow — the top creators earn the reward.', mock: (_a, ah) => <MockLeaderboard arrow={ah} /> },
+  { title: 'Level up as a creator', body: 'Every time the brand approves your work you earn XP and climb the creator levels — your standing, right in the app.', mock: () => <MockLevels /> },
 ]
 
 export function TutorialOverlay() {

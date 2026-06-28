@@ -6,7 +6,9 @@ import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { Screen } from '@/features/shared/ui/Screen'
 import { SkeletonDeliverableCard } from '@/features/shared/ui/SkeletonCard'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { Image as ExpoImage } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useCampaigns } from '@/features/campaigns/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useCallback, useMemo } from 'react'
@@ -32,6 +34,15 @@ export default function DeliverablesPage() {
   const queryClient = useQueryClient()
   const { data, isLoading, error, refetch } = useDeliverables()
   const { data: unreadFeedback } = useUnreadFeedbackCounts()
+  const { data: campaigns } = useCampaigns()
+
+  // campaignId → cover image (signed, from useCampaigns) so this work hub shows real
+  // campaign imagery like Discover does, instead of being a wall of image-less cards.
+  const coverByCampaign = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of campaigns || []) if (c.coverImageUrl) map.set(c.id, c.coverImageUrl)
+    return map
+  }, [campaigns])
 
   const onRefresh = useCallback(async () => {
     await Promise.all([
@@ -103,7 +114,12 @@ export default function DeliverablesPage() {
       if (!existing.flagReason && item.flagReason) existing.flagReason = item.flagReason
     }
 
-    return Array.from(grouped.values())
+    // Most urgent first: revision-requested, then most videos left.
+    return Array.from(grouped.values()).sort((a, b) => {
+      const ra = a.status === 'revision_requested' ? 0 : 1
+      const rb = b.status === 'revision_requested' ? 0 : 1
+      return ra - rb || b.count - a.count
+    })
   }, [data, campaignTotals])
 
   // Approved deliverables that still need the creator to post on TikTok and paste
@@ -151,9 +167,10 @@ export default function DeliverablesPage() {
         </>
       ) : null}
 
-      {/* Needs action */}
+      {/* Needs action — the single most urgent campaign gets the big hero card; any
+          others render as compact rows below so multiple active campaigns stay tidy. */}
       <FlatList
-        data={needsAction}
+        data={needsAction.slice(0, 1)}
         keyExtractor={(item) => item.campaignId}
         scrollEnabled={false}
         ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
@@ -175,6 +192,17 @@ export default function DeliverablesPage() {
             <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
               <Pressable onPress={() => openCampaignVideos(item.campaignId)}>
                 <View style={{ borderRadius: 26, overflow: 'hidden', backgroundColor: redesign.color.ink, ...redesign.shadow.cta }}>
+                  {/* Campaign cover photo (darkened) so the work hub feels as alive as Discover */}
+                  {coverByCampaign.get(item.campaignId) ? (
+                    <>
+                      <ExpoImage source={{ uri: coverByCampaign.get(item.campaignId)! }} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} />
+                      <LinearGradient
+                        colors={['rgba(11,11,15,0.60)', 'rgba(11,11,15,0.93)']}
+                        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    </>
+                  ) : null}
                   {/* Purple radial glow in the corner */}
                   <LinearGradient
                     colors={['rgba(124,63,242,0.55)', 'rgba(124,63,242,0)']}
@@ -249,6 +277,61 @@ export default function DeliverablesPage() {
         }}
       />
 
+      {/* Additional active campaigns — compact rows so it never becomes a wall of big cards */}
+      {needsAction.length > 1 ? (
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase' }}>
+            Also in progress
+          </Text>
+          {needsAction.slice(1).map((item, i) => {
+            const total = Math.max(item.total, item.submitted + item.count)
+            const pct = total > 0 ? Math.round((item.submitted / total) * 100) : 0
+            const isRevision = item.status === 'revision_requested'
+            const accent = isRevision ? '#EA580C' : redesign.color.purple
+            const cover = coverByCampaign.get(item.campaignId)
+            const unread = unreadByCampaign.get(item.campaignId) || 0
+            return (
+              <Animated.View key={item.campaignId} entering={FadeInDown.delay(i * 40).duration(250)}>
+                <Pressable
+                  onPress={() => openCampaignVideos(item.campaignId)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: isRevision ? 'rgba(234,88,12,0.45)' : redesign.color.hairlineStrong, padding: 12, ...redesign.shadow.card }}
+                >
+                  {cover ? (
+                    <View style={{ width: 46, height: 46, borderRadius: 12, overflow: 'hidden', backgroundColor: redesign.color.hairlineStrong }}>
+                      <ExpoImage source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                    </View>
+                  ) : (
+                    <View style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: `${accent}1A`, alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialCommunityIcons name={isRevision ? 'pencil-outline' : 'video-outline'} size={20} color={accent} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                      <Text style={{ flex: 1, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }} numberOfLines={1}>
+                        {item.campaignTitle}
+                      </Text>
+                      {unread > 0 ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: redesign.color.purple }} /> : null}
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flex: 1, height: 5, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
+                        <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${Math.max(pct, 3)}%`, borderRadius: 999 }} />
+                      </View>
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '600', color: redesign.color.muted, fontVariant: ['tabular-nums'] }}>{item.submitted}/{total}</Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: `${accent}1A` }}>
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: accent }}>{item.count} left</Text>
+                    </View>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={redesign.color.faint} />
+                  </View>
+                </Pressable>
+              </Animated.View>
+            )
+          })}
+        </View>
+      ) : null}
+
       {/* Ready to post — approved by the brand, just needs the TikTok link */}
       {readyToPost.length > 0 ? (
         <Animated.View entering={FadeInDown.delay(120).duration(300)} style={{ gap: 12 }}>
@@ -261,9 +344,15 @@ export default function DeliverablesPage() {
                 onPress={() => openCampaignVideos(item.campaignId)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(16,159,110,0.45)', padding: 14, ...redesign.shadow.card }}
               >
-                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(16,159,110,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialCommunityIcons name="check-decagram" size={20} color="#0F9F6E" />
-                </View>
+                {coverByCampaign.get(item.campaignId) ? (
+                  <View style={{ width: 40, height: 40, borderRadius: 12, overflow: 'hidden', backgroundColor: redesign.color.hairlineStrong }}>
+                    <ExpoImage source={{ uri: coverByCampaign.get(item.campaignId)! }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                  </View>
+                ) : (
+                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(16,159,110,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialCommunityIcons name="check-decagram" size={20} color="#0F9F6E" />
+                  </View>
+                )}
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }} numberOfLines={1}>
                     {item.campaignTitle}
@@ -303,9 +392,15 @@ export default function DeliverablesPage() {
                 onPress={() => openCampaignVideos(item.campaignId)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 14, ...redesign.shadow.card }}
               >
-                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${cfg.color}14`, alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialCommunityIcons name={cfg.icon} size={20} color={cfg.color} />
-                </View>
+                {coverByCampaign.get(item.campaignId) ? (
+                  <View style={{ width: 40, height: 40, borderRadius: 12, overflow: 'hidden', backgroundColor: redesign.color.hairlineStrong }}>
+                    <ExpoImage source={{ uri: coverByCampaign.get(item.campaignId)! }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                  </View>
+                ) : (
+                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${cfg.color}14`, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialCommunityIcons name={cfg.icon} size={20} color={cfg.color} />
+                  </View>
+                )}
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }} numberOfLines={1}>
                     {item.campaignTitle}

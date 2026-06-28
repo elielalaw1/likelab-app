@@ -1,5 +1,6 @@
 import { Animated, Dimensions, Image, Modal, Pressable, Text, View } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import ConfettiCannon from 'react-native-confetti-cannon'
@@ -7,13 +8,14 @@ import { spacing, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
+import { WhatsNewButton } from '@/features/whatsnew/WhatsNewModal'
 
 const topLogo = require('@/assets/images/likelablogonew.png')
 const easterEggGif = require('@/assets/images/easter-egg.gif')
 const EASTER_EGG_TAPS = 15
 const { width, height } = Dimensions.get('window')
 
-export function AppHeader() {
+export function AppHeader({ trailing = 'profile' }: { trailing?: 'profile' | 'settings' }) {
   const { palette } = useTheme()
   const { data: profile } = useCreatorProfile()
   const router = useRouter()
@@ -78,11 +80,14 @@ export function AppHeader() {
         <Image source={topLogo} style={{ width: 78, height: 78 }} resizeMode="contain" />
       </Pressable>
 
-      <Pressable onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
-        {profile?.avatarUrl ? (
-          <Image source={{ uri: profile.avatarUrl }} style={{ width: 38, height: 38, borderRadius: 19 }} />
-        ) : (
-          <View
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <WhatsNewButton />
+        {trailing === 'settings' ? (
+          <Pressable
+            onPress={() => router.push('/settings')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
             style={{
               width: 38,
               height: 38,
@@ -94,12 +99,33 @@ export function AppHeader() {
               borderColor: palette.borderColor,
             }}
           >
-            <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>
-              {profile?.displayName?.trim()?.[0]?.toUpperCase() || 'U'}
-            </Text>
-          </View>
+            <MaterialCommunityIcons name="cog-outline" size={21} color={palette.textMuted} />
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
+            {profile?.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={{ width: 38, height: 38, borderRadius: 19 }} />
+            ) : (
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(23,31,42,0.06)',
+                  borderWidth: 1,
+                  borderColor: palette.borderColor,
+                }}
+              >
+                <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>
+                  {profile?.displayName?.trim()?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              </View>
+            )}
+          </Pressable>
         )}
-      </Pressable>
+      </View>
     </View>
   )
 }

@@ -148,3 +148,20 @@ export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
 export function isProfileComplete(profile: CreatorProfile) {
   return getProfileCompletion(profile).isComplete
 }
+
+export type CreatorLevel = { xp: number; level: number }
+
+// The creator's real account-wide XP + level, read from the backend `creator_levels`
+// view (RLS: the creator sees only their own row; brands see nothing). No row yet
+// (no XP events) → level 1, 0 XP.
+export async function getCreatorLevel(): Promise<CreatorLevel> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { xp: 0, level: 1 }
+  const { data, error } = await supabase
+    .from('creator_levels')
+    .select('xp, level')
+    .eq('creator_id', userId)
+    .maybeSingle()
+  if (error || !data) return { xp: 0, level: 1 }
+  return { xp: Number(data.xp) || 0, level: Number(data.level) || 1 }
+}

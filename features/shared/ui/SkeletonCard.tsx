@@ -1,24 +1,35 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { DimensionValue, StyleSheet, View } from 'react-native'
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
+import { LinearGradient } from 'expo-linear-gradient'
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
 import { redesign } from '@/features/core/theme'
 
+// A skeleton bone with a light shimmer that sweeps left→right — reads more premium
+// than a flat opacity pulse.
 function Bone({ width, height, borderRadius = 10 }: { width: DimensionValue; height: number; borderRadius?: number }) {
-  const opacity = useSharedValue(1)
+  const [w, setW] = useState(0)
+  const x = useSharedValue(0)
 
   useEffect(() => {
-    opacity.value = withRepeat(
-      withSequence(withTiming(0.45, { duration: 750 }), withTiming(1, { duration: 750 })),
+    x.value = withRepeat(
+      withSequence(withTiming(1, { duration: 1150, easing: Easing.inOut(Easing.quad) }), withTiming(0, { duration: 0 })),
       -1,
-      false
+      false,
     )
-  }, [opacity])
+  }, [x])
 
-  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }))
+  const shimmer = useAnimatedStyle(() => ({ transform: [{ translateX: -(w + 90) + x.value * (w + 90) * 2 }] }))
 
   return (
-    <View style={{ width, height, borderRadius, overflow: 'hidden' }}>
-      <Animated.View style={[{ flex: 1, backgroundColor: 'rgba(11,11,15,0.06)' }, animStyle]} />
+    <View
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+      style={{ width, height, borderRadius, overflow: 'hidden', backgroundColor: 'rgba(11,11,15,0.06)' }}
+    >
+      {w > 0 ? (
+        <Animated.View style={[{ position: 'absolute', top: 0, bottom: 0, width: 90 }, shimmer]}>
+          <LinearGradient colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flex: 1 }} />
+        </Animated.View>
+      ) : null}
     </View>
   )
 }

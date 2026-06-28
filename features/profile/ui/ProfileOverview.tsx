@@ -156,7 +156,7 @@ export function ProfileOverview() {
       scrollRef={scrollRef}
       overlay={<ProfileCoachmarks steps={coachSteps} scrollRef={scrollRef} contentY={contentY} />}
     >
-      <AppHeader />
+      <AppHeader trailing="settings" />
 
       {profileLoading ? <ActivityIndicator color={colors.primary} /> : null}
       {profileError ? <Text style={{ color: redesign.color.muted, fontSize: 12 }}>Could not load creator profile.</Text> : null}

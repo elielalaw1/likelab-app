@@ -5,7 +5,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated'
 import { redesign, typography } from '@/features/core/theme'
 import type { Tier, TierProgress } from '@/features/profile/tiers'
-import type { Reputation, ReputationSignal } from '@/features/profile/reputation'
 
 const glyph = (name: string) => name as keyof typeof MaterialCommunityIcons.glyphMap
 
@@ -76,7 +75,7 @@ export function TierRow({ progress, onPress }: { progress: TierProgress; onPress
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${tier.label}. ${atTop ? 'Top level' : `${remaining} deliverables to ${next!.short}`}. View all levels`}
+      accessibilityLabel={`${tier.label}. ${atTop ? 'Top level' : `${remaining} XP to ${next!.short}`}. View all levels`}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: 0.5, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 14, paddingVertical: 12, ...redesign.shadow.card }}
     >
       <TierRing tier={tier} size={36} radius={13} borderWidth={2}>
@@ -99,77 +98,6 @@ export function TierRow({ progress, onPress }: { progress: TierProgress; onPress
       </View>
       <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
     </Pressable>
-  )
-}
-
-// A single reputation signal row — an animated meter for live signals, or a
-// locked "coming soon" row for signals the backend doesn't feed yet. The locked
-// state is honest: it shows the creator what WILL count, without faking a number.
-function SignalRow({ signal, tint, index }: { signal: ReputationSignal; tint: string; index: number }) {
-  const fill = useSharedValue(0)
-  const target = signal.value ?? 0
-  useEffect(() => {
-    fill.value = 0
-    fill.value = withDelay(260 + index * 70, withTiming(target, { duration: 760, easing: Easing.out(Easing.cubic) }))
-  }, [target, index, fill])
-
-  const barStyle = useAnimatedStyle(() => ({ width: `${Math.max(signal.tracked ? 3 : 0, fill.value * 100)}%` }))
-
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: signal.tracked ? 1 : 0.55 }}>
-      <Text style={{ width: 78, fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '600', color: redesign.color.muted }}>
-        {signal.label}
-      </Text>
-      <View style={{ flex: 1, height: 7, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
-        {signal.tracked ? (
-          <Animated.View style={[{ height: '100%', borderRadius: 999, backgroundColor: tint }, barStyle]} />
-        ) : null}
-      </View>
-      <View style={{ width: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
-        {signal.tracked ? null : <MaterialCommunityIcons name="lock-outline" size={11} color={redesign.color.faint} />}
-        <Text style={{ fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '700', color: signal.tracked ? redesign.color.ink : redesign.color.faint }}>
-          {signal.display}
-        </Text>
-      </View>
-    </View>
-  )
-}
-
-// Reputation breakdown — the creator's standing as a score + the signals that
-// build it. Live signals fill; future ones (on-time, quality, reach) show as
-// locked "Soon" rows so the creator sees what's coming. One source of truth lives
-// in features/profile/reputation.ts; brands/admins will read the same score later.
-export function ReputationCard({ reputation, tint }: { reputation: Reputation; tint: string }) {
-  return (
-    <Animated.View
-      entering={FadeInDown.duration(300).delay(90)}
-      style={{ backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: 0.5, borderColor: redesign.color.hairlineStrong, padding: 16, gap: 14, ...redesign.shadow.card }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ gap: 1 }}>
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 0.8 }}>
-            REPUTATION
-          </Text>
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: redesign.color.muted }}>
-            Built by completing great work
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 30, fontWeight: '800', color: tint, letterSpacing: -1 }}>
-            {reputation.score}
-          </Text>
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700', color: redesign.color.faint }}>
-            /100
-          </Text>
-        </View>
-      </View>
-
-      <View style={{ gap: 10 }}>
-        {reputation.signals.map((signal, index) => (
-          <SignalRow key={signal.id} signal={signal} tint={tint} index={index} />
-        ))}
-      </View>
-    </Animated.View>
   )
 }
 
@@ -208,7 +136,7 @@ export function TierProgressCard({ progress }: { progress: TierProgress }) {
           <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: redesign.color.muted, marginTop: 1 }}>
             {atTop
               ? 'Top of the ladder — you’re a Legend 💎'
-              : `${remaining} deliverable${remaining === 1 ? '' : 's'} to ${next!.short}`}
+              : `${remaining.toLocaleString()} XP to ${next!.short}`}
           </Text>
         </View>
         {atTop ? null : <TierBadge tier={next!} compact />}
