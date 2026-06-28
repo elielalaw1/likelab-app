@@ -4,7 +4,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Screen } from '@/features/shared/ui/Screen'
-import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useApplyToCampaign, useCampaigns } from '@/features/campaigns/hooks'
@@ -102,8 +101,7 @@ export default function ProjectsPage() {
   const isGrid = viewMode === 'grid'
 
   return (
-    <Screen onRefresh={onRefresh} scrollRef={scrollRef} bgColor={redesign.color.bg}>
-      <AppHeader />
+    <Screen onRefresh={onRefresh} scrollRef={scrollRef} bgColor={redesign.color.bg} topInset={false}>
 
       <Animated.View entering={FadeInDown.duration(250)}>
         <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>

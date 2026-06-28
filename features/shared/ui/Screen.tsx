@@ -27,9 +27,12 @@ type Props = {
   wallpaper?: boolean
   bgColor?: string
   contentGap?: number
+  // When false the screen skips its own top safe-area inset — used by the tab
+  // screens whose notch space is owned by the persistent header above the pager.
+  topInset?: boolean
 }
 
-export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap }: Props) {
+export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap, topInset = true }: Props) {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { reportScroll, setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
@@ -53,7 +56,7 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
   const safeBg = wallpaper ? 'transparent' : (bgColor ?? palette.bg)
 
   const inner = (
-    <SafeAreaView style={{ flex: 1, backgroundColor: safeBg }}>
+    <SafeAreaView edges={topInset ? undefined : ['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: safeBg }}>
       {gradient && !wallpaper ? (
         <LinearGradient
           pointerEvents="none"

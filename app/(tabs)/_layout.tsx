@@ -7,6 +7,7 @@ import { withLayoutContext } from 'expo-router'
 import { CreatorProfileLiveSync } from '@/features/profile/CreatorProfileLiveSync'
 import { WhatsNewHost } from '@/features/whatsnew/WhatsNewModal'
 import { LevelUpHost } from '@/features/levelup/LevelUpCelebration'
+import { PersistentTabHeader } from '@/features/navigation/PersistentTabHeader'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
 import { TutorialOverlay } from '@/features/onboarding/TutorialOverlay'
 import { WelcomePendingOverlay } from '@/features/onboarding/WelcomePendingOverlay'
@@ -70,15 +71,20 @@ export default function TabsLayout() {
       <CreatorProfileLiveSync userId={session.user.id} />
       <RealtimeSetup userId={session.user.id} />
       <BadgeSync />
-      <MaterialTopTabs
-        tabBar={(props) => <FloatingTabBar {...props} />}
-        tabBarPosition="bottom"
-        screenOptions={{ swipeEnabled: true, lazy: false }}
-      >
-        <MaterialTopTabs.Screen name="overview" options={{ title: 'Discover' }} />
-        <MaterialTopTabs.Screen name="deliverables" options={{ title: 'Deliverables' }} />
-        <MaterialTopTabs.Screen name="profile" options={{ title: 'Profile' }} />
-      </MaterialTopTabs>
+      <View style={{ flex: 1, backgroundColor: palette.bg }}>
+        <PersistentTabHeader />
+        <View style={{ flex: 1 }}>
+          <MaterialTopTabs
+            tabBar={(props) => <FloatingTabBar {...props} />}
+            tabBarPosition="bottom"
+            screenOptions={{ swipeEnabled: true, lazy: false }}
+          >
+            <MaterialTopTabs.Screen name="overview" options={{ title: 'Discover' }} />
+            <MaterialTopTabs.Screen name="deliverables" options={{ title: 'Deliverables' }} />
+            <MaterialTopTabs.Screen name="profile" options={{ title: 'Profile' }} />
+          </MaterialTopTabs>
+        </View>
+      </View>
       <CreatorOnboardingGate />
       <WelcomePendingOverlay />
       <TutorialOverlay />

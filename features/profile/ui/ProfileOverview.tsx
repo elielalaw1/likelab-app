@@ -12,7 +12,6 @@ import { AvatarPreviewModal } from '@/features/profile/ui/AvatarPreviewModal'
 import { ProfileCollaborations } from '@/features/profile/ui/ProfileCollaborations'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { MyVideosFeed } from '@/features/deliverables/ui/MyVideosFeed'
-import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { Screen } from '@/features/shared/ui/Screen'
 import { GlassCard } from '@/features/shared/ui/GlassCard'
@@ -154,9 +153,9 @@ export function ProfileOverview() {
     <Screen
       bgColor={redesign.color.bg}
       scrollRef={scrollRef}
+      topInset={false}
       overlay={<ProfileCoachmarks steps={coachSteps} scrollRef={scrollRef} contentY={contentY} />}
     >
-      <AppHeader trailing="settings" />
 
       {profileLoading ? <ActivityIndicator color={colors.primary} /> : null}
       {profileError ? <Text style={{ color: redesign.color.muted, fontSize: 12 }}>Could not load creator profile.</Text> : null}

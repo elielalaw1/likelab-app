@@ -1,7 +1,6 @@
 import { redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables, useUnreadFeedbackCounts } from '@/features/deliverables/hooks'
-import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { Screen } from '@/features/shared/ui/Screen'
 import { SkeletonStudioCard } from '@/features/shared/ui/SkeletonCard'
@@ -242,8 +241,7 @@ export default function DeliverablesPage() {
   )
 
   return (
-    <Screen onRefresh={onRefresh} bgColor={redesign.color.bg}>
-      <AppHeader />
+    <Screen onRefresh={onRefresh} bgColor={redesign.color.bg} topInset={false}>
 
       <Animated.View entering={FadeInDown.duration(250)}>
         <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>
