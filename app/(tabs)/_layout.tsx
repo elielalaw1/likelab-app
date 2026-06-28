@@ -72,18 +72,17 @@ export default function TabsLayout() {
       <RealtimeSetup userId={session.user.id} />
       <BadgeSync />
       <View style={{ flex: 1, backgroundColor: palette.bg }}>
+        <MaterialTopTabs
+          tabBar={(props) => <FloatingTabBar {...props} />}
+          tabBarPosition="bottom"
+          screenOptions={{ swipeEnabled: true, lazy: false }}
+        >
+          <MaterialTopTabs.Screen name="overview" options={{ title: 'Discover' }} />
+          <MaterialTopTabs.Screen name="deliverables" options={{ title: 'Deliverables' }} />
+          <MaterialTopTabs.Screen name="profile" options={{ title: 'Profile' }} />
+        </MaterialTopTabs>
+        {/* Blur header overlays the pager so content scrolls under the frosted glass */}
         <PersistentTabHeader />
-        <View style={{ flex: 1 }}>
-          <MaterialTopTabs
-            tabBar={(props) => <FloatingTabBar {...props} />}
-            tabBarPosition="bottom"
-            screenOptions={{ swipeEnabled: true, lazy: false }}
-          >
-            <MaterialTopTabs.Screen name="overview" options={{ title: 'Discover' }} />
-            <MaterialTopTabs.Screen name="deliverables" options={{ title: 'Deliverables' }} />
-            <MaterialTopTabs.Screen name="profile" options={{ title: 'Profile' }} />
-          </MaterialTopTabs>
-        </View>
       </View>
       <CreatorOnboardingGate />
       <WelcomePendingOverlay />

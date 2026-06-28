@@ -1,10 +1,13 @@
 import { ReactNode, createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import { useSharedValue, type SharedValue } from 'react-native-reanimated'
 
 type FloatingTabBarVisibilityContextValue = {
   visible: boolean
   setVisible: (value: boolean) => void
   reportScroll: (y: number) => void
   resetScrollTracking: () => void
+  // Live scroll offset of the active screen — drives the header's scroll elevation.
+  scrollY: SharedValue<number>
 }
 
 const noop = () => undefined
@@ -14,6 +17,7 @@ const FloatingTabBarVisibilityContext = createContext<FloatingTabBarVisibilityCo
   setVisible: noop,
   reportScroll: noop,
   resetScrollTracking: noop,
+  scrollY: { value: 0 } as SharedValue<number>,
 })
 
 type Props = {
@@ -22,6 +26,7 @@ type Props = {
 
 export function FloatingTabBarVisibilityProvider({ children }: Props) {
   const [visibleState, setVisibleState] = useState(true)
+  const scrollY = useSharedValue(0)
   const visibleRef = useRef(true)
   const lastYRef = useRef(0)
   const accumulatedDeltaRef = useRef(0)
@@ -46,6 +51,7 @@ export function FloatingTabBarVisibilityProvider({ children }: Props) {
   const reportScroll = useCallback(
     (rawY: number) => {
       const y = Math.max(0, rawY || 0)
+      scrollY.value = y
 
       // First report after a reset: just record the position (no delta) so a
       // preserved scroll offset doesn't read as a huge sudden movement.
@@ -83,7 +89,7 @@ export function FloatingTabBarVisibilityProvider({ children }: Props) {
         accumulatedDeltaRef.current = 0
       }
     },
-    [setVisible]
+    [setVisible, scrollY]
   )
 
   const value = useMemo(
@@ -92,8 +98,9 @@ export function FloatingTabBarVisibilityProvider({ children }: Props) {
       setVisible,
       reportScroll,
       resetScrollTracking,
+      scrollY,
     }),
-    [visibleState, setVisible, reportScroll, resetScrollTracking]
+    [visibleState, setVisible, reportScroll, resetScrollTracking, scrollY]
   )
 
   return <FloatingTabBarVisibilityContext.Provider value={value}>{children}</FloatingTabBarVisibilityContext.Provider>

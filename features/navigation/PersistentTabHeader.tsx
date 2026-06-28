@@ -3,24 +3,30 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter, useSegments } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
-import { redesign, spacing, typography } from '@/features/core/theme'
+import { BlurView } from 'expo-blur'
+import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
+import { glass, redesign, spacing, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
-import { useCreatorProfile } from '@/features/profile/hooks'
+import { useCreatorProfile, useReputation } from '@/features/profile/hooks'
+import { TierRing } from '@/features/profile/ui/TierBadge'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
+import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
+import { TAB_HEADER_HEIGHT } from '@/features/navigation/floatingTabBar.constants'
 import { WhatsNewButton } from '@/features/whatsnew/WhatsNewModal'
 
 const topLogo = require('@/assets/images/likelablogonew.png')
 
-// A single header that stays put while the tab pager swipes underneath. The right
-// side crossfades between the profile avatar (on Discover/Projects) and a settings
-// cog (on Profile), since the profile screen already shows the avatar.
+// A frosted-glass header that stays put while the tab pager swipes (and content
+// scrolls) underneath. The avatar wears the creator's tier ring and crossfades to a
+// settings cog on the Profile tab; a hairline + shadow fade in as you scroll.
 export function PersistentTabHeader() {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const segments = useSegments()
   const { data: profile } = useCreatorProfile()
+  const { tier } = useReputation()
+  const { scrollY } = useFloatingTabBarVisibility()
 
   const onProfile = segments[segments.length - 1] === 'profile'
 
@@ -32,48 +38,58 @@ export function PersistentTabHeader() {
   const avatarStyle = useAnimatedStyle(() => ({ opacity: 1 - t.value }))
   const cogStyle = useAnimatedStyle(() => ({ opacity: t.value }))
 
+  // Scroll elevation — the header lifts off the content as you scroll under it. A
+  // faint edge is always present so it reads as a defined surface, not a flat wash.
+  const shadowStyle = useAnimatedStyle(() => ({ shadowOpacity: interpolate(scrollY.value, [0, 24], [0.04, 0.16], Extrapolation.CLAMP) }))
+  const hairlineStyle = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.value, [0, 24], [0.35, 1], Extrapolation.CLAMP) }))
+
   return (
-    <View style={{ paddingTop: insets.top, paddingHorizontal: spacing.page, backgroundColor: redesign.color.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 52 }}>
-        <Pressable
-          onPress={() => {
-            router.navigate('/(tabs)/overview')
-            scrollEvents.emit('scrollToTop:overview')
-          }}
-          hitSlop={10}
-        >
-          <Image source={topLogo} style={{ width: 46, height: 46 }} resizeMode="contain" />
-        </Pressable>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <WhatsNewButton />
+    <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, shadowColor: '#0B0B0F', shadowRadius: 16, shadowOffset: { width: 0, height: 7 } }, shadowStyle]}>
+      <View style={{ paddingTop: insets.top, paddingHorizontal: spacing.page }}>
+        {/* Same frosted glass as the bottom tab bar — renders in Expo Go */}
+        <BlurView tint="light" intensity={glass.blurTabBar} style={[StyleSheet.absoluteFill, { backgroundColor: glass.tabBarBg }]} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: TAB_HEADER_HEIGHT }}>
           <Pressable
-            onPress={() => router.push(onProfile ? '/settings' : '/(tabs)/profile')}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={onProfile ? 'Settings' : 'Profile'}
-            style={{ width: 38, height: 38 }}
+            onPress={() => {
+              router.navigate('/(tabs)/overview')
+              scrollEvents.emit('scrollToTop:overview')
+            }}
+            hitSlop={10}
           >
-            {/* Avatar — fades out on the profile tab */}
-            <Animated.View style={[StyleSheet.absoluteFill, avatarStyle]}>
-              {profile?.avatarUrl ? (
-                <Image source={{ uri: profile.avatarUrl }} style={{ width: 38, height: 38, borderRadius: 19 }} />
-              ) : (
-                <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(23,31,42,0.06)', borderWidth: 1, borderColor: palette.borderColor }}>
-                  <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>
-                    {profile?.displayName?.trim()?.[0]?.toUpperCase() || 'U'}
-                  </Text>
-                </View>
-              )}
-            </Animated.View>
-
-            {/* Settings cog — fades in on the profile tab */}
-            <Animated.View style={[StyleSheet.absoluteFill, cogStyle, { borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(23,31,42,0.06)', borderWidth: 1, borderColor: palette.borderColor }]}>
-              <MaterialCommunityIcons name="cog-outline" size={21} color={palette.textMuted} />
-            </Animated.View>
+            <Image source={topLogo} style={{ width: 46, height: 46 }} resizeMode="contain" />
           </Pressable>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <WhatsNewButton />
+            <Pressable
+              onPress={() => router.push(onProfile ? '/settings' : '/(tabs)/profile')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={onProfile ? 'Settings' : 'Profile'}
+              style={{ width: 40, height: 40 }}
+            >
+              {/* Avatar with the creator's tier ring — fades out on the Profile tab */}
+              <Animated.View style={[StyleSheet.absoluteFill, avatarStyle]}>
+                <TierRing tier={tier.tier} size={40} radius={20} borderWidth={2}>
+                  {profile?.avatarUrl ? (
+                    <Image source={{ uri: profile.avatarUrl }} style={{ width: '100%', height: '100%' }} />
+                  ) : (
+                    <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>
+                      {profile?.displayName?.trim()?.[0]?.toUpperCase() || 'U'}
+                    </Text>
+                  )}
+                </TierRing>
+              </Animated.View>
+
+              {/* Settings cog — fades in on the Profile tab (opaque, covers the ring) */}
+              <Animated.View style={[StyleSheet.absoluteFill, cogStyle, { borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: redesign.color.card, borderWidth: 1, borderColor: palette.borderColor }]}>
+                <MaterialCommunityIcons name="cog-outline" size={21} color={palette.textMuted} />
+              </Animated.View>
+            </Pressable>
+          </View>
         </View>
       </View>
-    </View>
+      <Animated.View style={[{ height: StyleSheet.hairlineWidth, backgroundColor: redesign.color.hairlineStrong }, hairlineStyle]} />
+    </Animated.View>
   )
 }

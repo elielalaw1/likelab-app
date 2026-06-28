@@ -241,7 +241,7 @@ export default function DeliverablesPage() {
   )
 
   return (
-    <Screen onRefresh={onRefresh} bgColor={redesign.color.bg} topInset={false}>
+    <Screen onRefresh={onRefresh} bgColor={redesign.color.bg} headerOverlay>
 
       <Animated.View entering={FadeInDown.duration(250)}>
         <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>

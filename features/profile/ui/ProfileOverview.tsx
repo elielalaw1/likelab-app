@@ -153,7 +153,7 @@ export function ProfileOverview() {
     <Screen
       bgColor={redesign.color.bg}
       scrollRef={scrollRef}
-      topInset={false}
+      headerOverlay
       overlay={<ProfileCoachmarks steps={coachSteps} scrollRef={scrollRef} contentY={contentY} />}
     >
 

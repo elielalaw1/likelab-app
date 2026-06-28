@@ -6,7 +6,7 @@ import { spacing } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { WallpaperBackground } from '@/features/shared/ui/WallpaperBackground'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
-import { getFloatingTabBarSpace } from '@/features/navigation/floatingTabBar.constants'
+import { getFloatingTabBarSpace, TAB_HEADER_HEIGHT } from '@/features/navigation/floatingTabBar.constants'
 import { useFocusEffect } from '@react-navigation/native'
 
 type GradientSpec = {
@@ -27,16 +27,18 @@ type Props = {
   wallpaper?: boolean
   bgColor?: string
   contentGap?: number
-  // When false the screen skips its own top safe-area inset — used by the tab
-  // screens whose notch space is owned by the persistent header above the pager.
-  topInset?: boolean
+  // When true the screen sits UNDER the persistent blur header overlay: it skips its
+  // own top safe-area inset and pads its content down by the header's height so the
+  // content scrolls beneath the blur instead of starting under it.
+  headerOverlay?: boolean
 }
 
-export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap, topInset = true }: Props) {
+export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap, headerOverlay = false }: Props) {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { reportScroll, setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
   const bottomPad = spacing.xxl + (tabAware ? getFloatingTabBarSpace(insets.bottom) : 12) + overlayPadding
+  const topPad = headerOverlay ? insets.top + TAB_HEADER_HEIGHT + spacing.sm : spacing.sm
   const [refreshing, setRefreshing] = useState(false)
 
   useFocusEffect(
@@ -56,7 +58,7 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
   const safeBg = wallpaper ? 'transparent' : (bgColor ?? palette.bg)
 
   const inner = (
-    <SafeAreaView edges={topInset ? undefined : ['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: safeBg }}>
+    <SafeAreaView edges={headerOverlay ? ['bottom', 'left', 'right'] : undefined} style={{ flex: 1, backgroundColor: safeBg }}>
       {gradient && !wallpaper ? (
         <LinearGradient
           pointerEvents="none"
@@ -76,7 +78,7 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={palette.text} /> : undefined}
           contentContainerStyle={{
             paddingHorizontal: spacing.page,
-            paddingTop: spacing.sm,
+            paddingTop: topPad,
             paddingBottom: bottomPad,
             gap: contentGap ?? spacing.lg,
           }}
@@ -84,7 +86,7 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
           {children}
         </ScrollView>
       ) : (
-        <View style={{ flex: 1, paddingHorizontal: spacing.page, paddingBottom: bottomPad, gap: contentGap ?? spacing.lg }}>{children}</View>
+        <View style={{ flex: 1, paddingHorizontal: spacing.page, paddingTop: topPad, paddingBottom: bottomPad, gap: contentGap ?? spacing.lg }}>{children}</View>
       )}
       {overlay}
     </SafeAreaView>

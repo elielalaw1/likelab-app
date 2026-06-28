@@ -101,7 +101,7 @@ export default function ProjectsPage() {
   const isGrid = viewMode === 'grid'
 
   return (
-    <Screen onRefresh={onRefresh} scrollRef={scrollRef} bgColor={redesign.color.bg} topInset={false}>
+    <Screen onRefresh={onRefresh} scrollRef={scrollRef} bgColor={redesign.color.bg} headerOverlay>
 
       <Animated.View entering={FadeInDown.duration(250)}>
         <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>
