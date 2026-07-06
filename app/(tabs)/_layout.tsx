@@ -7,8 +7,10 @@ import { withLayoutContext } from 'expo-router'
 import { CreatorProfileLiveSync } from '@/features/profile/CreatorProfileLiveSync'
 import { WhatsNewHost } from '@/features/whatsnew/WhatsNewModal'
 import { LevelUpHost } from '@/features/levelup/LevelUpCelebration'
+import { LiveCelebrationHost } from '@/features/deliverables/ui/LiveCelebration'
 import { PersistentTabHeader } from '@/features/navigation/PersistentTabHeader'
 import { CreatorOnboardingGate } from '@/features/onboarding/CreatorOnboardingGate'
+import { ProfileCompletionAutoPrompt } from '@/features/onboarding/ProfileCompletionAutoPrompt'
 import { TutorialOverlay } from '@/features/onboarding/TutorialOverlay'
 import { WelcomePendingOverlay } from '@/features/onboarding/WelcomePendingOverlay'
 import { useCreatorProfile } from '@/features/profile/hooks'
@@ -85,10 +87,12 @@ export default function TabsLayout() {
         <PersistentTabHeader />
       </View>
       <CreatorOnboardingGate />
+      <ProfileCompletionAutoPrompt />
       <WelcomePendingOverlay />
       <TutorialOverlay />
       <WhatsNewHost />
       <LevelUpHost />
+      <LiveCelebrationHost />
     </FloatingTabBarVisibilityProvider>
   )
 }

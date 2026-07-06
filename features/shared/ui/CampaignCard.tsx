@@ -21,6 +21,8 @@ type Props = {
   badge?: number
   compact?: boolean
   index?: number
+  /** When set, the apply pill shows this gate reason (e.g. "Awaiting approval") up front instead of a baiting "Apply now". */
+  applyGate?: string | null
 }
 
 function formatPlatform(platform?: string | null) {
@@ -40,7 +42,7 @@ function brandVerified(campaign: Campaign): boolean {
   return !!(campaign.brandInstagram && campaign.brandTiktok)
 }
 
-export function CampaignCard({ campaign, onPress, onApply, badge, compact, index = 0 }: Props) {
+export function CampaignCard({ campaign, onPress, onApply, badge, compact, index = 0, applyGate }: Props) {
   'use no memo'
   const { palette } = useTheme()
   const brandSheetRef = useRef<BottomSheetModal>(null)
@@ -230,11 +232,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
         <View style={{ position: 'absolute', right: 12, top: 12, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
           {badge ? (
             <View style={{ minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 }}>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: 'System' }}>{badge}</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: 'System', fontVariant: ['tabular-nums'] }}>{badge}</Text>
             </View>
           ) : null}
           {open ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(16,185,129,0.95)', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(16,159,110,0.95)', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 }}>
               <View style={{ width: 5, height: 5, borderRadius: 999, backgroundColor: '#fff' }} />
               <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 }}>OPEN</Text>
             </View>
@@ -257,20 +259,14 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
 
         {/* Payout + Closes cells */}
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1, borderRadius: redesign.radius.cell, paddingVertical: 12, paddingHorizontal: 14, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairline }}>
-            <LinearGradient
-              colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.08)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ position: 'absolute', inset: 0 }}
-            />
-            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '800', letterSpacing: 1.0, textTransform: 'uppercase', marginBottom: 4 }}>Reward</Text>
-            <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.3 }} numberOfLines={1}>
+          <View style={{ flex: 1, borderRadius: redesign.radius.cell, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairline }}>
+            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '700', marginBottom: 4 }}>Reward</Text>
+            <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
               {reward || '—'}
             </Text>
           </View>
           <View style={{ flex: 1, borderRadius: redesign.radius.cell, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairline }}>
-            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 9, fontWeight: '800', letterSpacing: 1.0, textTransform: 'uppercase', marginBottom: 4 }}>Closes</Text>
+            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '700', marginBottom: 4 }}>Closes</Text>
             <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
               {closed ? 'Closed' : days == null ? 'Open' : days === 0 ? 'Last day' : `${days}d`}
             </Text>
@@ -304,7 +300,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
             style={{
               minHeight: 50,
               borderRadius: redesign.radius.pill,
-              backgroundColor: applyState === 'applied' ? 'rgba(16,159,110,0.96)' : applyState === 'blocked' ? 'rgba(239,68,68,0.96)' : redesign.color.ink,
+              backgroundColor: applyState === 'applied' ? 'rgba(16,159,110,0.96)' : applyState === 'blocked' ? 'rgba(239,68,68,0.96)' : (applyState === 'idle' && applyGate) ? 'rgba(11,11,15,0.42)' : redesign.color.ink,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -313,7 +309,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               ...redesign.shadow.cta,
             }}
           >
-            {applyState === 'idle' ? (
+            {applyState === 'idle' && !applyGate ? (
               <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, bottom: 0, width: 100, transform: [{ skewX: '-18deg' }] }, shimmerStyle]}>
                 <LinearGradient
                   colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.20)', 'rgba(255,255,255,0)']}
@@ -326,7 +322,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
             {applyState === 'applied' ? (
               <>
                 <MaterialCommunityIcons name="check-circle-outline" size={18} color="#fff" />
-                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applied!</Text>
+                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applied</Text>
               </>
             ) : applyState === 'blocked' ? (
               <>
@@ -337,6 +333,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
               <>
                 <ActivityIndicator color="#fff" size="small" />
                 <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applying…</Text>
+              </>
+            ) : applyGate ? (
+              <>
+                <MaterialCommunityIcons name="lock-outline" size={16} color="#fff" />
+                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>{applyGate}</Text>
               </>
             ) : (
               <>

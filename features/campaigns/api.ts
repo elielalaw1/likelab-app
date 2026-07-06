@@ -1,8 +1,23 @@
 import { supabase } from '@/lib/supabase'
-import { ApplicationStatus, Campaign, CreatorInvitation, Deliverable } from '@/features/core/types'
+import { ApplicationStatus, Campaign, CampaignApplyForm, CreatorInvitation, Deliverable } from '@/features/core/types'
 import { getCurrentUserId, numberValue, textValue } from '@/features/core/supabase-utils'
+import { directDeliveryEnabled } from '@/features/core/flags'
 
 type Row = Record<string, unknown>
+
+// Gold/partner campaigns keep the pre-post brand review; standard campaigns deliver
+// link + RAW in one step and go live directly. The tier column is backend-pending, so
+// until it ships we fall back to the current review flow in prod, and to the new direct
+// flow in a dev build (EXPO_PUBLIC_DIRECT_DELIVERY=on) so it can be exercised.
+function resolveTier(row: Row): { tier: Campaign['campaignTier']; requiresReview: boolean } {
+  const raw = (textValue(row, ['campaign_tier', 'tier']) || '').toLowerCase()
+  if (raw === 'gold' || raw === 'partner') return { tier: raw, requiresReview: true }
+  if (raw === 'standard') return { tier: 'standard', requiresReview: false }
+  const explicit = row['requires_review']
+  if (explicit === true) return { tier: null, requiresReview: true }
+  if (explicit === false) return { tier: 'standard', requiresReview: false }
+  return { tier: null, requiresReview: !directDeliveryEnabled }
+}
 
 function toPrizeDistribution(value: unknown): number[] | null {
   if (!value) return null
@@ -58,17 +73,56 @@ function toStringArray(value: unknown): string[] | null {
   return null
 }
 
+// Normalise the campaigns.apply_form jsonb (brand/admin-authored, so defensive)
+// into a typed CampaignApplyForm. Returns null when there's nothing to collect.
+function parseApplyForm(raw: unknown): CampaignApplyForm | null {
+  // Brand/admin-authored jsonb — tolerate naming variants (select vs single-select,
+  // collectSize vs collect_size, options vs choices, label vs question) defensively.
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const asText = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '')
+  const rawQuestions = Array.isArray(o.questions) ? o.questions : Array.isArray(o.fields) ? o.fields : []
+  const questions = rawQuestions
+    .map((raw, i) => {
+      if (!raw || typeof raw !== 'object') return null
+      const q = raw as Record<string, unknown>
+      const label = asText(q.label ?? q.question ?? q.title).trim()
+      if (!label) return null
+      const t = asText(q.type).toLowerCase()
+      const type = t.includes('select') || t === 'choice' || t === 'radio' ? ('select' as const) : ('text' as const)
+      const opts = Array.isArray(q.options) ? q.options : Array.isArray(q.choices) ? q.choices : []
+      const options = opts.map(asText).map((s) => s.trim()).filter(Boolean)
+      return {
+        id: String(q.id ?? q.key ?? `q${i}`),
+        label,
+        type,
+        options: options.length ? options : undefined,
+        required: q.required === true || q.required === 'true',
+      }
+    })
+    .filter((q): q is NonNullable<typeof q> => q !== null)
+  const collectSize = o.collectSize === true || o.collect_size === true
+  const msg = asText(o.message ?? o.intro ?? o.intro_message).trim()
+  const message = msg ? msg : null
+  if (!collectSize && questions.length === 0 && !message) return null
+  return { message, collectSize, questions }
+}
+
 function mapCampaign(row: Row): Campaign {
   return {
     id: String(row.id || ''),
     title: textValue(row, ['name']) || 'Untitled campaign',
     description: textValue(row, ['description']),
+    productDescription: textValue(row, ['product_description']),
+    applyFormEnabled: row.apply_form_enabled === true,
+    applyForm: parseApplyForm(row.apply_form),
     brandId: textValue(row, ['brand_id']),
     startDate: textValue(row, ['start_date']),
     endDate: textValue(row, ['end_date']),
     status: (textValue(row, ['status']) || 'draft') as Campaign['status'],
     phase: (textValue(row, ['phase']) || null) as Campaign['phase'],
     requiredVideos: numberValue(row, ['required_videos']),
+    ...(() => { const t = resolveTier(row); return { requiresReview: t.requiresReview, campaignTier: t.tier } })(),
     rewardType: textValue(row, ['reward_type']),
     rewardValue: textValue(row, ['reward_value']),
     rewardAmount: numberValue(row, ['reward_value_sek']),
@@ -306,7 +360,7 @@ export async function getCampaignById(campaignId: string) {
   return enriched
 }
 
-export async function applyToCampaign(campaignId: string) {
+export async function applyToCampaign(campaignId: string): Promise<{ applicationId: string }> {
   const userId = await getCurrentUserId()
 
   const { data: existing, error: existingError } = await supabase
@@ -330,18 +384,31 @@ export async function applyToCampaign(campaignId: string) {
         .update({ status: 'applied' })
         .eq('id', current.id)
       if (updateError) throw new Error(updateError.message)
-      return
+      return { applicationId: String(current.id) }
     }
 
     throw new Error(`Cannot apply while application status is "${current.status}"`)
   }
 
-  const { error } = await supabase.from('applications').insert({
-    campaign_id: campaignId,
-    creator_id: userId,
-    status: 'applied',
-  })
+  const { data, error } = await supabase
+    .from('applications')
+    .insert({ campaign_id: campaignId, creator_id: userId, status: 'applied' })
+    .select('id')
+    .single()
 
+  if (error) throw new Error(error.message)
+  return { applicationId: String(data.id) }
+}
+
+// Saves the creator's answers to the campaign's after-apply form onto their own
+// application row. Best-effort: a failure here must never undo the application.
+export async function saveApplyFormResponse(applicationId: string, response: Record<string, unknown>) {
+  const userId = await getCurrentUserId()
+  const { error } = await supabase
+    .from('applications')
+    .update({ apply_form_response: response })
+    .eq('id', applicationId)
+    .eq('creator_id', userId)
   if (error) throw new Error(error.message)
 }
 

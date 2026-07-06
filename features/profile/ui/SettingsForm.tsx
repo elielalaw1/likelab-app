@@ -435,7 +435,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
       {onboarding === '1' ? (
         <SectionCard>
           <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '700' }}>
-            Complete Your Profile
+            Complete your profile
           </Text>
           <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 14, lineHeight: 20 }}>
             This is now the main onboarding flow. Fill in the missing sections below and save your changes to unlock the app.
@@ -455,15 +455,10 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         <SectionHeader>Account</SectionHeader>
         <SectionCard>
           <Pressable onPress={handlePickAvatar} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: redesign.color.hairlineStrong }}>
-              <Image
-                source={{
-                  uri:
-                    form.avatarUrl ||
-                    'https://images.unsplash.com/photo-1542204625-de293a7b7c13?auto=format&fit=crop&w=200&q=80',
-                }}
-                style={{ width: '100%', height: '100%' }}
-              />
+            <View style={{ width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: redesign.color.hairlineStrong, backgroundColor: 'rgba(99,80,184,0.08)' }}>
+              {form.avatarUrl ? (
+                <Image source={{ uri: form.avatarUrl }} style={{ width: '100%', height: '100%' }} />
+              ) : null}
               <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(10,15,30,0.24)', alignItems: 'center', justifyContent: 'center' }}>
                 <MaterialCommunityIcons name="camera-outline" size={18} color="#fff" />
               </View>
@@ -743,7 +738,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             }}
           >
             <Text style={{ fontFamily: typography.fontFamily, fontWeight: '700', fontSize: 16, color: redesign.color.ink }}>
-              Confirm Account Deletion
+              Confirm account deletion
             </Text>
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: redesign.color.muted }}>
               Enter your current password to permanently delete your account.

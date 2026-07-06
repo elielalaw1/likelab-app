@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useVideoPlayer, VideoView } from 'expo-video'
+import Animated, { Easing, FadeIn, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
 import { useQueryClient } from '@tanstack/react-query'
 import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
@@ -73,21 +74,15 @@ function VideoPlayerModal({ deliverableId, onClose }: { deliverableId: string; o
               <Text style={{ color: 'rgba(255,255,255,0.92)', fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '700', letterSpacing: -0.2 }}>
                 Your video
               </Text>
-              <LinearGradient
-                colors={redesign.gradient.holographic}
-                locations={redesign.gradient.holographicLocations}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={{ width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center' }}
+              <View
+                style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: redesign.color.purple, alignItems: 'center', justifyContent: 'center' }}
               >
                 <MaterialCommunityIcons name="play" size={15} color="#fff" />
-              </LinearGradient>
+              </View>
             </View>
           </View>
-          <LinearGradient
-            colors={redesign.gradient.holographic}
-            locations={redesign.gradient.holographicLocations}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={{ height: 2, marginHorizontal: 16, marginTop: 12, borderRadius: 999, opacity: 0.9 }}
+          <View
+            style={{ height: 2, marginHorizontal: 16, marginTop: 12, borderRadius: 999, backgroundColor: 'rgba(99,80,184,0.85)' }}
           />
         </View>
       </View>
@@ -141,7 +136,48 @@ function ActionButton({ icon, label, onPress, danger, disabled }: { icon: keyof 
   )
 }
 
-export function VideoReviewActions({ deliverableId }: { deliverableId: string }) {
+// A calm, reassuring "we've got it, sit tight" state — the peak-end principle says
+// the wait shouldn't feel like dead air. A softly pulsing eye + a slow scanning
+// sweep signal active work without a jittery spinner.
+function InReviewHero({ brandName }: { brandName?: string | null }) {
+  const pulse = useSharedValue(0)
+  const scan = useSharedValue(0)
+  useEffect(() => {
+    pulse.value = withRepeat(withSequence(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.ease) }), withTiming(0, { duration: 1300, easing: Easing.inOut(Easing.ease) })), -1, false)
+    scan.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }), -1, false)
+    return () => { cancelAnimation(pulse); cancelAnimation(scan) }
+  }, [pulse, scan])
+  const glowStyle = useAnimatedStyle(() => ({ opacity: 0.3 + pulse.value * 0.45, transform: [{ scale: 1 + pulse.value * 0.12 }] }))
+  const scanStyle = useAnimatedStyle(() => ({ opacity: 0.5 + pulse.value * 0.5, transform: [{ translateX: -70 + scan.value * 140 }] }))
+
+  return (
+    <Animated.View
+      entering={FadeIn}
+      style={{ alignItems: 'center', gap: 12, paddingVertical: 20, paddingHorizontal: 16, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, ...redesign.shadow.card }}
+    >
+      <View style={{ width: 64, height: 64, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View style={[glowStyle, { position: 'absolute', inset: 0, borderRadius: 32, backgroundColor: 'rgba(99,80,184,0.20)' }]} />
+        <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(99,80,184,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="eye-check-outline" size={28} color={redesign.color.purple} />
+        </View>
+      </View>
+      <View style={{ alignItems: 'center', gap: 4 }}>
+        <Text style={{ color: redesign.color.ink, fontSize: 16.5, fontWeight: '800', letterSpacing: -0.3, fontFamily: typography.fontFamily, textAlign: 'center' }}>
+          {brandName ? `${brandName} is reviewing your video` : 'Your video is in review'}
+        </Text>
+        <Text style={{ color: redesign.color.muted, fontSize: 13, fontWeight: '500', lineHeight: 18.5, fontFamily: typography.fontFamily, textAlign: 'center', maxWidth: 264 }}>
+          Nothing to do right now — we’ll notify you the moment they respond.
+        </Text>
+      </View>
+      {/* slow scanning sweep across a track — active work, no jitter */}
+      <View style={{ width: 120, height: 4, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
+        <Animated.View style={[scanStyle, { width: 46, height: '100%', borderRadius: 999, backgroundColor: redesign.color.purple }]} />
+      </View>
+    </Animated.View>
+  )
+}
+
+export function VideoReviewActions({ deliverableId, brandName }: { deliverableId: string; brandName?: string | null }) {
   const queryClient = useQueryClient()
   const [replacing, setReplacing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -195,14 +231,18 @@ export function VideoReviewActions({ deliverableId }: { deliverableId: string })
   }
 
   return (
-    <>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <ActionButton icon="play-circle-outline" label="View" onPress={() => { haptic.light(); setPlaying(true) }} disabled={busy} />
-        <ActionButton icon="autorenew" label="Replace" onPress={() => { haptic.selection(); setReplacing(true) }} disabled={busy} />
-        <ActionButton icon="trash-can-outline" label="Delete" onPress={handleDelete} danger disabled={busy} />
-        {busy ? <ActivityIndicator size="small" color={redesign.color.muted} /> : null}
+    <View style={{ gap: 14 }}>
+      <InReviewHero brandName={brandName} />
+      <View style={{ gap: 8 }}>
+        <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' }}>While you wait</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ActionButton icon="play-circle-outline" label="View" onPress={() => { haptic.light(); setPlaying(true) }} disabled={busy} />
+          <ActionButton icon="autorenew" label="Replace" onPress={() => { haptic.selection(); setReplacing(true) }} disabled={busy} />
+          <ActionButton icon="trash-can-outline" label="Delete" onPress={handleDelete} danger disabled={busy} />
+          {busy ? <ActivityIndicator size="small" color={redesign.color.muted} /> : null}
+        </View>
       </View>
       {playing ? <VideoPlayerModal deliverableId={deliverableId} onClose={() => setPlaying(false)} /> : null}
-    </>
+    </View>
   )
 }

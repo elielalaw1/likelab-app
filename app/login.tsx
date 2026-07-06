@@ -61,8 +61,11 @@ export default function LoginPage() {
       })
       if (error) {
         failureCountRef.current += 1
-        const delay = Math.min(3 * Math.pow(2, failureCountRef.current - 1), 30)
-        setLoginCooldown(Math.round(delay))
+        // Only start throttling after a few failures, so an honest typo retries instantly.
+        if (failureCountRef.current >= 3) {
+          const delay = Math.min(3 * Math.pow(2, failureCountRef.current - 3), 30)
+          setLoginCooldown(Math.round(delay))
+        }
         Alert.alert('Sign in failed', error.message)
         return
       }

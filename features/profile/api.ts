@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
 import { CreatorProfile } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
@@ -18,6 +19,11 @@ function toStatString(value: unknown): string | null {
 }
 
 function mapProfileConstraintError(message: string) {
+  // Live keeps a max-3-accounts-per-phone rule (the enforce_creator_phone_limit
+  // trigger), not a hard UNIQUE — its error carries the PHONE_LIMIT_REACHED tag.
+  if (message.includes('PHONE_LIMIT_REACHED')) {
+    return 'This phone number has reached its limit of 3 accounts.'
+  }
   if (message.includes('unique_creator_phone')) {
     return 'This phone number is already in use by another account'
   }
@@ -45,7 +51,7 @@ function inferPhoneCountryCode(phone?: string | null) {
 // Phone is optional, so it is intentionally excluded here. Keep this list in
 // sync with the checklist keys in getProfileCompletion so the percentage and
 // the "complete" check agree (a profile with everything but a phone hits 100%).
-const COMPLETION_KEYS = ['avatar_url', 'age_range', 'primary_category', 'gender', 'country', 'address', 'postal_code']
+const COMPLETION_KEYS = ['avatar_url', 'first_name', 'last_name', 'age_range', 'primary_category', 'gender', 'country', 'city', 'address', 'postal_code']
 
 function completionPercentage(row: Row) {
   const filled = COMPLETION_KEYS.reduce((acc, key) => {
@@ -64,6 +70,10 @@ function mapProfile(creator: Row, profile: Row, userId: string): CreatorProfile 
     id: userId,
     email: textValue(profile, ['email']),
     displayName,
+    // Real columns only — no display_name fallback here, so the completion check
+    // treats older name-only accounts as "missing" and re-prompts them to split it.
+    firstName: textValue(creator, ['first_name']),
+    lastName: textValue(creator, ['last_name']),
     phoneCountryCode: inferPhoneCountryCode(textValue(creator, ['phone'])),
     phone: textValue(creator, ['phone']),
     tiktokHandle: textValue(creator, ['tiktok_handle']),
@@ -124,6 +134,13 @@ export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
   const payload: Record<string, unknown> = { user_id: userId }
 
   if (hasOwn(values, 'displayName')) payload.display_name = values.displayName ?? null
+  if (hasOwn(values, 'firstName')) payload.first_name = values.firstName ?? null
+  if (hasOwn(values, 'lastName')) payload.last_name = values.lastName ?? null
+  // Keep the legacy concatenated display_name in sync whenever either name part is
+  // set, so brand/admin surfaces that still read display_name stay correct.
+  if ((hasOwn(values, 'firstName') || hasOwn(values, 'lastName')) && !hasOwn(values, 'displayName')) {
+    payload.display_name = `${values.firstName ?? ''} ${values.lastName ?? ''}`.trim() || null
+  }
   if (hasOwn(values, 'phone')) payload.phone = values.phone ?? null
   if (hasOwn(values, 'tiktokHandle')) payload.tiktok_handle = stripHandle(values.tiktokHandle)
   if (hasOwn(values, 'instagramHandle')) payload.instagram_handle = stripHandle(values.instagramHandle)
@@ -141,8 +158,49 @@ export async function updateCreatorProfile(values: Partial<CreatorProfile>) {
   // Avoid no-op upserts that can create/alter rows unintentionally.
   if (Object.keys(payload).length === 1) return
 
-  const { error } = await supabase.from('creator_profiles').upsert(payload, { onConflict: 'user_id' })
+  // Ask for the written row back so a silently-blocked write is caught. When an RLS
+  // UPDATE policy filters out the row the upsert affects 0 rows and returns NO error
+  // (data: null) — without this check the profile-completion flow would "succeed",
+  // persist nothing, and re-prompt forever.
+  const { data, error } = await supabase
+    .from('creator_profiles')
+    .upsert(payload, { onConflict: 'user_id' })
+    .select('user_id')
+    .maybeSingle()
   if (error) throw new Error(mapProfileConstraintError(error.message))
+  if (!data) throw new Error('We could not save your changes. You may not have permission to edit this profile — please sign out and back in, or contact support.')
+}
+
+// Pick an image from the library and upload it to the avatars bucket, returning a
+// cache-busted public URL (or null if the user cancelled). Shared by Settings and
+// the profile-completion flow so the upload logic lives in one place. Throws on
+// permission denial or a storage error so the caller can surface a message.
+export async function uploadAvatarFromLibrary(userId: string): Promise<string | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+  if (!permission.granted) throw new Error('Allow photo library access to upload a profile photo.')
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.85,
+  })
+  if (result.canceled || !result.assets[0]?.uri) return null
+
+  const asset = result.assets[0]
+  const uri = asset.uri
+  const extFromMime = asset.mimeType?.split('/')[1]
+  const ext = (extFromMime || uri.split('.').pop() || 'jpg').split('?')[0].toLowerCase()
+  const contentType = asset.mimeType || `image/${ext}`
+  const path = `${userId}/avatar.${ext}`
+
+  const response = await fetch(uri)
+  const arrayBuffer = await response.arrayBuffer()
+  const { error } = await supabase.storage.from('avatars').upload(path, arrayBuffer, { upsert: true, contentType })
+  if (error) throw error
+
+  const publicUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
+  return `${publicUrl}?t=${Date.now()}`
 }
 
 export function isProfileComplete(profile: CreatorProfile) {

@@ -175,7 +175,7 @@ export default function VerifyOtpPage() {
     <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        colors={['rgba(99,80,184,0.08)', 'rgba(99,80,184,0.02)', 'transparent']}
         start={{ x: 1, y: 0 }}
         end={{ x: 0.2, y: 0.5 }}
         style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
@@ -262,6 +262,11 @@ export default function VerifyOtpPage() {
                 </Text>
               </Pressable>
             </View>
+
+            {/* Escape hatch: a mistyped email would otherwise be a dead-end here */}
+            <Pressable onPress={() => router.replace({ pathname: '/signup', params: { email } })} hitSlop={6} style={{ alignSelf: 'center', marginTop: 2 }}>
+              <Text style={{ color: redesign.color.muted, fontSize: 13, fontWeight: '600', fontFamily: typography.fontFamily }}>Wrong email? Go back</Text>
+            </Pressable>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

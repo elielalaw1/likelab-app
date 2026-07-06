@@ -27,7 +27,7 @@ function LadderRow({ entry, index }: { entry: TierLadderEntry; index: number }) 
         flexDirection: 'row',
         gap: 14,
         alignItems: 'center',
-        backgroundColor: current ? 'rgba(124,63,242,0.05)' : redesign.color.card,
+        backgroundColor: current ? 'rgba(99,80,184,0.05)' : redesign.color.card,
         borderRadius: 18,
         borderWidth: current ? 1 : 0.5,
         borderColor: current ? tier.color : redesign.color.hairlineStrong,
@@ -47,7 +47,7 @@ function LadderRow({ entry, index }: { entry: TierLadderEntry; index: number }) 
             LVL {tier.level}
           </Text>
           {current ? (
-            <View style={{ borderRadius: 999, backgroundColor: 'rgba(124,63,242,0.12)', paddingHorizontal: 8, paddingVertical: 2 }}>
+            <View style={{ borderRadius: 999, backgroundColor: 'rgba(99,80,184,0.12)', paddingHorizontal: 8, paddingVertical: 2 }}>
               <Text style={{ fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', color: redesign.color.purple, letterSpacing: 0.4 }}>YOU’RE HERE</Text>
             </View>
           ) : achieved ? (

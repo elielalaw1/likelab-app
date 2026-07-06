@@ -66,7 +66,7 @@ function MilestoneCard({ joinedCount }: { joinedCount: number }) {
   return (
     <Animated.View entering={FadeInDown.duration(300).delay(120)} style={{ backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: 0.5, borderColor: redesign.color.hairlineStrong, padding: 16, gap: 12, ...redesign.shadow.card }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ width: 38, height: 38, borderRadius: 13, backgroundColor: m.reached ? redesign.color.successBg : 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 38, height: 38, borderRadius: 13, backgroundColor: m.reached ? redesign.color.successBg : 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center' }}>
           <MaterialCommunityIcons name={m.reached ? 'account-multiple-check' : 'gift-outline'} size={20} color={m.reached ? redesign.color.successText : redesign.color.purple} />
         </View>
         <View style={{ flex: 1, gap: 3 }}>

@@ -29,7 +29,7 @@ type AppStatus = 'invited' | 'active' | 'pending' | 'rejected' | 'withdrawn' | '
 const STATUS_META: Record<AppStatus, { label: string; color: string; bg: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = {
   invited:   { label: 'Invited',        color: '#B45309', bg: '#FFF7E8',                 icon: 'email-heart-outline' },
   active:    { label: 'Active',         color: '#0E9F6E', bg: 'rgba(16,185,129,0.12)',   icon: 'rocket-launch-outline' },
-  pending:   { label: 'Pending review', color: '#7A3FF2', bg: 'rgba(124,63,242,0.10)',   icon: 'clock-outline' },
+  pending:   { label: 'Pending review', color: '#6350B8', bg: 'rgba(99,80,184,0.10)',   icon: 'clock-outline' },
   rejected:  { label: 'Not selected',   color: '#6B6B76', bg: 'rgba(11,11,15,0.05)',     icon: 'close-circle-outline' },
   withdrawn: { label: 'Withdrawn',      color: '#6B6B76', bg: 'rgba(11,11,15,0.05)',     icon: 'undo-variant' },
   declined:  { label: 'Declined',       color: '#6B6B76', bg: 'rgba(11,11,15,0.05)',     icon: 'cancel' },
@@ -313,7 +313,7 @@ export default function ApplicationsPage() {
       // fire its own "accepted" toast for the same action.
       markLocalInvitationAccept()
       await acceptInvitation.mutateAsync(invitationId)
-      toast.success('Invitation accepted!')
+      toast.success('Invitation accepted')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not accept invitation')
     }
@@ -405,6 +405,8 @@ export default function ApplicationsPage() {
         ListEmptyComponent={
           !isLoading ? (
             <EmptyState
+              actionLabel="Browse campaigns"
+              onAction={() => router.navigate('/(tabs)/overview')}
               title="Nothing here"
               subtitle={
                 activeFilter === 'accepted'
@@ -496,7 +498,7 @@ export default function ApplicationsPage() {
                 <StatusChip status={appStatus} />
                 {appStatus === 'active' ? (
                   todo > 0 ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingLeft: 8, paddingRight: 11, paddingVertical: 5, backgroundColor: 'rgba(124,63,242,0.10)' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingLeft: 8, paddingRight: 11, paddingVertical: 5, backgroundColor: 'rgba(99,80,184,0.10)' }}>
                       <MaterialCommunityIcons name="arrow-right-circle" size={13} color={redesign.color.purple} />
                       <Text style={{ color: redesign.color.purple, fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '800' }}>{`${todo} to do`}</Text>
                     </View>

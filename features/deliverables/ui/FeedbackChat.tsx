@@ -184,7 +184,7 @@ export function FeedbackButton({
         </Animated.View>
       ) : null}
 
-      <Pressable onPress={openThread} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', borderRadius: 999, borderWidth: 1, borderColor: hasUnread ? redesign.color.purple : redesign.color.hairlineStrong, backgroundColor: hasUnread ? 'rgba(124,63,242,0.08)' : redesign.color.card, paddingLeft: 8, paddingRight: 16, paddingVertical: 8 }}>
+      <Pressable onPress={openThread} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start', borderRadius: 999, borderWidth: 1, borderColor: hasUnread ? redesign.color.purple : redesign.color.hairlineStrong, backgroundColor: hasUnread ? 'rgba(99,80,184,0.08)' : redesign.color.card, paddingLeft: 8, paddingRight: 16, paddingVertical: 8 }}>
         {/* Pulsing chat icon */}
         <View style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }}>
           {hasUnread ? (

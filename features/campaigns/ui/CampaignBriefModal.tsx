@@ -1,12 +1,18 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native'
+import { useState } from 'react'
+import { LayoutAnimation, Modal, Platform, Pressable, ScrollView, Text, UIManager, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated'
+import Animated, { FadeIn } from 'react-native-reanimated'
 import type { ReactNode } from 'react'
 import { Campaign } from '@/features/core/types'
 import { formatCampaignGoal } from '@/features/core/format'
 import { redesign, typography } from '@/features/core/theme'
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true)
+}
+
+const FONT = typography.fontFamily
 
 type Props = {
   visible: boolean
@@ -19,131 +25,147 @@ type Block = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap
   tint: string
   accent: string
+  preview: string
   node: ReactNode
   danger?: boolean
 }
 
 function Paragraph({ children }: { children: ReactNode }) {
-  return (
-    <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, lineHeight: 23, color: redesign.color.ink }}>
-      {children}
-    </Text>
-  )
+  return <Text style={{ fontFamily: FONT, fontSize: 15, lineHeight: 23, color: redesign.color.ink }}>{children}</Text>
 }
 
 export function CampaignBriefModal({ visible, onClose, campaign }: Props) {
+  // Accordion — one section open at a time so the sheet is a scannable list of
+  // headers (each with a one-line teaser), never a wall of text.
+  const [open, setOpen] = useState<string | null>(null)
+
   if (!campaign) return null
 
+  // One accent — purple — across every section (design principle: purple as the
+  // single sparse accent, no rainbow). Red is reserved for the one danger block.
+  const ACCENT = redesign.color.purple
+  const TINT = 'rgba(99,80,184,0.12)'
+  const DANGER = '#DC2626'
+  const DANGER_TINT = 'rgba(239,68,68,0.12)'
+
   const blocks: Block[] = []
-  if (campaign.campaignGoal) blocks.push({ label: 'Campaign goal', icon: 'target', tint: 'rgba(124,63,242,0.12)', accent: '#7A3FF2', node: <Paragraph>{formatCampaignGoal(campaign.campaignGoal)}</Paragraph> })
-  if (campaign.description) blocks.push({ label: 'Product description', icon: 'cube-outline', tint: 'rgba(31,200,232,0.14)', accent: '#0E92AD', node: <Paragraph>{campaign.description}</Paragraph> })
-  if (campaign.preferredCreators) blocks.push({ label: 'Preferred creators', icon: 'account-star-outline', tint: 'rgba(242,92,193,0.14)', accent: '#C23F95', node: <Paragraph>{campaign.preferredCreators}</Paragraph> })
-  if (campaign.instructions) blocks.push({ label: 'Your instructions', icon: 'pencil-outline', tint: 'rgba(16,159,110,0.12)', accent: '#0E9F6E', node: <Paragraph>{campaign.instructions}</Paragraph> })
-  if (campaign.videoRequirements) blocks.push({ label: 'Video requirements', icon: 'video-outline', tint: 'rgba(242,92,193,0.12)', accent: '#C23F95', node: <Paragraph>{campaign.videoRequirements}</Paragraph> })
-  if (campaign.briefGuidelines) blocks.push({ label: 'Brief & guidelines', icon: 'file-document-outline', tint: 'rgba(124,63,242,0.12)', accent: '#7A3FF2', node: <Paragraph>{campaign.briefGuidelines}</Paragraph> })
+  const push = (label: string, icon: Block['icon'], text?: string | null, danger?: boolean) => {
+    const t = (text || '').trim()
+    if (!t) return
+    blocks.push({
+      label,
+      icon,
+      accent: danger ? DANGER : ACCENT,
+      tint: danger ? DANGER_TINT : TINT,
+      preview: t,
+      node: <Paragraph>{t}</Paragraph>,
+      danger,
+    })
+  }
+
+  push('The product', 'package-variant-closed', campaign.productDescription)
+  push('Campaign goal', 'target', campaign.campaignGoal ? formatCampaignGoal(campaign.campaignGoal) : null)
+  push('Sales pitch', 'bullhorn-outline', campaign.description)
+  push('Your instructions', 'pencil-outline', campaign.instructions)
+  push('Video requirements', 'video-outline', campaign.videoRequirements)
+  push('Brief & guidelines', 'file-document-outline', campaign.briefGuidelines)
   if ((campaign.keyMessages || []).length > 0) {
+    const msgs = campaign.keyMessages || []
     blocks.push({
       label: 'Key messages',
       icon: 'message-text-outline',
-      tint: 'rgba(45,212,191,0.14)',
-      accent: '#0E92AD',
+      accent: ACCENT,
+      tint: TINT,
+      preview: `${msgs.length} point${msgs.length === 1 ? '' : 's'} to hit`,
       node: (
         <View style={{ gap: 10 }}>
-          {campaign.keyMessages?.map((msg, i) => (
+          {msgs.map((msg, i) => (
             <View key={i} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: redesign.color.purple, marginTop: 9 }} />
-              <Text style={{ flex: 1, fontFamily: typography.fontFamily, fontSize: 15, lineHeight: 22, color: redesign.color.ink }}>{msg}</Text>
+              <Text style={{ flex: 1, fontFamily: FONT, fontSize: 15, lineHeight: 22, color: redesign.color.ink }}>{msg}</Text>
             </View>
           ))}
         </View>
       ),
     })
   }
-  if (campaign.brandVoice) blocks.push({ label: 'Brand voice', icon: 'account-voice', tint: 'rgba(45,212,191,0.14)', accent: '#0E92AD', node: <Paragraph>{campaign.brandVoice}</Paragraph> })
-  if (campaign.brandTone) blocks.push({ label: 'Brand tone', icon: 'tune-variant', tint: 'rgba(242,92,193,0.12)', accent: '#C23F95', node: <Paragraph>{campaign.brandTone}</Paragraph> })
-  if (campaign.targetAudience) blocks.push({ label: 'Target audience', icon: 'account-group-outline', tint: 'rgba(31,200,232,0.14)', accent: '#0E92AD', node: <Paragraph>{campaign.targetAudience}</Paragraph> })
-  if (campaign.thingsToAvoid) blocks.push({ label: 'Things to avoid', icon: 'cancel', tint: 'rgba(239,68,68,0.12)', accent: '#DC2626', danger: true, node: <Paragraph>{campaign.thingsToAvoid}</Paragraph> })
+  push('Preferred creators', 'account-star-outline', campaign.preferredCreators)
+  push('Brand voice', 'account-voice', campaign.brandVoice)
+  push('Brand tone', 'tune-variant', campaign.brandTone)
+  push('Target audience', 'account-group-outline', campaign.targetAudience)
+  push('Things to avoid', 'cancel', campaign.thingsToAvoid, true)
+
+  const toggle = (label: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.create(200, 'easeInEaseOut', 'opacity'))
+    setOpen((cur) => (cur === label ? null : label))
+  }
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          {/* Grabber */}
           <View style={{ alignItems: 'center', paddingTop: 8 }}>
             <View style={{ width: 40, height: 5, borderRadius: 999, backgroundColor: 'rgba(11,11,15,0.14)' }} />
           </View>
 
-          {/* Header */}
-          {visible ? (
-            <Animated.View
-              entering={FadeIn.duration(260)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14 }}
-            >
-              {/* Holographic logo tile — accent used sparingly */}
-              <LinearGradient
-                colors={redesign.gradient.holographic}
-                locations={redesign.gradient.holographicLocations}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={{ width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <MaterialCommunityIcons name="file-document-outline" size={20} color="#fff" />
-              </LinearGradient>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.2, textTransform: 'uppercase' }}>
-                  Full brief
-                </Text>
-                <Text style={{ fontFamily: typography.fontFamily, fontSize: 21, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.5, marginTop: 1 }} numberOfLines={1}>
-                  {campaign.title}
-                </Text>
-              </View>
-              <Pressable
-                onPress={onClose}
-                hitSlop={10}
-                style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center', ...redesign.shadow.card }}
-              >
-                <MaterialCommunityIcons name="close" size={20} color={redesign.color.ink} />
-              </Pressable>
-            </Animated.View>
-          ) : null}
+          {/* Header — solid purple accent (no holographic gradient) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: redesign.color.purple, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="file-document-outline" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FONT, fontSize: 10.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.2, textTransform: 'uppercase' }}>Full brief</Text>
+              <Text style={{ fontFamily: FONT, fontSize: 21, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.5, marginTop: 1 }} numberOfLines={1}>
+                {campaign.title}
+              </Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="close" size={20} color={redesign.color.ink} />
+            </Pressable>
+          </View>
 
-          {/* Thin holographic divider */}
-          <LinearGradient
-            colors={redesign.gradient.holographic}
-            locations={redesign.gradient.holographicLocations}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={{ height: 2, marginHorizontal: 20, borderRadius: 999, opacity: 0.85 }}
-          />
+          <View style={{ height: 1, backgroundColor: redesign.color.hairlineStrong, marginHorizontal: 20 }} />
 
           {visible ? (
-            <ScrollView contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 56 }} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
               {blocks.length ? (
-                blocks.map((b, i) => (
-                  <Animated.View
-                    key={b.label}
-                    entering={FadeInUp.springify().damping(15).mass(0.7).stiffness(140).delay(140 + i * 75)}
-                    style={{
-                      backgroundColor: redesign.color.card,
-                      borderRadius: 22,
-                      borderWidth: 1,
-                      borderColor: b.danger ? 'rgba(239,68,68,0.16)' : redesign.color.hairlineStrong,
-                      padding: 18,
-                      gap: 12,
-                      ...redesign.shadow.card,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: b.tint, alignItems: 'center', justifyContent: 'center' }}>
-                        <MaterialCommunityIcons name={b.icon} size={16} color={b.accent} />
-                      </View>
-                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.2, textTransform: 'uppercase' }}>
-                        {b.label}
-                      </Text>
+                blocks.map((b) => {
+                  const isOpen = open === b.label
+                  return (
+                    <View
+                      key={b.label}
+                      style={{
+                        backgroundColor: redesign.color.card,
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        borderColor: isOpen ? (b.danger ? 'rgba(239,68,68,0.22)' : redesign.color.purple) : redesign.color.hairlineStrong,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Pressable onPress={() => toggle(b.label)} style={{ flexDirection: 'row', alignItems: 'center', gap: 11, padding: 14 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: b.tint, alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialCommunityIcons name={b.icon} size={17} color={b.accent} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontFamily: FONT, fontSize: 14.5, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.2 }}>{b.label}</Text>
+                          {!isOpen ? (
+                            <Text numberOfLines={1} style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: '500', color: redesign.color.muted, marginTop: 1 }}>
+                              {b.preview}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <MaterialCommunityIcons name={isOpen ? 'chevron-up' : 'chevron-down'} size={22} color={redesign.color.faint} />
+                      </Pressable>
+                      {isOpen ? (
+                        <Animated.View entering={FadeIn.duration(160)} style={{ paddingHorizontal: 14, paddingBottom: 16, paddingTop: 2 }}>
+                          {b.node}
+                        </Animated.View>
+                      ) : null}
                     </View>
-                    {b.node}
-                  </Animated.View>
-                ))
+                  )
+                })
               ) : (
-                <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, color: redesign.color.muted }}>
+                <Text style={{ fontFamily: FONT, fontSize: 14, color: redesign.color.muted, padding: 8 }}>
                   No additional brief details have been added for this campaign yet.
                 </Text>
               )}

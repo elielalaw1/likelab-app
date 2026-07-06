@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <View style={{ flex: 1, backgroundColor: redesign.color.bg, alignItems: 'center', justifyContent: 'center', padding: 28 }}>
-        <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+        <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
           <MaterialCommunityIcons name="alert-circle-outline" size={32} color={redesign.color.purple} />
         </View>
 

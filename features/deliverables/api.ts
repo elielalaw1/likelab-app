@@ -1,5 +1,5 @@
 import { File } from 'expo-file-system'
-import { uploadAsync, FileSystemUploadType } from 'expo-file-system/legacy'
+import { createUploadTask, FileSystemUploadType } from 'expo-file-system/legacy'
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase'
 import { Deliverable, DeliverableFeedback, DeliverableSubmission, mapFeedbackRow, mapSubmissionRow } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
@@ -110,7 +110,14 @@ export async function uploadVideo(params: {
   }
 
   const encodedPath = storagePath.split('/').map(encodeURIComponent).join('/')
-  const uploadResult = await uploadAsync(
+  // Stream via an upload TASK (not one-shot uploadAsync) so we can bound it —
+  // expo-file-system has no built-in timeout, so a dead connection would
+  // otherwise leave the UI stuck on "uploading" forever. We use ONLY a generous
+  // ceiling (4 min): a stall-detection scheme that cancels on "no progress for
+  // N seconds" mis-fires on healthy uploads, because progress events pause while
+  // the app is backgrounded (e.g. during the photo-permission prompt) or on slow
+  // links. The ceiling catches a genuinely dead upload without false-cancelling.
+  const task = createUploadTask(
     `${supabaseUrl}/storage/v1/object/deliverable-videos/${encodedPath}`,
     fileUri,
     {
@@ -123,8 +130,24 @@ export async function uploadVideo(params: {
         'x-upsert': 'true',
         'cache-control': '3600',
       },
-    }
+    },
   )
+
+  let aborted = false
+  const watchdog = setTimeout(() => {
+    aborted = true
+    void task.cancelAsync().catch(() => {})
+  }, 240_000)
+
+  let uploadResult: Awaited<ReturnType<typeof task.uploadAsync>>
+  try {
+    uploadResult = await task.uploadAsync()
+  } finally {
+    clearTimeout(watchdog)
+  }
+  if (aborted || !uploadResult) {
+    throw new Error('The upload stalled — check your connection and try again.')
+  }
   if (uploadResult.status < 200 || uploadResult.status >= 300) {
     throw new Error(`Video upload failed (status ${uploadResult.status}). Please try again.`)
   }

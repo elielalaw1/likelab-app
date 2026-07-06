@@ -20,9 +20,9 @@ export function ProjectCardPreview() {
 
   return (
     <View style={{ width: 248, borderRadius: 22, overflow: 'hidden', backgroundColor: redesign.color.ink, ...redesign.shadow.cta }}>
-      {/* faux cover */}
-      <LinearGradient colors={['#7A3FF2', '#1FC8E8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-      <LinearGradient colors={['rgba(11,11,15,0.5)', 'rgba(11,11,15,0.93)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
+      {/* mono purple corner glow — mirrors the real coverless Projects card */}
+      <LinearGradient colors={['rgba(11,11,15,0.52)', 'rgba(11,11,15,0.93)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['rgba(99,80,184,0.5)', 'rgba(99,80,184,0)']} start={{ x: 1, y: 0 }} end={{ x: 0.35, y: 0.7 }} style={{ position: 'absolute', top: -24, right: -24, width: 180, height: 180, borderRadius: 90 }} />
 
       <View style={{ padding: 16, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
@@ -37,18 +37,20 @@ export function ProjectCardPreview() {
           </View>
         </View>
 
-        <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 }}>Glow Kit launch</Text>
+        <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 19, fontWeight: '800', letterSpacing: -0.4, lineHeight: 23 }}>Glow Kit launch</Text>
 
         <View style={{ gap: 6 }}>
           <View style={{ height: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
-            <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: '34%', borderRadius: 999 }} />
+            <View style={{ height: '100%', width: '34%', borderRadius: 999, backgroundColor: redesign.color.purple }} />
           </View>
           <Text style={{ color: 'rgba(255,255,255,0.65)', fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '600' }}>1 of 3 submitted</Text>
         </View>
 
-        <Animated.View style={[{ marginTop: 2, minHeight: 42, borderRadius: 13, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, ctaStyle]}>
-          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '800' }}>Upload video</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color={redesign.color.ink} />
+        <Animated.View style={[{ marginTop: 2, minHeight: 46, borderRadius: 15, paddingHorizontal: 16, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, ctaStyle]}>
+          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', letterSpacing: -0.2 }}>Upload video</Text>
+          <View style={{ position: 'absolute', right: 7, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(11,11,15,0.06)', alignItems: 'center', justifyContent: 'center' }}>
+            <MaterialCommunityIcons name="arrow-top-right" size={16} color={redesign.color.ink} />
+          </View>
         </Animated.View>
       </View>
     </View>

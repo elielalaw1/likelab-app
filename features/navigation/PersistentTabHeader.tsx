@@ -26,7 +26,7 @@ export function PersistentTabHeader() {
   const segments = useSegments()
   const { data: profile } = useCreatorProfile()
   const { tier } = useReputation()
-  const { scrollY } = useFloatingTabBarVisibility()
+  const { scrollY, headerOffset } = useFloatingTabBarVisibility()
 
   const onProfile = segments[segments.length - 1] === 'profile'
 
@@ -38,16 +38,26 @@ export function PersistentTabHeader() {
   const avatarStyle = useAnimatedStyle(() => ({ opacity: 1 - t.value }))
   const cogStyle = useAnimatedStyle(() => ({ opacity: t.value }))
 
-  // Scroll elevation — the header lifts off the content as you scroll under it. A
-  // faint edge is always present so it reads as a defined surface, not a flat wash.
-  const shadowStyle = useAnimatedStyle(() => ({ shadowOpacity: interpolate(scrollY.value, [0, 24], [0.04, 0.16], Extrapolation.CLAMP) }))
-  const hairlineStyle = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.value, [0, 24], [0.35, 1], Extrapolation.CLAMP) }))
+  // Slide/fade the header continuously with the scroll gesture — smooth, no snap.
+  const hideY = -(insets.top + TAB_HEADER_HEIGHT + 12)
+  const headerStyle = useAnimatedStyle(() => ({
+    opacity: 1 - headerOffset.value,
+    transform: [{ translateY: headerOffset.value * hideY }],
+  }))
+
+  // Glass + edge fade in only once content is scrolling under the header. At the very
+  // top there's nothing behind it, so it blends seamlessly into the background.
+  const glassStyle = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.value, [0, 22], [0, 1], Extrapolation.CLAMP) }))
+  const shadowStyle = useAnimatedStyle(() => ({ shadowOpacity: interpolate(scrollY.value, [0, 22], [0, 0.16], Extrapolation.CLAMP) }))
+  const hairlineStyle = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.value, [0, 22], [0, 1], Extrapolation.CLAMP) }))
 
   return (
-    <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, shadowColor: '#0B0B0F', shadowRadius: 16, shadowOffset: { width: 0, height: 7 } }, shadowStyle]}>
+    <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, shadowColor: '#0B0B0F', shadowRadius: 16, shadowOffset: { width: 0, height: 7 } }, shadowStyle, headerStyle]}>
       <View style={{ paddingTop: insets.top, paddingHorizontal: spacing.page }}>
-        {/* Same frosted glass as the bottom tab bar — renders in Expo Go */}
-        <BlurView tint="light" intensity={glass.blurTabBar} style={[StyleSheet.absoluteFill, { backgroundColor: glass.tabBarBg }]} />
+        {/* Frosted glass (same as the bottom tab bar) — fades in on scroll, blended at top */}
+        <Animated.View style={[StyleSheet.absoluteFill, glassStyle]}>
+          <BlurView tint="light" intensity={glass.blurTabBar} style={[StyleSheet.absoluteFill, { backgroundColor: glass.tabBarBg }]} />
+        </Animated.View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: TAB_HEADER_HEIGHT }}>
           <Pressable
             onPress={() => {

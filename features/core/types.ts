@@ -32,10 +32,29 @@ export type DeliverableStatus =
   | 'approved'
   | 'published'
 
+// Brand/admin-configured questionnaire shown in the app right after a creator
+// applies (e.g. to collect a clothing size before the product is shipped).
+export type CampaignApplyQuestion = {
+  id: string
+  label: string
+  type: 'text' | 'select'
+  options?: string[]
+  required?: boolean
+}
+
+export type CampaignApplyForm = {
+  message?: string | null
+  collectSize?: boolean
+  questions?: CampaignApplyQuestion[]
+}
+
 export type Campaign = {
   id: string
   title: string
   description?: string | null
+  productDescription?: string | null
+  applyFormEnabled?: boolean | null
+  applyForm?: CampaignApplyForm | null
   brandId?: string | null
   brandName?: string | null
   startDate?: string | null
@@ -43,6 +62,11 @@ export type Campaign = {
   status?: CampaignStatus | null
   phase?: CampaignPhase | null
   requiredVideos?: number | null
+  // Gold/partner campaigns keep the pre-post brand review; standard campaigns deliver
+  // link + RAW file in one step and go live directly. Backed by a campaign-tier column
+  // (backend pending) — resolved in campaigns/api.ts.
+  requiresReview?: boolean
+  campaignTier?: 'standard' | 'gold' | 'partner' | null
   rewardType?: string | null
   rewardValue?: string | null
   rewardAmount?: number | null
@@ -80,6 +104,8 @@ export type CreatorProfile = {
   id: string
   email?: string | null
   displayName?: string | null
+  firstName?: string | null
+  lastName?: string | null
   phoneCountryCode?: string | null
   phone?: string | null
   tiktokHandle?: string | null

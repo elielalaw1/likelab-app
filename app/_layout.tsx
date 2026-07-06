@@ -303,7 +303,9 @@ export default function RootLayout() {
             <ErrorBoundary>
               <View style={{ flex: 1 }}>
                 <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" />
+                  {/* Post-auth root — never allow the iOS edge-swipe to pop the tab bar
+                      and reveal an auth screen (login/welcome) sitting beneath it. */}
+                  <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
                   <Stack.Screen name="applications" />
                   <Stack.Screen name="campaigns/[id]" />
                   <Stack.Screen name="leaderboard/[id]" />
@@ -315,6 +317,8 @@ export default function RootLayout() {
                   <Stack.Screen name="reset-password" />
                   <Stack.Screen name="forgot-password" />
                   <Stack.Screen name="verify-otp" />
+                  {/* Profile-completion flow — closed only via its own Later/Continue. */}
+                  <Stack.Screen name="complete-profile" options={{ gestureEnabled: false }} />
                 </Stack>
                 <ToastContainer />
                 <OfflineBanner />

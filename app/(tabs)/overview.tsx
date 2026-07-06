@@ -12,9 +12,11 @@ import { useCreatorProfile, useReputation } from '@/features/profile/hooks'
 import { isProfileComplete } from '@/features/profile/api'
 import { isAwaitingLink } from '@/features/deliverables/api'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
-import { ActiveCampaignRail, FeaturedCampaign } from '@/features/campaigns/ui/DiscoverSections'
+import { FeaturedCampaign } from '@/features/campaigns/ui/DiscoverSections'
+import { ActiveCampaignDeck } from '@/features/campaigns/ui/ActiveCampaignDeck'
 import { TierRow } from '@/features/profile/ui/TierBadge'
 import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
+import { ScreenHeader } from '@/features/shared/ui/ScreenHeader'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { useQueryClient } from '@tanstack/react-query'
@@ -103,17 +105,15 @@ export default function ProjectsPage() {
   return (
     <Screen onRefresh={onRefresh} scrollRef={scrollRef} bgColor={redesign.color.bg} headerOverlay>
 
-      <Animated.View entering={FadeInDown.duration(250)}>
-        <Text style={{ fontSize: 34, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -1, lineHeight: 38 }}>
-          Discover
-        </Text>
-        <Text style={{ fontSize: 14.5, fontWeight: '500', color: redesign.color.muted, fontFamily: typography.fontFamily, lineHeight: 21, marginTop: 4 }}>
-          Apply to campaigns. Compete. Get paid.
-        </Text>
-      </Animated.View>
+      <ScreenHeader
+        eyebrow={browsable.length > 0 ? `${browsable.length} live ${browsable.length === 1 ? 'campaign' : 'campaigns'}` : undefined}
+        eyebrowDot
+        title="Discover"
+        subtitle="Apply to campaigns. Compete. Get paid."
+      />
 
       {/* In-progress campaigns — what a returning creator cares about first */}
-      <ActiveCampaignRail campaigns={accepted} badgeCounts={badgeCounts} onPress={(c) => router.push(campaignRouteParams(c) as never)} />
+      <ActiveCampaignDeck campaigns={accepted} badgeCounts={badgeCounts} onPress={(c) => router.push(campaignRouteParams(c) as never)} />
 
       {/* Category filter chips */}
       {categories.length > 1 ? (
@@ -158,7 +158,7 @@ export default function ProjectsPage() {
 
       {browsable.length > 0 ? (
         <>
-          <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: redesign.color.muted, letterSpacing: -0.1, fontFamily: typography.fontFamily }}>
             Open now · {browsable.length}
           </Text>
 
@@ -169,12 +169,12 @@ export default function ProjectsPage() {
           {rest.length > 0 ? (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1.0, textTransform: 'uppercase', fontFamily: typography.fontFamily }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: redesign.color.muted, letterSpacing: -0.1, fontFamily: typography.fontFamily }}>
                   More · {rest.length}
                 </Text>
                 <Pressable
                   onPress={() => { haptic.selection(); setViewMode((v) => (v === 'list' ? 'grid' : 'list')) }}
-                  style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: isGrid ? 'rgba(8,8,12,0.96)' : 'rgba(255,255,255,0.60)', borderWidth: 0.5, borderColor: isGrid ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,1)', alignItems: 'center', justifyContent: 'center', ...redesign.shadow.card }}
+                  style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: isGrid ? 'rgba(8,8,12,0.96)' : 'rgba(255,255,255,0.60)', borderWidth: 0.5, borderColor: isGrid ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,1)', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <MaterialCommunityIcons name={isGrid ? 'view-list-outline' : 'view-grid-outline'} size={18} color={isGrid ? 'rgba(255,255,255,0.95)' : 'rgba(28,28,30,0.55)'} />
                 </Pressable>
@@ -203,6 +203,7 @@ export default function ProjectsPage() {
                     <CampaignCard
                       campaign={item}
                       index={index}
+                      applyGate={!isApproved ? 'Awaiting approval' : (!profile || !isProfileComplete(profile)) ? 'Complete profile to apply' : undefined}
                       onPress={() => router.push(campaignRouteParams(item) as never)}
                       onApply={async () => {
                         if (!isApproved) {
@@ -231,10 +232,25 @@ export default function ProjectsPage() {
             </>
           ) : null}
         </>
+      ) : error && !isLoading ? (
+        <Animated.View entering={FadeInDown.duration(300)} style={{ gap: 14, backgroundColor: redesign.color.card, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 20, ...redesign.shadow.card }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(239,68,68,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="wifi-off" size={22} color="#EF4444" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 15.5, fontWeight: '800', letterSpacing: -0.3 }}>Couldn&apos;t load campaigns</Text>
+              <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', lineHeight: 18, marginTop: 2 }}>Check your connection and try again.</Text>
+            </View>
+          </View>
+          <Pressable onPress={() => refetchCampaigns()} style={{ minHeight: 44, borderRadius: 13, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '800' }}>Try again</Text>
+          </Pressable>
+        </Animated.View>
       ) : !isLoading ? (
         <Animated.View entering={FadeInDown.duration(300)} style={{ gap: 14, backgroundColor: redesign.color.card, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 20, ...redesign.shadow.card }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name="bell-badge-outline" size={23} color={redesign.color.purple} />
             </View>
             <View style={{ flex: 1 }}>

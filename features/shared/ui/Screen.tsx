@@ -1,11 +1,13 @@
-import { ReactNode, RefObject, useState, useCallback } from 'react'
+import { ReactNode, RefObject, useState, useCallback, useEffect, useRef } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
+import Animated, { useSharedValue, withTiming } from 'react-native-reanimated'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { spacing } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { WallpaperBackground } from '@/features/shared/ui/WallpaperBackground'
-import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
+import { RefreshHeader } from '@/features/shared/ui/RefreshHeader'
+import { useFloatingTabBarVisibility, useTabScrollHandler } from '@/features/navigation/FloatingTabBarVisibility'
 import { getFloatingTabBarSpace, TAB_HEADER_HEIGHT } from '@/features/navigation/floatingTabBar.constants'
 import { useFocusEffect } from '@react-navigation/native'
 
@@ -36,10 +38,14 @@ type Props = {
 export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap, headerOverlay = false }: Props) {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
-  const { reportScroll, setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
+  const { setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
+  const scrollHandler = useTabScrollHandler()
   const bottomPad = spacing.xxl + (tabAware ? getFloatingTabBarSpace(insets.bottom) : 12) + overlayPadding
   const topPad = headerOverlay ? insets.top + TAB_HEADER_HEIGHT + spacing.sm : spacing.sm
   const [refreshing, setRefreshing] = useState(false)
+  const busy = useRef(false)
+  // Drives the collapsible RefreshHeader: 0 = closed, 1 = fully open.
+  const openProgress = useSharedValue(0)
 
   useFocusEffect(
     useCallback(() => {
@@ -50,12 +56,30 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
   )
 
   const handleRefresh = useCallback(async () => {
-    if (!onRefresh) return
+    if (!onRefresh || busy.current) return
+    busy.current = true
     setRefreshing(true)
-    try { await onRefresh() } finally { setRefreshing(false) }
+    // Hold the refresh open for a minimum beat so the branded loading video actually plays
+    // (and the header visibly opens) instead of collapsing the instant cached data resolves.
+    const MIN_MS = 900
+    const started = Date.now()
+    try {
+      await onRefresh()
+    } finally {
+      const elapsed = Date.now() - started
+      if (elapsed < MIN_MS) await new Promise((r) => setTimeout(r, MIN_MS - elapsed))
+      setRefreshing(false)
+      busy.current = false
+    }
   }, [onRefresh])
 
+  // Expand the header while refreshing, collapse it when done.
+  useEffect(() => {
+    openProgress.value = withTiming(refreshing ? 1 : 0, { duration: 280 })
+  }, [refreshing, openProgress])
+
   const safeBg = wallpaper ? 'transparent' : (bgColor ?? palette.bg)
+  const gap = contentGap ?? spacing.lg
 
   const inner = (
     <SafeAreaView edges={headerOverlay ? ['bottom', 'left', 'right'] : undefined} style={{ flex: 1, backgroundColor: safeBg }}>
@@ -69,24 +93,31 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
         />
       ) : null}
       {scroll ? (
-        <ScrollView
-          ref={scrollRef}
-          onScroll={tabAware ? (event) => reportScroll(event.nativeEvent.contentOffset.y) : undefined}
+        <Animated.ScrollView
+          ref={scrollRef as never}
+          onScroll={tabAware ? scrollHandler : undefined}
           scrollEventThrottle={16}
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
-          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={palette.text} /> : undefined}
+          refreshControl={
+            onRefresh ? (
+              // refreshing stays false so the OS never holds its own empty gap — our
+              // collapsible RefreshHeader IS the refresh affordance. onRefresh still fires
+              // on each pull-release.
+              <RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor="transparent" colors={['transparent']} />
+            ) : undefined
+          }
           contentContainerStyle={{
             paddingHorizontal: spacing.page,
             paddingTop: topPad,
             paddingBottom: bottomPad,
-            gap: contentGap ?? spacing.lg,
           }}
         >
-          {children}
-        </ScrollView>
+          {onRefresh ? <RefreshHeader progress={openProgress} /> : null}
+          <View style={{ gap }}>{children}</View>
+        </Animated.ScrollView>
       ) : (
-        <View style={{ flex: 1, paddingHorizontal: spacing.page, paddingTop: topPad, paddingBottom: bottomPad, gap: contentGap ?? spacing.lg }}>{children}</View>
+        <View style={{ flex: 1, paddingHorizontal: spacing.page, paddingTop: topPad, paddingBottom: bottomPad, gap }}>{children}</View>
       )}
       {overlay}
     </SafeAreaView>

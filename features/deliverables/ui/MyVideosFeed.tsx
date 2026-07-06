@@ -51,7 +51,7 @@ function GridCell({ video, width, onPress }: { video: MyVideo; width: number; on
       {thumb ? (
         <ExpoImage source={{ uri: thumb }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" transition={150} />
       ) : (
-        <LinearGradient pointerEvents="none" colors={['rgba(124,63,242,0.4)', 'rgba(31,200,232,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+        <LinearGradient pointerEvents="none" colors={['rgba(99,80,184,0.4)', 'rgba(99,80,184,0.12)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
       )}
       {video.tiktokUrl ? (
         <View style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
@@ -77,7 +77,7 @@ function ArchivedFeedItem({ video, width, height }: { video: MyVideo; width: num
       {poster ? (
         <ExpoImage source={{ uri: poster }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" blurRadius={2} />
       ) : (
-        <LinearGradient pointerEvents="none" colors={['rgba(124,63,242,0.4)', 'rgba(31,200,232,0.14)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+        <LinearGradient pointerEvents="none" colors={['rgba(99,80,184,0.4)', 'rgba(99,80,184,0.12)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
       )}
       <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)' }} />
       <View style={{ alignItems: 'center', gap: 14, paddingHorizontal: 32 }}>
@@ -194,7 +194,7 @@ export function MyVideosFeed({ pagePadding = 16, title = 'My videos' }: { pagePa
         </View>
       ) : videos.length === 0 ? (
         <View style={{ backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 26, paddingHorizontal: 22, alignItems: 'center', gap: 8, ...redesign.shadow.card }}>
-          <View style={{ width: 48, height: 48, borderRadius: 15, backgroundColor: 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 48, height: 48, borderRadius: 15, backgroundColor: 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center' }}>
             <MaterialCommunityIcons name="video-outline" size={24} color={redesign.color.purple} />
           </View>
           <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14.5, fontWeight: '800' }}>No videos yet</Text>

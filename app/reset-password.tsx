@@ -161,17 +161,17 @@ export default function ResetPasswordPage() {
                       style={{
                         borderRadius: 20,
                         borderWidth: 1.5,
-                        borderColor: '#C9D2FF',
+                        borderColor: 'transparent',
                         overflow: 'hidden',
                       }}
                     >
                       <LinearGradient
-                        colors={['rgba(240,236,255,0.92)', 'rgba(236,243,255,0.92)']}
+                        colors={['#6350B8', '#6350B8']}
                         start={{ x: 0, y: 0.5 }}
                         end={{ x: 1, y: 0.5 }}
                         style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 18 }}
                       >
-                        <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>Back to sign in</Text>
+                        <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>Back to sign in</Text>
                       </LinearGradient>
                     </Pressable>
                   </View>
@@ -229,18 +229,18 @@ export default function ResetPasswordPage() {
                       style={{
                         borderRadius: 20,
                         borderWidth: 1.5,
-                        borderColor: '#C9D2FF',
+                        borderColor: 'transparent',
                         overflow: 'hidden',
                         opacity: loading || !ready ? 0.72 : 1,
                       }}
                     >
                       <LinearGradient
-                        colors={['rgba(240,236,255,0.92)', 'rgba(236,243,255,0.92)']}
+                        colors={['#6350B8', '#6350B8']}
                         start={{ x: 0, y: 0.5 }}
                         end={{ x: 1, y: 0.5 }}
                         style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 18 }}
                       >
-                        <Text style={{ color: '#101525', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>{loading ? 'Saving...' : 'Set new password'}</Text>
+                        <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'Montserrat' }}>{loading ? 'Saving…' : 'Set new password'}</Text>
                       </LinearGradient>
                     </Pressable>
                   </View>

@@ -35,15 +35,22 @@ export default function ConnectTikTokPage() {
     }
   }
 
-  const handleContinue = () => {
+  const fadeOut = (onDone: () => void) => {
     setExiting(true)
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 350,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
-    }).start(() => {
-      router.replace('/(tabs)/overview')
+    }).start(onDone)
+  }
+
+  const handleContinue = () => {
+    // Return to wherever reconnect was triggered from (e.g. the deliverable the
+    // creator was posting) instead of always dumping them on the overview tab.
+    fadeOut(() => {
+      if (router.canGoBack()) router.back()
+      else router.replace('/(tabs)/overview')
     })
   }
 
@@ -51,7 +58,7 @@ export default function ConnectTikTokPage() {
     <Animated.View style={{ flex: 1, backgroundColor: redesign.color.bg, opacity: fadeAnim }}>
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        colors={['rgba(99,80,184,0.08)', 'rgba(99,80,184,0.02)', 'transparent']}
         start={{ x: 1, y: 0 }}
         end={{ x: 0.2, y: 0.5 }}
         style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}

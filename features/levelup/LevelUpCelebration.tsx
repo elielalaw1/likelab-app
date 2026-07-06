@@ -38,7 +38,7 @@ function CelebrationModal({ tier, onClose }: { tier: Tier; onClose: () => void }
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1 }}>LEVEL {tier.level}</Text>
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 26, fontWeight: '900', color: redesign.color.ink, letterSpacing: -0.8, textAlign: 'center' }}>{tier.label}</Text>
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '500', color: redesign.color.muted, textAlign: 'center', lineHeight: 20, marginTop: 2 }}>
-              You leveled up by getting your work approved. Keep it going! 🎉
+              You leveled up by getting your work approved. Keep the streak going.
             </Text>
           </View>
 

@@ -55,7 +55,7 @@ function SocialPill({ iconNode, handle, gradient, onPress }: { iconNode: ReactNo
   return (
     <Pressable onPress={onPress} disabled={!onPress} style={{ borderRadius: 999, overflow: 'hidden' }}>
       {gradient ? (
-        <LinearGradient colors={['#F25CC1', '#7A3FF2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={['#6350B8', '#6350B8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           {inner}
         </LinearGradient>
       ) : (
@@ -76,7 +76,7 @@ function NicheChip({ label, tint, text, dot }: { label: string; tint: string; te
 
 export function ProfileOverview() {
   const { colors, palette } = useTheme()
-  const { data: profile, isLoading: profileLoading, error: profileError } = useCreatorProfile()
+  const { data: profile, isLoading: profileLoading, error: profileError, refetch: refetchProfile } = useCreatorProfile()
   const { data: applicationsData } = useApplications()
   const { data: deliverables } = useDeliverables()
   const { data: referral } = useReferral()
@@ -142,7 +142,7 @@ export function ProfileOverview() {
   const contentY = useRef<Record<string, number>>({})
   const onLayoutY = (key: string) => (e: { nativeEvent: { layout: { y: number } } }) => { contentY.current[key] = e.nativeEvent.layout.y }
   const coachSteps: CoachStep[] = [
-    { key: 'tier', viewRef: tierRef, title: 'Your creator level', body: 'Apply to campaigns to climb the ladder — each tier unlocks a new emblem. Tap to see all levels.' },
+    { key: 'tier', viewRef: tierRef, title: 'Your creator level', body: 'Complete campaigns to climb the ladder — each delivered video moves you up and unlocks a new emblem. Tap to see all levels.' },
     { key: 'videos', viewRef: videosRef, title: 'My videos', body: 'Every video you post for a campaign lands here — your living portfolio.' },
     { key: 'insights', viewRef: insightsRef, title: 'Insights', body: 'Track your views, likes and leaderboard ranking across all your campaigns.' },
     { key: 'invite', viewRef: inviteRef, title: 'Invite friends', body: 'Share your code with other creators. When 3 join, you earn the Connector badge.' },
@@ -158,7 +158,18 @@ export function ProfileOverview() {
     >
 
       {profileLoading ? <ActivityIndicator color={colors.primary} /> : null}
-      {profileError ? <Text style={{ color: redesign.color.muted, fontSize: 12 }}>Could not load creator profile.</Text> : null}
+      {profileError && !profile ? (
+        <View style={{ backgroundColor: redesign.color.card, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 20, gap: 12, ...redesign.shadow.card }}>
+          <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 15.5, fontWeight: '800', letterSpacing: -0.3 }}>Couldn&apos;t load your profile</Text>
+          <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', lineHeight: 19 }}>Check your connection and try again.</Text>
+          <Pressable onPress={() => refetchProfile()} style={{ minHeight: 44, borderRadius: 13, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '800' }}>Try again</Text>
+          </Pressable>
+          <Pressable onPress={handleSignOut} style={{ minHeight: 44, borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '700' }}>Log out</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {profile ? (
         <>
@@ -189,7 +200,7 @@ export function ProfileOverview() {
             </Pressable>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 16 }}>
-              <Text style={{ fontFamily: typography.fontFamily, fontSize: 30, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.8 }}>
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 34, fontWeight: '900', color: redesign.color.ink, letterSpacing: -1.1 }}>
                 {profile.displayName || 'Creator'}
               </Text>
               {verified ? <MaterialCommunityIcons name="check-decagram" size={22} color="#1F9BE8" /> : null}
@@ -230,8 +241,8 @@ export function ProfileOverview() {
 
             {(niches.length > 0 || verified) ? (
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: 10 }}>
-                {niches[0] ? <NicheChip label={niches[0]} tint="rgba(124,63,242,0.10)" text={redesign.color.purple} /> : null}
-                {niches[1] ? <NicheChip label={niches[1]} tint="rgba(31,200,232,0.12)" text="#0E92AD" /> : null}
+                {niches[0] ? <NicheChip label={niches[0]} tint="rgba(99,80,184,0.10)" text={redesign.color.purple} /> : null}
+                {niches[1] ? <NicheChip label={niches[1]} tint="rgba(11,11,15,0.05)" text={redesign.color.muted} /> : null}
                 {verified ? <NicheChip label="Active" tint={redesign.color.successBg} text={redesign.color.successText} dot /> : null}
               </View>
             ) : null}
@@ -263,7 +274,7 @@ export function ProfileOverview() {
           {/* Activity — slim 3-column row */}
           <View style={{ gap: 8 }}>
             <Text style={PROFILE_SECTION_LABEL}>Activity</Text>
-            <View style={{ flexDirection: 'row', backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 14, ...redesign.shadow.card }}>
+            <View style={{ flexDirection: 'row', backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 14 }}>
               {[
                 { label: 'Active', value: stats.activeCampaignsCount, onPress: () => router.push({ pathname: '/applications', params: { filter: 'accepted' } }) },
                 { label: 'Applied', value: stats.applicationsCount, onPress: () => router.push('/applications') },
@@ -283,9 +294,9 @@ export function ProfileOverview() {
             onPress={() => router.push('/insights')}
             accessibilityRole="button"
             accessibilityLabel="View insights"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14, ...redesign.shadow.card }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14 }}
           >
-            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(124,63,242,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name="chart-line" size={19} color={redesign.color.purple} />
             </View>
             <View style={{ flex: 1 }}>
@@ -302,10 +313,10 @@ export function ProfileOverview() {
             onPress={() => router.push('/invite')}
             accessibilityRole="button"
             accessibilityLabel="Invite friends"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14, ...redesign.shadow.card }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14 }}
           >
-            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(242,92,193,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="gift-outline" size={19} color={redesign.color.magenta} />
+            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="gift-outline" size={19} color={redesign.color.purple} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700', color: redesign.color.ink }}>Invite friends</Text>
@@ -322,7 +333,7 @@ export function ProfileOverview() {
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
             <View style={{ flex: 2 }}>
               <LiquidButton
-                label="Edit Profile"
+                label="Edit profile"
                 onPress={() => router.push('/settings')}
                 minHeight={50}
                 borderRadius={18}
@@ -331,7 +342,7 @@ export function ProfileOverview() {
             </View>
             <View style={{ flex: 1 }}>
               <LiquidButton
-                label="Log Out"
+                label="Log out"
                 onPress={handleSignOut}
                 minHeight={50}
                 borderRadius={18}
@@ -353,7 +364,7 @@ export function ProfileOverview() {
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}
         >
           <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700' }}>
-            Contact Us
+            Contact us
           </Text>
           <MaterialCommunityIcons name={contactOpen ? 'chevron-up' : 'chevron-down'} size={20} color={palette.textMuted} />
         </Pressable>

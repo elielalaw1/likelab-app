@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { designSignupWordmark } from '@/design/assets'
 import { SelectPopover } from '@/features/profile/ui/SelectPopover'
 import { CountrySelect } from '@/features/profile/ui/CountrySelect'
-import { CATEGORY_OPTIONS, GENDER_OPTIONS, COUNTRY_TO_PHONE_CODE, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES, findCountryByValue, formatCountyLabel } from '@/features/profile/location-data'
+import { CATEGORY_OPTIONS, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES, formatCountyLabel } from '@/features/profile/location-data'
 import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { updateCreatorProfile } from '@/features/profile/api'
@@ -66,13 +66,18 @@ export default function SignupPage() {
   const [step, setStep] = useState<Step>(1)
 
   // Step 1 — account
-  const [displayName, setDisplayName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [instagramHandle, setInstagramHandle] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  // Full name shown across the app + on shipping labels. We collect first + last
+  // separately so surnames are reliably captured for creator mapping / sendouts,
+  // then concatenate into the existing display_name field (no backend change).
+  const displayName = `${firstName.trim()} ${lastName.trim()}`.trim()
 
   // Pre-fill the invite code from a captured deep link, or the clipboard if it
   // looks like a referral code (best-effort — silently ignored otherwise).
@@ -110,7 +115,7 @@ export default function SignupPage() {
   const [createLoading, setCreateLoading] = useState(false)
 
   const goNextFromStep1 = () => {
-    if (!displayName.trim() || !email.trim() || !password || !confirmPassword) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
       Alert.alert('Missing fields', 'Fill in all required fields.')
       return
     }
@@ -126,7 +131,7 @@ export default function SignupPage() {
   }
 
   const goNextFromStep2 = () => {
-    if (!gender || !age || !country || !primaryCategory) {
+    if (!gender || !age || !primaryCategory) {
       Alert.alert('Missing fields', 'Please fill in all fields.')
       return
     }
@@ -134,8 +139,10 @@ export default function SignupPage() {
   }
 
   const goNextFromStep3 = () => {
-    if (!address.trim() || !postalCode.trim()) {
-      Alert.alert('Missing fields', 'Please enter your shipping address.')
+    // City is required for every country — without it we can't ship products to
+    // the creator (the whole point of the sendout phase / creator mapping).
+    if (!country || !address.trim() || !postalCode.trim() || !city.trim()) {
+      Alert.alert('Missing fields', 'Please complete your shipping address — country, street, postal code and city.')
       return
     }
     setStep(4)
@@ -182,7 +189,7 @@ export default function SignupPage() {
     <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        colors={['rgba(99,80,184,0.08)', 'rgba(99,80,184,0.02)', 'transparent']}
         start={{ x: 1, y: 0 }}
         end={{ x: 0.2, y: 0.5 }}
         style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
@@ -202,7 +209,14 @@ export default function SignupPage() {
           {/* Step 1 — Account */}
           {step === 1 ? (
             <View style={cardStyle}>
-              <AuthInput label="NAME *" value={displayName} onChangeText={setDisplayName} placeholder="Your name" autoCapitalize="words" />
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <AuthInput label="FIRST NAME *" value={firstName} onChangeText={setFirstName} placeholder="First name" autoCapitalize="words" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AuthInput label="LAST NAME *" value={lastName} onChangeText={setLastName} placeholder="Last name" autoCapitalize="words" />
+                </View>
+              </View>
               <AuthInput label="EMAIL *" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" />
               <AuthInput label="PHONE NUMBER" value={phone} onChangeText={setPhone} placeholder="+46 70 123 45 67" keyboardType="phone-pad" />
               <AuthInput label="INSTAGRAM HANDLE" value={instagramHandle} onChangeText={(v) => setInstagramHandle(v.replace(/^@+/, ''))} placeholder="yourinstagram" prefixText="@" sanitizeText={(v) => v.replace(/^@+/, '')} />
@@ -215,7 +229,7 @@ export default function SignupPage() {
                 {' and '}
                 <Text onPress={() => Linking.openURL('https://likelab.io/privacy-policy')} style={{ color: redesign.color.ink, textDecorationLine: 'underline' }}>Privacy Policy</Text>.
               </Text>
-              {navButtons(() => router.back(), goNextFromStep1)}
+              {navButtons(() => (router.canGoBack() ? router.back() : router.replace('/welcome')), goNextFromStep1)}
             </View>
           ) : null}
 
@@ -241,6 +255,28 @@ export default function SignupPage() {
                   />
                 </View>
               </View>
+              <SelectPopover label="Primary Category *" value={primaryCategory} placeholder="Select category" options={CATEGORY_OPTIONS} onSelect={setPrimaryCategory} />
+              {navButtons(() => setStep(1), goNextFromStep2)}
+            </View>
+          ) : null}
+
+          {/* Step 3 — Shipping address (country + city consolidated here so the whole
+              deliverable address lives in one block and every creator is shippable) */}
+          {step === 3 ? (
+            <View style={cardStyle}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#060B1F', fontFamily: typography.fontFamily, marginBottom: 2 }}>Shipping address</Text>
+              <Text style={{ color: redesign.color.muted, fontSize: 13, fontFamily: typography.fontFamily, lineHeight: 18, marginBottom: 4 }}>
+                Used to send physical products from campaign brands.
+              </Text>
+              {/* Recipient — reuses first + last name from Step 1 so this reads as a real label. */}
+              {displayName ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: redesign.color.bg, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 12, paddingVertical: 10 }}>
+                  <MaterialCommunityIcons name="package-variant-closed" size={18} color={redesign.color.muted} />
+                  <Text style={{ color: redesign.color.muted, fontSize: 13, fontFamily: typography.fontFamily }}>
+                    <Text style={{ color: redesign.color.ink, fontWeight: '700' }}>Ships to: </Text>{displayName}
+                  </Text>
+                </View>
+              ) : null}
               <CountrySelect
                 value={country}
                 onSelect={(name, code) => {
@@ -250,27 +286,15 @@ export default function SignupPage() {
                   setCity('')
                 }}
               />
-              {isSweden ? (
-                <SelectPopover label="County" value={county} placeholder="Select county" options={countyOptions} onSelect={(v) => { setCounty(v); setCity('') }} />
-              ) : null}
-              {isSweden && county ? (
-                <SelectPopover label="City" value={city} placeholder="Select city" options={cityOptions} onSelect={setCity} />
-              ) : !isSweden ? (
-                <AuthInput label="CITY" value={city} onChangeText={setCity} placeholder="Your city" autoCapitalize="words" />
-              ) : null}
-              <SelectPopover label="Primary Category *" value={primaryCategory} placeholder="Select category" options={CATEGORY_OPTIONS} onSelect={setPrimaryCategory} />
-              {navButtons(() => setStep(1), goNextFromStep2)}
-            </View>
-          ) : null}
-
-          {/* Step 3 — Shipping address */}
-          {step === 3 ? (
-            <View style={cardStyle}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#060B1F', fontFamily: typography.fontFamily, marginBottom: 2 }}>Shipping address</Text>
-              <Text style={{ color: redesign.color.muted, fontSize: 13, fontFamily: typography.fontFamily, lineHeight: 18, marginBottom: 4 }}>
-                Used to send physical products from campaign brands.
-              </Text>
               <AuthInput label="STREET ADDRESS *" value={address} onChangeText={setAddress} placeholder="123 Main Street" autoCapitalize="words" />
+              {isSweden ? (
+                <SelectPopover label="County *" value={county} placeholder="Select county" options={countyOptions} onSelect={(v) => { setCounty(v); setCity('') }} />
+              ) : null}
+              {isSweden ? (
+                <SelectPopover label="City *" value={city} placeholder={county ? 'Select city' : 'Select county first'} options={cityOptions} onSelect={setCity} />
+              ) : (
+                <AuthInput label="CITY *" value={city} onChangeText={setCity} placeholder="Your city" autoCapitalize="words" />
+              )}
               <AuthInput label="POSTAL CODE *" value={postalCode} onChangeText={setPostalCode} placeholder="12345" keyboardType="number-pad" />
               {navButtons(() => setStep(2), goNextFromStep3)}
             </View>

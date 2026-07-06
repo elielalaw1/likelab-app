@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Modal, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import * as SecureStore from 'expo-secure-store'
@@ -28,26 +28,39 @@ function Chip({ children, bg, color }: { children: React.ReactNode; bg: string; 
 
 function MockDiscover({ arrow }: { arrow: object }) {
   return (
-    <View style={{ width: 220, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, overflow: 'hidden', ...redesign.shadow.card }}>
-      <View style={{ height: 72, justifyContent: 'flex-start', padding: 8 }}>
-        <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0, opacity: 0.45 }} />
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, alignSelf: 'flex-start' }}>
-          <Text style={{ fontSize: 9, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>◍ ClearSkin</Text>
+    <View style={{ width: 240, borderRadius: 26, padding: 4, backgroundColor: 'rgba(11,11,15,0.04)', borderWidth: 1, borderColor: redesign.color.hairlineStrong }}>
+      {/* Double-bezel mini of the real FeaturedCampaign card */}
+      <View style={{ borderRadius: 22, overflow: 'hidden', backgroundColor: redesign.color.card, ...redesign.shadow.card }}>
+        <View style={{ height: 82 }}>
+          <LinearGradient colors={['rgba(99,80,184,0.45)', 'rgba(99,80,184,0.15)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
+          <LinearGradient colors={['rgba(0,0,0,0.35)', 'transparent']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 44 }} />
+          <View style={{ position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingLeft: 7, paddingRight: 9, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.92)' }}>
+            <MaterialCommunityIcons name="star-four-points" size={9} color={redesign.color.purple} />
+            <Text style={{ color: redesign.color.ink, fontSize: 8, fontWeight: '900', letterSpacing: 0.6, fontFamily: typography.fontFamily }}>FEATURED</Text>
+          </View>
         </View>
-      </View>
-      <View style={{ padding: 12, gap: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Glow Kit launch</Text>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <Chip bg="rgba(124,63,242,0.10)" color={redesign.color.purple}>REWARD · CASH</Chip>
-          <Chip bg={redesign.color.bg} color={redesign.color.muted}>27d</Chip>
-        </View>
-        <View>
-          <Animated.View style={[{ position: 'absolute', top: -34, alignSelf: 'center', zIndex: 2 }, arrow]}>
-            <MaterialCommunityIcons name="arrow-down-bold" size={30} color={redesign.color.purple} />
-          </Animated.View>
-          <View style={{ height: 38, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}>
-            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', fontFamily: typography.fontFamily }}>Apply now</Text>
-            <MaterialCommunityIcons name="arrow-right" size={15} color="#fff" />
+        <View style={{ padding: 12, gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: 'rgba(99,80,184,0.14)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 8, fontWeight: '900', color: redesign.color.purple, fontFamily: typography.fontFamily }}>C</Text>
+            </View>
+            <Text style={{ color: redesign.color.muted, fontSize: 11, fontWeight: '700', fontFamily: typography.fontFamily }}>ClearSkin</Text>
+          </View>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.5, lineHeight: 19, fontFamily: typography.fontFamily }}>Glow Kit launch</Text>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <Chip bg="rgba(99,80,184,0.10)" color={redesign.color.purple}>Cash</Chip>
+            <Chip bg={redesign.color.bg} color={redesign.color.muted}>3d left</Chip>
+          </View>
+          <View>
+            <Animated.View style={[{ position: 'absolute', top: -34, alignSelf: 'center', zIndex: 2 }, arrow]}>
+              <MaterialCommunityIcons name="arrow-down-bold" size={30} color={redesign.color.purple} />
+            </Animated.View>
+            <View style={{ height: 40, borderRadius: 14, paddingHorizontal: 14, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' }}>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>View &amp; apply</Text>
+              <View style={{ position: 'absolute', right: 5, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="arrow-top-right" size={14} color="#fff" />
+              </View>
+            </View>
           </View>
         </View>
       </View>
@@ -61,7 +74,7 @@ function MockAccepted() {
       <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: redesign.color.successBg, alignItems: 'center', justifyContent: 'center' }}>
         <MaterialCommunityIcons name="check-bold" size={28} color={redesign.color.successText} />
       </View>
-      <Text style={{ fontSize: 15, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>You&apos;re in! 🎉</Text>
+      <Text style={{ fontSize: 15, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>You&apos;re in</Text>
       <Text style={{ fontSize: 11.5, fontWeight: '500', color: redesign.color.muted, fontFamily: typography.fontFamily, textAlign: 'center' }}>
         The brand accepted your application
       </Text>
@@ -71,28 +84,20 @@ function MockAccepted() {
 
 function MockSubmit({ arrow }: { arrow: object }) {
   return (
-    <View style={{ width: 244, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, padding: 14, gap: 11, ...redesign.shadow.card }}>
-      {/* Approved → post-the-link instruction, matching the deliverable action sheet */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-        <MaterialCommunityIcons name="check-decagram" size={16} color={redesign.color.successText} />
-        <Text style={{ fontSize: 11.5, fontWeight: '700', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Approved — post it &amp; paste the link</Text>
+    <View style={{ width: 268, borderRadius: 22, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, padding: 16, gap: 10, ...redesign.shadow.card }}>
+      {/* Mirrors the real LinkSubmitRow: paste your TikTok link → ink pill submit */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 46, paddingLeft: 14, paddingRight: 10, borderRadius: 14, borderWidth: 1, borderColor: '#0F9F6E', backgroundColor: redesign.color.bg }}>
+        <Text numberOfLines={1} style={{ flex: 1, color: redesign.color.ink, fontSize: 13, fontFamily: typography.fontFamily }}>tiktok.com/@you/video/…</Text>
+        <MaterialCommunityIcons name="check-circle" size={18} color="#0F9F6E" style={{ marginLeft: 6 }} />
       </View>
-      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-        <View style={{ flex: 1, height: 38, borderRadius: 12, borderWidth: 1, borderColor: redesign.color.hairlineStrong, backgroundColor: redesign.color.bg, justifyContent: 'center', paddingHorizontal: 10 }}>
-          <Text style={{ fontSize: 12, color: redesign.color.faint, fontFamily: typography.fontFamily }}>tiktok.com/@you/…</Text>
+      <View>
+        <Animated.View style={[{ position: 'absolute', top: -34, alignSelf: 'center', zIndex: 2 }, arrow]}>
+          <MaterialCommunityIcons name="arrow-down-bold" size={30} color={redesign.color.purple} />
+        </Animated.View>
+        <View style={{ minHeight: 46, borderRadius: 999, backgroundColor: 'rgba(8,8,12,0.96)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <MaterialCommunityIcons name="link-variant" size={17} color="#fff" />
+          <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', letterSpacing: -0.2 }}>Submit link</Text>
         </View>
-        <View>
-          <Animated.View style={[{ position: 'absolute', top: -32, alignSelf: 'center', zIndex: 2 }, arrow]}>
-            <MaterialCommunityIcons name="arrow-down-bold" size={28} color={redesign.color.purple} />
-          </Animated.View>
-          <View style={{ width: 44, height: 38, borderRadius: 12, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name="link-variant" size={17} color="#fff" />
-          </View>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-        <MaterialCommunityIcons name="check-circle" size={13} color={redesign.color.successText} />
-        <Text style={{ fontSize: 9, fontWeight: '800', letterSpacing: 0.6, color: redesign.color.successText, fontFamily: typography.fontFamily }}>LIVE ON TIKTOK</Text>
       </View>
     </View>
   )
@@ -106,9 +111,9 @@ function MockLeaderboard({ arrow }: { arrow: object }) {
   ]
   return (
     <View style={{ width: 230, borderRadius: 20, backgroundColor: redesign.color.darkScreen, padding: 12, gap: 8, overflow: 'hidden', ...redesign.shadow.cta }}>
-      <LinearGradient pointerEvents="none" colors={['rgba(124,63,242,0.4)', 'transparent']} start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.8 }} style={{ position: 'absolute', top: -20, right: -20, width: 140, height: 140, borderRadius: 70 }} />
+      <LinearGradient pointerEvents="none" colors={['rgba(99,80,184,0.4)', 'transparent']} start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.8 }} style={{ position: 'absolute', top: -20, right: -20, width: 140, height: 140, borderRadius: 70 }} />
       {rows.map((r) => (
-        <View key={r.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10, borderWidth: r.you ? 1 : 0, borderColor: 'rgba(124,63,242,0.7)', backgroundColor: r.you ? 'rgba(124,63,242,0.22)' : 'rgba(255,255,255,0.05)' }}>
+        <View key={r.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10, borderWidth: r.you ? 1 : 0, borderColor: 'rgba(99,80,184,0.7)', backgroundColor: r.you ? 'rgba(99,80,184,0.22)' : 'rgba(255,255,255,0.05)' }}>
           <Text style={{ fontSize: 15 }}>{r.medal}</Text>
           <Text style={{ flex: 1, color: '#fff', fontSize: 12.5, fontWeight: '800', fontFamily: typography.fontFamily }}>{r.label}</Text>
           <View style={{ backgroundColor: 'rgba(59,214,138,0.16)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
@@ -128,7 +133,7 @@ function MockLeaderboard({ arrow }: { arrow: object }) {
 function MockWelcome() {
   return (
     <View style={{ width: 120, height: 120, borderRadius: 40, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', ...redesign.shadow.cta }}>
-      <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
+      <LinearGradient colors={['#8B4DF7', '#5B27C4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
       <MaterialCommunityIcons name="check-decagram" size={58} color="#fff" />
     </View>
   )
@@ -136,23 +141,21 @@ function MockWelcome() {
 
 function MockLevels() {
   return (
-    <View style={{ width: 230, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, padding: 16, gap: 12, ...redesign.shadow.card }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 44, height: 44, borderRadius: 15, padding: 2.5, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ flex: 1, alignSelf: 'stretch', borderRadius: 12.5, backgroundColor: redesign.color.card, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name="trending-up" size={20} color={redesign.color.cyan} />
-          </View>
-        </LinearGradient>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13.5, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>Rising creator</Text>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily }}>200 XP to Contender</Text>
+    <View style={{ width: 290, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: 1, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 14, paddingVertical: 12, ...redesign.shadow.card }}>
+      {/* Tier ring emblem — mirrors the real TierRow */}
+      <View style={{ width: 36, height: 36, borderRadius: 13, borderWidth: 2, borderColor: redesign.color.purple, backgroundColor: redesign.color.card, alignItems: 'center', justifyContent: 'center' }}>
+        <MaterialCommunityIcons name="star-four-points" size={16} color={redesign.color.purple} />
+      </View>
+      <View style={{ flex: 1, gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13.5, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>Rising creator</Text>
+          <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily }}>200 to Pro</Text>
+        </View>
+        <View style={{ height: 6, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
+          <View style={{ height: '100%', width: '62%', borderRadius: 999, backgroundColor: redesign.color.purple }} />
         </View>
       </View>
-      <View style={{ height: 7, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
-        <View style={{ height: '100%', width: '62%', borderRadius: 999, overflow: 'hidden' }}>
-          <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
-        </View>
-      </View>
+      <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
     </View>
   )
 }
@@ -160,7 +163,7 @@ function MockLevels() {
 type Slide = { title: string; body: string; mock: (arrow: object, arrowH: object) => React.ReactNode }
 
 const SLIDES: Slide[] = [
-  { title: 'You’re approved! 🎉', body: 'Welcome to LikeLab. Here’s how it works in a few quick steps.', mock: () => <MockWelcome /> },
+  { title: 'You’re approved', body: 'Welcome to LikeLab. Here’s how it works in a few quick steps.', mock: () => <MockWelcome /> },
   { title: 'Discover & apply', body: 'Browse open campaigns and tap Apply on the ones that fit you.', mock: (a) => <MockDiscover arrow={a} /> },
   { title: 'Get selected', body: 'Brands review creators and pick their favourites — you’ll be notified when you’re in.', mock: () => <MockAccepted /> },
   { title: 'Film & get approved', body: 'Your campaigns land in Projects — each card tells you exactly what to do next: upload, review, post, live. The brand gives the green light (or asks for tweaks).', mock: () => <ProjectCardPreview /> },
@@ -171,6 +174,7 @@ const SLIDES: Slide[] = [
 
 export function TutorialOverlay() {
   const { data: profile } = useCreatorProfile()
+  const insets = useSafeAreaInsets()
   const { width } = useWindowDimensions()
   const [visible, setVisible] = useState(false)
   const [index, setIndex] = useState(0)
@@ -262,7 +266,7 @@ export function TutorialOverlay() {
       <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
         <LinearGradient
           pointerEvents="none"
-          colors={['rgba(124,63,242,0.12)', 'rgba(31,200,232,0.06)', 'transparent']}
+          colors={['rgba(99,80,184,0.10)', 'rgba(99,80,184,0.03)', 'transparent']}
           start={{ x: 1, y: 0 }} end={{ x: 0.2, y: 0.55 }}
           style={{ position: 'absolute', top: 0, right: 0, width: 380, height: 380 }}
         />
@@ -272,9 +276,11 @@ export function TutorialOverlay() {
             <ConfettiCannon count={140} origin={{ x: width / 2, y: -20 }} autoStart fadeOut explosionSpeed={420} fallSpeed={3200} />
           </View>
         ) : null}
-        <SafeAreaView style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 6, height: 40 }}>
-            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 }}>HOW IT WORKS</Text>
+        <View style={{ flex: 1, paddingBottom: insets.bottom }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,80,184,0.10)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 }}>
+              <Text style={{ color: redesign.color.purple, fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>How it works</Text>
+            </View>
             {!isLast ? (
               <Pressable onPress={finish} hitSlop={8}>
                 <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700' }}>Skip</Text>
@@ -300,7 +306,7 @@ export function TutorialOverlay() {
                 <View style={{ minHeight: 240, justifyContent: 'center', marginBottom: 36 }}>
                   {i === index ? <Animated.View entering={FadeIn.duration(260)}>{slide.mock(arrowDown, arrowSide)}</Animated.View> : slide.mock(arrowDown, arrowSide)}
                 </View>
-                <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 25, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center', marginBottom: 10 }}>
+                <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 28, fontWeight: '900', letterSpacing: -0.9, lineHeight: 32, textAlign: 'center', marginBottom: 10 }}>
                   {slide.title}
                 </Text>
                 <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '500', lineHeight: 22, textAlign: 'center', maxWidth: 320 }}>
@@ -319,13 +325,15 @@ export function TutorialOverlay() {
           <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
             <Pressable
               onPress={handleNext}
-              style={{ minHeight: 54, borderRadius: 999, backgroundColor: redesign.color.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...redesign.shadow.cta }}
+              style={{ minHeight: 56, borderRadius: 999, paddingHorizontal: 20, backgroundColor: redesign.color.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', ...redesign.shadow.cta }}
             >
-              <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800' }}>{nextLabel}</Text>
-              <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.2 }}>{nextLabel}</Text>
+              <View style={{ position: 'absolute', right: 8, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
+              </View>
             </Pressable>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   )

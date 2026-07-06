@@ -14,11 +14,15 @@ type Props = {
   percentage: number
   checklist: ChecklistItem[]
   onCompleteProfile: () => void
+  title?: string
+  ctaLabel?: string
 }
 
-export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }: Props) {
+export function CreatorProfileGate({ percentage, checklist, onCompleteProfile, title = 'Complete your profile', ctaLabel = 'Complete profile' }: Props) {
   const { colors, palette } = useTheme()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
+  // A single binary step (e.g. connect TikTok) has no meaningful percentage — hide the fake bar.
+  const singleStep = checklist.length <= 1
 
   return (
     <View
@@ -51,15 +55,19 @@ export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }:
           <MaterialCommunityIcons name="alert-circle-outline" size={14} color={palette.warningText} />
         </View>
         <Text style={{ flex: 1, color: palette.text, fontWeight: '700', fontSize: 14, fontFamily: typography.fontFamily }}>
-          Complete Your Profile
+          {title}
         </Text>
-        <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>{percentage}%</Text>
+        {!singleStep ? (
+          <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>{percentage}%</Text>
+        ) : null}
         <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={palette.textMuted} />
       </Pressable>
 
-      <View style={{ height: 6, borderRadius: 999, backgroundColor: palette.borderColor, overflow: 'hidden' }}>
-        <View style={{ width: `${Math.max(0, Math.min(100, percentage))}%`, height: '100%', backgroundColor: colors.primary }} />
-      </View>
+      {!singleStep ? (
+        <View style={{ height: 6, borderRadius: 999, backgroundColor: palette.borderColor, overflow: 'hidden' }}>
+          <View style={{ width: `${Math.max(0, Math.min(100, percentage))}%`, height: '100%', backgroundColor: colors.primary }} />
+        </View>
+      ) : null}
 
       {expanded ? (
         <View style={{ gap: 6 }}>
@@ -96,8 +104,8 @@ export function CreatorProfileGate({ percentage, checklist, onCompleteProfile }:
               gap: 8,
             }}
           >
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14, fontFamily: typography.fontFamily }}>Complete Profile</Text>
-            <MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14, fontFamily: typography.fontFamily }}>{ctaLabel}</Text>
+            <MaterialCommunityIcons name="arrow-top-right" size={16} color="#fff" />
           </Pressable>
         </View>
       ) : null}

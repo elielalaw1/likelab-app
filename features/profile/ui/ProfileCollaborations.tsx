@@ -69,7 +69,7 @@ export function ProfileCollaborations({ items }: Props) {
                   {item.coverImageUrl ? (
                     <ExpoImage source={{ uri: item.coverImageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" transition={200} />
                   ) : (
-                    <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, opacity: 0.55 }} />
+                    <LinearGradient colors={['rgba(99,80,184,0.5)', 'rgba(99,80,184,0.18)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }} />
                   )}
                   {/* scrim */}
                   <LinearGradient

@@ -6,7 +6,7 @@ import { redesign } from '@/features/core/theme'
 
 // A skeleton bone with a light shimmer that sweeps left→right — reads more premium
 // than a flat opacity pulse.
-function Bone({ width, height, borderRadius = 10, dark = false }: { width: DimensionValue; height: number; borderRadius?: number; dark?: boolean }) {
+export function Bone({ width, height, borderRadius = 10, dark = false }: { width: DimensionValue; height: number; borderRadius?: number; dark?: boolean }) {
   const [w, setW] = useState(0)
   const x = useSharedValue(0)
 

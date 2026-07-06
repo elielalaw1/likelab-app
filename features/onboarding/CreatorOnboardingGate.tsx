@@ -32,6 +32,8 @@ export function CreatorOnboardingGate() {
         percentage={0}
         checklist={[{ key: 'tiktok', label: 'Connect your TikTok account', done: false }]}
         onCompleteProfile={() => router.push('/connect-tiktok')}
+        title="Connect TikTok to continue"
+        ctaLabel="Connect TikTok"
       />
     )
   } else if (!isLoading && isFetched && profile && (reviewStatus === 'pending' || reviewStatus === 'rejected')) {

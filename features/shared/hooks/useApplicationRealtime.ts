@@ -36,7 +36,7 @@ export function useApplicationRealtime(userId: string) {
             // Skip if the creator just accepted locally (applications.tsx already
             // showed a success toast) — otherwise it double-fires.
             if (Date.now() - lastLocalAcceptAt > 6000) {
-              toast.success('Your application was accepted! 🎉')
+              toast.success('Your application was accepted')
             }
           } else if (newStatus === 'rejected' && oldStatus !== 'rejected') {
             // Rely on payload.new only — payload.old.status is absent unless the
@@ -55,7 +55,7 @@ export function useApplicationRealtime(userId: string) {
           queryClient.invalidateQueries({ queryKey: ['applications'] })
           const newStatus = (payload.new as Record<string, unknown>)?.status
           if (payload.eventType === 'INSERT' && newStatus === 'pending') {
-            toast.info('New campaign invitation!')
+            toast.info('New campaign invitation')
           }
         }
       )

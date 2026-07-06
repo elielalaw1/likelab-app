@@ -39,31 +39,38 @@ export function LinkSubmitRow({ deliverableId, submitLabel = 'Submit link' }: Pr
     }
   }
 
+  const showValid = trimmed.length > 0 && isValidTikTokUrl(trimmed)
+
   return (
     <View style={{ gap: 8 }}>
-      <TextInput
-        value={url}
-        onChangeText={setUrl}
-        placeholder="https://www.tiktok.com/@you/video/…"
-        placeholderTextColor={palette.textMuted}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        returnKeyType="done"
-        editable={!isPending}
-        onSubmitEditing={handleSubmit}
+      <View
         style={{
+          flexDirection: 'row',
+          alignItems: 'center',
           minHeight: 48,
-          paddingHorizontal: 14,
+          paddingLeft: 14,
+          paddingRight: 10,
           borderRadius: radii.input,
           borderWidth: 1,
-          borderColor: palette.borderColor,
+          borderColor: showValid ? '#0F9F6E' : palette.borderColor,
           backgroundColor: palette.inputBg,
-          color: palette.text,
-          fontSize: 14,
-          fontFamily: typography.fontFamily,
         }}
-      />
+      >
+        <TextInput
+          value={url}
+          onChangeText={setUrl}
+          placeholder="https://www.tiktok.com/@you/video/…"
+          placeholderTextColor={palette.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          returnKeyType="done"
+          editable={!isPending}
+          onSubmitEditing={handleSubmit}
+          style={{ flex: 1, paddingVertical: 12, color: palette.text, fontSize: 14, fontFamily: typography.fontFamily }}
+        />
+        {showValid ? <MaterialCommunityIcons name="check-circle" size={20} color="#0F9F6E" style={{ marginLeft: 6 }} /> : null}
+      </View>
       <LiquidButton
         label={isPending ? 'Submitting…' : submitLabel}
         onPress={handleSubmit}

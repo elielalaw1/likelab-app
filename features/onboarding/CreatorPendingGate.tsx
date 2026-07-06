@@ -51,7 +51,8 @@ function bookingDates() {
 export function CreatorPendingGate({ state }: Props) {
   const { colors, palette } = useTheme()
   const { data: profile } = useCreatorProfile()
-  const [expanded, setExpanded] = useState(false)
+  // Auto-expand for rejected creators so the appeal action is visible without a tap.
+  const [expanded, setExpanded] = useState(state === 'rejected')
   const [appealOpen, setAppealOpen] = useState(false)
   const [appealStep, setAppealStep] = useState<1 | 2 | 3>(1)
   const [appealReason, setAppealReason] = useState('')
@@ -61,9 +62,11 @@ export function CreatorPendingGate({ state }: Props) {
   const [bookingError, setBookingError] = useState('')
 
   const rejected = state === 'rejected'
-  const title = rejected ? 'Application Not Approved' : 'Account Under Review'
-  const subtitle = rejected ? 'Your application was not approved.' : 'Actions are disabled until approved.'
-  const pillLabel = rejected ? 'Not Approved' : 'Pending Review'
+  const title = rejected ? 'Application not approved' : 'Account under review'
+  const subtitle = rejected
+    ? 'Your application was not approved — you can appeal below.'
+    : 'We’re reviewing your account. You’ll be able to apply as soon as you’re approved.'
+  const pillLabel = rejected ? 'Not approved' : 'Pending review'
   const iconColor = rejected ? '#B91C1C' : '#0891B2'
   const iconBg = rejected ? '#FEE2E2' : '#CFFAFE'
   const availableDates = useMemo(() => bookingDates(), [])

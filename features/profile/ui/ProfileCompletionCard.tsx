@@ -36,13 +36,13 @@ export function ProfileCompletionCard({ percentage, items, onPressItem }: Props)
           adjustsFontSizeToFit
           minimumFontScale={0.75}
         >
-          Complete Your Profile
+          Complete your profile
         </Text>
         <Text style={{ color: redesign.color.purple, fontFamily: typography.fontFamily, fontSize: 18, lineHeight: 20, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{percentage}%</Text>
       </View>
 
       <View style={{ height: 8, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
-        <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${pct}%`, borderRadius: 999 }} />
+        <View style={{ height: '100%', width: `${pct}%`, borderRadius: 999, backgroundColor: redesign.color.purple }} />
       </View>
 
       <View style={{ gap: 8 }}>

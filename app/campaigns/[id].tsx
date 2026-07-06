@@ -10,7 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
-import { formatCampaignGoal, formatDateRange, getDaysLeft, isCampaignClosed } from '@/features/core/format'
+import { formatCampaignGoal, formatDateRange, formatRewardType, getDaysLeft, isCampaignClosed } from '@/features/core/format'
 import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -18,6 +18,8 @@ import { CountUp, springs } from '@/features/motion/springs'
 import { haptic } from '@/features/shared/haptics'
 import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { CampaignBriefModal } from '@/features/campaigns/ui/CampaignBriefModal'
+import { ApplyInfoSheet } from '@/features/campaigns/ui/ApplyInfoSheet'
+import { TermsSheet } from '@/features/campaigns/ui/TermsSheet'
 import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
@@ -29,6 +31,7 @@ import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { PressableScale } from '@/features/shared/ui/PressableScale'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
+import { Bone } from '@/features/shared/ui/SkeletonCard'
 import { toast } from '@/features/shared/ui/Toast'
 import * as StoreReview from 'expo-store-review'
 import * as SecureStore from 'expo-secure-store'
@@ -47,6 +50,10 @@ const MEDAL: Record<number, { bg: string; text: string }> = {
 
 // SEK prize amounts are hidden from creators — show the tier rank label only.
 const TIER_LABELS: Record<number, string> = { 1: 'Gold', 2: 'Silver', 3: 'Bronze' }
+
+// Hero image height — taller than the old 210 so the campaign photo actually reads
+// as the hero. The title now sits below the image (not overlaid), so nothing covers it.
+const HERO_H = 280
 
 function formatPlatform(platform?: string | null) {
   if (!platform) return '-'
@@ -77,32 +84,31 @@ function Section({
         borderRadius: 20,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: redesign.color.hairlineStrong,
-        padding: 14,
-        gap: 10,
-        ...redesign.shadow.card,
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+        gap: 12,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View
           style={{
-            width: 30,
-            height: 30,
-            borderRadius: 10,
+            width: 32,
+            height: 32,
+            borderRadius: 11,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: tint || 'rgba(124,63,242,0.10)',
+            backgroundColor: tint || 'rgba(99,80,184,0.10)',
           }}
         >
-          <MaterialCommunityIcons name={icon} size={16} color={accent || redesign.color.purple} />
+          <MaterialCommunityIcons name={icon} size={17} color={accent || redesign.color.purple} />
         </View>
         <Text
           style={{
-            color: redesign.color.faint,
+            color: redesign.color.ink,
             fontFamily: typography.fontFamily,
             fontWeight: '800',
-            fontSize: 10,
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
+            fontSize: 15,
+            letterSpacing: -0.3,
           }}
         >
           {title}
@@ -176,6 +182,8 @@ export default function CampaignDetailPage() {
     initialTab === 'videos' ? 'videos' : 'brief'
   )
   const [applySuccess, setApplySuccess] = useState(false)
+  const [applyInfoId, setApplyInfoId] = useState<string | null>(null)
+  const [termsOpen, setTermsOpen] = useState(false)
   const [briefOpen, setBriefOpen] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const { width: winW } = useWindowDimensions()
@@ -197,21 +205,16 @@ export default function CampaignDetailPage() {
   const currentApplicationStatus = campaign?.creatorApplicationStatus || null
   const applyBlockedByStatus = currentApplicationStatus === 'applied' || currentApplicationStatus === 'accepted'
 
-  const handleApply = async () => {
-    if (profile?.reviewStatus !== 'approved') {
-      toast.error('Your creator account must be approved before applying.')
-      return
-    }
-
-    if (!isProfileComplete(profile)) {
-      toast.error('Complete your profile before applying.')
-      return
-    }
-
+  // The actual apply — runs after the Terms gate (if any) is accepted.
+  const doApply = async () => {
     try {
-      await applyMutation.mutateAsync(campaignId)
+      const { applicationId } = await applyMutation.mutateAsync(campaignId)
       setApplySuccess(true)
-      toast.success('Application sent!')
+      toast.success('Application sent')
+      // If the brand configured an after-apply form, collect it now (sizes etc.).
+      if (campaign?.applyFormEnabled && campaign.applyForm) {
+        setApplyInfoId(applicationId)
+      }
       StoreReview.isAvailableAsync().then(async (available) => {
         if (!available) return
         const REVIEW_KEY = 'last_review_request'
@@ -225,6 +228,21 @@ export default function CampaignDetailPage() {
     } catch {
       // Failure is surfaced centrally via the mutation's onError toast.
     }
+  }
+
+  const handleApply = async () => {
+    if (profile?.reviewStatus !== 'approved') {
+      toast.error('Your creator account must be approved before applying.')
+      return
+    }
+
+    if (!isProfileComplete(profile)) {
+      toast.error('Complete your profile before applying.')
+      return
+    }
+
+    // Terms of Service gate — creator must accept before an application is created.
+    setTermsOpen(true)
   }
 
   const hashtagText = useMemo(() => {
@@ -400,7 +418,7 @@ export default function CampaignDetailPage() {
 
   const hasBriefDetails = !!(
     campaign &&
-    (campaign.campaignGoal || campaign.description || campaign.preferredCreators || campaign.instructions ||
+    (campaign.productDescription || campaign.campaignGoal || campaign.description || campaign.preferredCreators || campaign.instructions ||
       campaign.videoRequirements || campaign.briefGuidelines || (campaign.keyMessages || []).length ||
       campaign.brandVoice || campaign.brandTone || campaign.targetAudience || campaign.thingsToAvoid)
   )
@@ -408,7 +426,7 @@ export default function CampaignDetailPage() {
   const readFullBriefButton = (
     <Pressable
       onPress={() => { haptic.medium(); setBriefOpen(true) }}
-      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: radii.full, backgroundColor: 'rgba(124,63,242,0.10)' }}
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: radii.full, backgroundColor: 'rgba(99,80,184,0.10)' }}
     >
       <Text style={{ color: redesign.color.purple, fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '800' }}>Read full brief</Text>
       <MaterialCommunityIcons name="arrow-right" size={16} color={redesign.color.purple} />
@@ -418,6 +436,18 @@ export default function CampaignDetailPage() {
   return (
     <>
       <CampaignBriefModal visible={briefOpen} onClose={() => setBriefOpen(false)} campaign={campaign ?? null} />
+      <ApplyInfoSheet
+        visible={!!applyInfoId}
+        form={campaign?.applyForm ?? null}
+        applicationId={applyInfoId}
+        brandName={campaign?.brandName}
+        onClose={() => setApplyInfoId(null)}
+      />
+      <TermsSheet
+        visible={termsOpen}
+        onAccept={() => { setTermsOpen(false); void doApply() }}
+        onClose={() => setTermsOpen(false)}
+      />
       <BrandSheet
         ref={brandSheetRef}
         data={campaign ? {
@@ -437,9 +467,20 @@ export default function CampaignDetailPage() {
         </Pressable>
       </Animated.View>
 
-      {isLoading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
-          <ActivityIndicator size="large" color={colors.primary} />
+      {isLoading && !campaign ? (
+        <View style={{ gap: 16, marginTop: 8 }}>
+          {/* Hero card placeholder */}
+          <View style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: redesign.color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong }}>
+            <Bone width="100%" height={HERO_H} borderRadius={0} />
+            <View style={{ padding: 16, gap: 10 }}>
+              <Bone width="80%" height={22} />
+              <Bone width="45%" height={13} />
+            </View>
+          </View>
+          {/* Tab bar + content placeholders */}
+          <Bone width="100%" height={52} borderRadius={16} />
+          <Bone width="100%" height={120} borderRadius={20} />
+          <Bone width="100%" height={88} borderRadius={18} />
         </View>
       ) : null}
       {error ? <Text style={{ color: palette.textMuted, fontSize: 12 }}>Could not load this campaign.</Text> : null}
@@ -447,8 +488,11 @@ export default function CampaignDetailPage() {
       {campaign ? (
         <>
           <Animated.View entering={FadeInDown.duration(250).delay(80)}>
-            <View style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#0E0A1C', ...redesign.shadow.card }}>
-              <View style={{ height: 210, backgroundColor: '#1A0F2E' }}>
+            {/* Double-bezel — the hero sits in a machined tray for physical depth */}
+            <View style={{ borderRadius: 30, padding: 5, backgroundColor: 'rgba(11,11,15,0.04)', borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong }}>
+            <View style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: redesign.color.card, ...redesign.shadow.card }}>
+              {/* Image gallery — taller and unobscured so the campaign photo is the hero */}
+              <View style={{ height: HERO_H, backgroundColor: '#EDEBE6' }}>
                 {/* Swipeable image gallery (Tradera-style) */}
                 {heroImages.length > 1 ? (
                   <ScrollView
@@ -466,7 +510,7 @@ export default function CampaignDetailPage() {
                       <ExpoImage
                         key={`${uri}-${i}`}
                         source={{ uri }}
-                        style={{ width: heroWidth, height: 210 }}
+                        style={{ width: heroWidth, height: HERO_H }}
                         contentFit="cover"
                         cachePolicy="memory-disk"
                         transition={200}
@@ -481,20 +525,24 @@ export default function CampaignDetailPage() {
                     cachePolicy="memory-disk"
                     transition={300}
                   />
-                ) : null}
+                ) : (
+                  <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialCommunityIcons name="image-outline" size={40} color={redesign.color.faint} />
+                  </View>
+                )}
 
-                {/* Bottom scrim for text readability */}
+                {/* Light top scrim — only enough to keep the brand chip + counter legible */}
                 <LinearGradient
                   pointerEvents="none"
-                  colors={['transparent', 'rgba(8,4,18,0.94)']}
-                  start={{ x: 0.5, y: 0.3 }}
+                  colors={['rgba(0,0,0,0.28)', 'transparent']}
+                  start={{ x: 0.5, y: 0 }}
                   end={{ x: 0.5, y: 1 }}
-                  style={{ position: 'absolute', inset: 0 }}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 96 }}
                 />
 
                 {/* Brand chip top-left */}
                 <Pressable
-                  style={{ position: 'absolute', top: 14, left: 14, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 999, paddingLeft: 4, paddingRight: 11, paddingVertical: 4 }}
+                  style={{ position: 'absolute', top: 14, left: 14, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, paddingLeft: 4, paddingRight: 11, paddingVertical: 4 }}
                   onPress={() => (campaign.brandInstagram || campaign.brandTiktok) ? brandSheetRef.current?.present() : undefined}
                   disabled={!campaign.brandInstagram && !campaign.brandTiktok}
                 >
@@ -513,39 +561,80 @@ export default function CampaignDetailPage() {
                   </View>
                 ) : null}
 
-                {/* Pagination dots */}
+                {/* Pagination dots — short bottom scrim keeps them visible on light photos */}
                 {heroImages.length > 1 ? (
-                  <View pointerEvents="none" style={{ position: 'absolute', bottom: 10, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 }}>
-                    {heroImages.map((_, i) => (
-                      <View
-                        key={i}
-                        style={{ width: i === activeImage ? 16 : 6, height: 6, borderRadius: 999, backgroundColor: i === activeImage ? '#fff' : 'rgba(255,255,255,0.5)' }}
-                      />
-                    ))}
-                  </View>
+                  <>
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={['transparent', 'rgba(0,0,0,0.30)']}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 44 }}
+                    />
+                    <View pointerEvents="none" style={{ position: 'absolute', bottom: 10, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 }}>
+                      {heroImages.map((_, i) => (
+                        <View
+                          key={i}
+                          style={{ width: i === activeImage ? 16 : 6, height: 6, borderRadius: 999, backgroundColor: i === activeImage ? '#fff' : 'rgba(255,255,255,0.6)' }}
+                        />
+                      ))}
+                    </View>
+                  </>
                 ) : null}
+              </View>
 
-                {/* Bottom content */}
-                <View pointerEvents="none" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 18, paddingTop: 18, paddingBottom: heroImages.length > 1 ? 26 : 18, gap: 8 }}>
-                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800', lineHeight: 28, letterSpacing: -0.5, fontFamily: typography.fontFamily }} numberOfLines={3}>
-                    {campaign.title}
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <MaterialCommunityIcons name="web" size={13} color="rgba(255,255,255,0.55)" />
-                      <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                        {formatPlatform(primaryPlatform)}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <MaterialCommunityIcons name="calendar-month-outline" size={13} color="rgba(255,255,255,0.55)" />
-                      <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
-                        {formatDateRange(campaign.startDate, campaign.endDate) || '-'}
-                      </Text>
-                    </View>
+              {/* Title block — below the image so the photo stays fully visible and the
+                  heading sits on a clean surface (calmer than white-on-dark-scrim) */}
+              <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 9 }}>
+                <Text style={{ color: redesign.color.ink, fontSize: 25, fontWeight: '800', lineHeight: 30, letterSpacing: -0.8, fontFamily: typography.fontFamily }} numberOfLines={3}>
+                  {campaign.title}
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center' }}>
+                  {/* Reward — the incentive, visible at the point the apply decision is made */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <MaterialCommunityIcons name="gift-outline" size={13} color={redesign.color.purple} />
+                    <Text style={{ color: redesign.color.ink, fontSize: 12.5, fontWeight: '800', fontFamily: typography.fontFamily, letterSpacing: -0.1 }}>
+                      {formatRewardType(campaign)}
+                    </Text>
                   </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <MaterialCommunityIcons name="web" size={13} color={redesign.color.faint} />
+                    <Text style={{ color: redesign.color.muted, fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
+                      {formatPlatform(primaryPlatform)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <MaterialCommunityIcons name="calendar-month-outline" size={13} color={redesign.color.faint} />
+                    <Text style={{ color: redesign.color.muted, fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>
+                      {formatDateRange(campaign.startDate, campaign.endDate) || '-'}
+                    </Text>
+                  </View>
+                  {(() => {
+                    // Urgency cue — a known conversion lever. Accent when it's tight,
+                    // muted "Closed" once the deadline has passed.
+                    const closed = isCampaignClosed(campaign.endDate)
+                    const daysLeft = getDaysLeft(campaign.endDate)
+                    if (closed) {
+                      return (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: redesign.color.hairlineStrong, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                          <Text style={{ color: redesign.color.muted, fontSize: 11, fontWeight: '800', fontFamily: typography.fontFamily }}>Closed</Text>
+                        </View>
+                      )
+                    }
+                    if (daysLeft == null) return null
+                    const urgent = daysLeft <= 3
+                    return (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: urgent ? 'rgba(99,80,184,0.12)' : redesign.color.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                        <MaterialCommunityIcons name="clock-outline" size={12} color={urgent ? redesign.color.purple : redesign.color.faint} />
+                        <Text style={{ color: urgent ? redesign.color.purple : redesign.color.muted, fontSize: 11, fontWeight: '800', fontFamily: typography.fontFamily }}>
+                          {daysLeft === 0 ? 'Last day' : `${daysLeft} days left`}
+                        </Text>
+                      </View>
+                    )
+                  })()}
                 </View>
               </View>
+            </View>
             </View>
           </Animated.View>
 
@@ -595,23 +684,33 @@ export default function CampaignDetailPage() {
 
           {activeTab === 'brief' && (
             <>
-              {/* Goal + full-brief entry */}
+              {/* The product — a short, plain explanation of what the creator is featuring */}
+              {campaign.productDescription ? (
+                <Section icon="package-variant-closed" title="The product" tint="rgba(99,80,184,0.12)">
+                  <Text style={{ fontSize: 14.5, color: redesign.color.ink, lineHeight: 22, fontWeight: '500', fontFamily: typography.fontFamily }}>
+                    {campaign.productDescription}
+                  </Text>
+                </Section>
+              ) : null}
+
+              {/* Goal + a taste of the pitch, then the full brief lives in the popup —
+                  keeping this page scannable instead of a wall of text. */}
               {campaign.campaignGoal || campaign.description ? (
-                <Section icon="target" title="Campaign Goal" tint="rgba(124,63,242,0.12)">
+                <Section icon="target" title="Campaign goal" tint="rgba(99,80,184,0.12)">
                   {campaign.campaignGoal ? (
                     <Text style={{ fontSize: 16, color: redesign.color.ink, lineHeight: 23, fontWeight: '700', letterSpacing: -0.3, fontFamily: typography.fontFamily }}>
                       {formatCampaignGoal(campaign.campaignGoal)}
                     </Text>
                   ) : null}
                   {campaign.description ? (
-                    <Text numberOfLines={3} style={{ fontSize: 14.5, color: redesign.color.muted, lineHeight: 22, fontFamily: typography.fontFamily }}>
+                    <Text numberOfLines={2} style={{ fontSize: 14.5, color: redesign.color.muted, lineHeight: 22, fontFamily: typography.fontFamily }}>
                       {campaign.description}
                     </Text>
                   ) : null}
                   {hasBriefDetails ? readFullBriefButton : null}
                 </Section>
               ) : hasBriefDetails ? (
-                <Section icon="file-document-outline" title="Brief" tint="rgba(124,63,242,0.12)">
+                <Section icon="file-document-outline" title="Brief" tint="rgba(99,80,184,0.12)">
                   {readFullBriefButton}
                 </Section>
               ) : null}
@@ -624,22 +723,28 @@ export default function CampaignDetailPage() {
                   { label: 'Review days', value: campaign.reviewDays },
                 ].filter((c) => c.value != null)
                 if (!cells.length) return null
+                // One calm card with divided columns — reads quieter than three
+                // separate glossy, shadowed tiles (the old "plasticky" feel).
                 return (
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    {cells.map((cell) => (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      backgroundColor: redesign.color.card,
+                      borderRadius: 18,
+                      paddingVertical: 15,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: redesign.color.hairlineStrong,
+                    }}
+                  >
+                    {cells.map((cell, i) => (
                       <View
                         key={cell.label}
                         style={{
                           flex: 1,
-                          backgroundColor: redesign.color.card,
-                          borderRadius: 18,
-                          paddingVertical: 16,
-                          paddingHorizontal: 8,
                           alignItems: 'center',
-                          gap: 4,
-                          borderWidth: StyleSheet.hairlineWidth,
-                          borderColor: redesign.color.hairlineStrong,
-                          ...redesign.shadow.card,
+                          gap: 3,
+                          borderLeftWidth: i > 0 ? StyleSheet.hairlineWidth : 0,
+                          borderLeftColor: redesign.color.hairlineStrong,
                         }}
                       >
                         <CountUp
@@ -647,12 +752,12 @@ export default function CampaignDetailPage() {
                           duration={600}
                           style={{
                             fontFamily: typography.fontFamily,
-                            fontSize: 26,
+                            fontSize: 23,
                             fontWeight: '800',
                             color: redesign.color.ink,
-                            letterSpacing: -1,
+                            letterSpacing: -0.8,
                             padding: 0,
-                            minWidth: 26,
+                            minWidth: 22,
                             textAlign: 'center',
                           }}
                         />
@@ -667,7 +772,7 @@ export default function CampaignDetailPage() {
 
               {/* Requirements — disclosure + platforms + hashtags in one dense card */}
               {(campaign.requiredDisclosure || (campaign.platforms || []).length > 0 || hashtagText.length > 0) ? (
-                <Section icon="check-circle-outline" title="Requirements" tint="rgba(124,63,242,0.10)">
+                <Section icon="check-circle-outline" title="Requirements" tint="rgba(99,80,184,0.10)">
                   <View style={{ gap: 14 }}>
                     {campaign.requiredDisclosure ? (
                       <View style={{ gap: 7 }}>
@@ -683,7 +788,7 @@ export default function CampaignDetailPage() {
                         <Text style={SUB_LABEL}>Platforms</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
                           {campaign.platforms?.map((p, i) => (
-                            <Chip key={i} label={formatPlatform(p)} bg="rgba(124,63,242,0.10)" color="#6D28D9" />
+                            <Chip key={i} label={formatPlatform(p)} bg="rgba(99,80,184,0.10)" color="#6D28D9" />
                           ))}
                         </View>
                       </View>
@@ -701,7 +806,7 @@ export default function CampaignDetailPage() {
                                 setCopiedTag(tag)
                                 setTimeout(() => setCopiedTag(null), 2000)
                               }}
-                              style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radii.full, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: 'rgba(124,63,242,0.10)' }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radii.full, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: 'rgba(99,80,184,0.10)' }}
                             >
                               <Text style={{ color: '#6D28D9', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '700' }}>{tag}</Text>
                               <MaterialCommunityIcons
@@ -776,13 +881,11 @@ export default function CampaignDetailPage() {
                     return (
                       <PressableScale onPress={() => router.push(`/leaderboard/${campaignId}`)} haptic={false} style={{ borderRadius: 20, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, backgroundColor: redesign.color.card, gap: 12, ...redesign.shadow.card }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                          <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 44, height: 44, borderRadius: 14, padding: 1.5, alignItems: 'center', justifyContent: 'center' }}>
-                            <View style={{ flex: 1, alignSelf: 'stretch', borderRadius: 12.5, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
-                              <Text style={{ fontFamily: typography.fontFamily, fontWeight: '900', fontSize: 15, color: '#fff' }}>#{leaderboard.rank}</Text>
-                            </View>
-                          </LinearGradient>
+                          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '900', fontSize: 15, color: '#fff', fontVariant: ['tabular-nums'] }}>#{leaderboard.rank}</Text>
+                          </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '800', fontSize: 14.5, color: redesign.color.ink, letterSpacing: -0.2 }}>Your Position</Text>
+                            <Text style={{ fontFamily: typography.fontFamily, fontWeight: '800', fontSize: 14.5, color: redesign.color.ink, letterSpacing: -0.2 }}>Your position</Text>
                             <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.muted, marginTop: 1 }}>
                               #{leaderboard.rank} of {leaderboard.total_creators} creators
                             </Text>
@@ -794,7 +897,7 @@ export default function CampaignDetailPage() {
                           <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: redesign.color.muted, fontVariant: ['tabular-nums'] }}>Leader {fmtNum(leaderboard.top_views)}</Text>
                         </View>
                         <View style={{ height: 8, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
-                          <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${pct}%`, borderRadius: 999 }} />
+                          <View style={{ height: '100%', width: `${pct}%`, borderRadius: 999, backgroundColor: redesign.color.purple }} />
                         </View>
                         <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '800', color: redesign.color.purple, textAlign: 'center' }}>
                           View full leaderboard →
@@ -822,14 +925,8 @@ export default function CampaignDetailPage() {
                 return (
                   <Animated.View
                     entering={FadeInDown.duration(400)}
-                    style={{ marginBottom: 16, borderRadius: 24, overflow: 'hidden', backgroundColor: redesign.color.ink, ...redesign.shadow.cta }}
+                    style={{ marginBottom: 16, borderRadius: 24, overflow: 'hidden', backgroundColor: redesign.color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, ...redesign.shadow.card }}
                   >
-                    {/* Signature purple radial glow — matches the app's hero cards */}
-                    <LinearGradient
-                      colors={['rgba(124,63,242,0.55)', 'rgba(124,63,242,0)']}
-                      start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.8 }}
-                      style={{ position: 'absolute', top: -40, right: -40, width: 240, height: 240, borderRadius: 120 }}
-                    />
                     <View style={{ padding: 20, gap: 16 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                         <View>
@@ -840,29 +937,23 @@ export default function CampaignDetailPage() {
                             <CountUp
                               value={submitted}
                               duration={650}
-                              style={{ fontFamily: typography.fontFamily, fontSize: 42, fontWeight: '900', color: '#fff', letterSpacing: -2, lineHeight: 44, padding: 0, minWidth: 26 }}
+                              style={{ fontFamily: typography.fontFamily, fontSize: 42, fontWeight: '900', color: redesign.color.ink, letterSpacing: -2, lineHeight: 44, padding: 0, minWidth: 26 }}
                             />
-                            <Text style={{ fontFamily: typography.fontFamily, fontSize: 17, fontWeight: '700', color: 'rgba(255,255,255,0.5)' }}>
+                            <Text style={{ fontFamily: typography.fontFamily, fontSize: 17, fontWeight: '700', color: redesign.color.faint }}>
                               {`of ${total} submitted`}
                             </Text>
                           </View>
                         </View>
-                        <LinearGradient
-                          colors={redesign.gradient.avatarRing}
-                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                          style={{ width: 56, height: 56, borderRadius: 28, padding: 2.5, alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <View style={{ flex: 1, alignSelf: 'stretch', borderRadius: 25.5, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '900', color: '#fff', fontVariant: ['tabular-nums'] }}>{`${pct}%`}</Text>
-                          </View>
-                        </LinearGradient>
+                        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '900', color: '#fff', fontVariant: ['tabular-nums'] }}>{`${pct}%`}</Text>
+                        </View>
                       </View>
-                      <View style={{ height: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
-                        <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${Math.max(pct, 3)}%`, borderRadius: 999 }} />
+                      <View style={{ height: 8, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
+                        <View style={{ height: '100%', width: `${Math.max(pct, 3)}%`, borderRadius: 999, backgroundColor: redesign.color.purple }} />
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: nextIdx === -1 ? 'rgba(255,255,255,0.08)' : 'rgba(124,63,242,0.28)', borderRadius: 999, paddingLeft: 9, paddingRight: 14, paddingVertical: 8 }}>
-                        <MaterialCommunityIcons name={nextIdx === -1 ? 'check-circle' : 'arrow-right-circle'} size={16} color={nextIdx === -1 ? redesign.color.payoutGreen : '#fff'} />
-                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '800', color: '#fff', letterSpacing: -0.1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: nextIdx === -1 ? redesign.color.successBg : 'rgba(99,80,184,0.10)', borderRadius: 999, paddingLeft: 9, paddingRight: 14, paddingVertical: 8 }}>
+                        <MaterialCommunityIcons name={nextIdx === -1 ? 'check-circle' : 'arrow-right-circle'} size={16} color={nextIdx === -1 ? redesign.color.successText : redesign.color.purple} />
+                        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '800', color: nextIdx === -1 ? redesign.color.successText : redesign.color.purple, letterSpacing: -0.1 }}>
                           {nextIdx === -1 ? 'All caught up — nothing to do' : `Next: ${nextLabel}`}
                         </Text>
                       </View>
@@ -880,6 +971,7 @@ export default function CampaignDetailPage() {
                   deliverables={visibleDeliverables}
                   brandName={campaign?.brandName}
                   brandLogoUrl={campaign?.brandLogoUrl}
+                  requiresReview={campaign?.requiresReview ?? true}
                 />
               )}
             </View>

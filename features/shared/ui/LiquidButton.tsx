@@ -102,9 +102,10 @@ export function LiquidButton({
       ]}
     >
       {tone === 'primary'
-        ? <BlurView tint="dark" intensity={12} style={{ position: 'absolute', inset: 0 }} />
-        : <BlurView tint="light" intensity={42} style={{ position: 'absolute', inset: 0 }} />}
+        ? <BlurView pointerEvents="none" tint="dark" intensity={12} style={{ position: 'absolute', inset: 0 }} />
+        : <BlurView pointerEvents="none" tint="light" intensity={42} style={{ position: 'absolute', inset: 0 }} />}
       <LinearGradient
+        pointerEvents="none"
         colors={[toneFillTop[tone], toneFillBottom[tone]]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
@@ -112,6 +113,7 @@ export function LiquidButton({
       />
       {tone === 'primary' ? null : (
         <LinearGradient
+          pointerEvents="none"
           colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0)']}
           start={{ x: 0.2, y: 0 }}
           end={{ x: 0.8, y: 0.75 }}

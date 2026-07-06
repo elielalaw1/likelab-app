@@ -224,7 +224,7 @@ function TopPerformerCard({ item }: { item: CampaignInsight }) {
         <View style={{ borderRadius: 22.6, backgroundColor: redesign.color.darkScreen, padding: 18, gap: 16, overflow: 'hidden' }}>
           <LinearGradient
             pointerEvents="none"
-            colors={['rgba(124,63,242,0.4)', 'transparent']}
+            colors={['rgba(99,80,184,0.4)', 'transparent']}
             start={{ x: 1, y: 0 }}
             end={{ x: 0.2, y: 0.9 }}
             style={{ position: 'absolute', top: -30, right: -30, width: 160, height: 160, borderRadius: 80 }}

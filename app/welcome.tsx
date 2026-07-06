@@ -110,14 +110,14 @@ function DiscoverMock({ float, pulse, bounce }: Drivers) {
           <Text style={{ fontSize: 10, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>{camp.brand}</Text>
         </Animated.View>
         <View style={{ backgroundColor: 'rgba(11,11,15,0.55)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
-          <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#fff', fontFamily: typography.fontFamily }}>🔥 {applied} applied</Text>
+          <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#fff', fontFamily: typography.fontFamily }}>{applied} applied</Text>
         </View>
       </View>
       <View style={{ padding: 14, gap: 10 }}>
         <Animated.View key={`t${c}`} entering={FadeIn.duration(360)} style={{ gap: 8 }}>
           <Text style={{ fontSize: 14, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>{camp.title}</Text>
           <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Chip bg="rgba(124,63,242,0.10)" color={redesign.color.purple}>{camp.reward}</Chip>
+            <Chip bg="rgba(99,80,184,0.10)" color={redesign.color.purple}>{camp.reward}</Chip>
             <Chip bg={redesign.color.bg} color={redesign.color.muted}>{camp.days}</Chip>
           </View>
         </Animated.View>
@@ -178,7 +178,7 @@ function RankBadge({ slot }: { slot: number }) {
 // Shared row pill: [rank cell][avatar][name][right].
 function RowShell({ color, label, you, children, right }: { color: string; label: string; you?: boolean; children: React.ReactNode; right: React.ReactNode }) {
   return (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, paddingHorizontal: 8, borderWidth: you ? 1 : 0, borderColor: 'rgba(124,63,242,0.9)', backgroundColor: you ? 'rgba(124,63,242,0.3)' : 'rgba(255,255,255,0.05)' }}>
+    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, paddingHorizontal: 8, borderWidth: you ? 1 : 0, borderColor: 'rgba(99,80,184,0.9)', backgroundColor: you ? 'rgba(99,80,184,0.3)' : 'rgba(255,255,255,0.05)' }}>
       <View style={{ width: 22, height: ROW_H - 5, alignItems: 'center', justifyContent: 'center' }}>{children}</View>
       <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
         {you ? <MaterialCommunityIcons name="account" size={14} color="#fff" /> : <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: typography.fontFamily }}>{label[0]}</Text>}
@@ -249,7 +249,7 @@ function LeaderboardMock({ float, bounce }: Drivers) {
 
   return (
     <Animated.View style={[{ width: 258, borderRadius: 24, backgroundColor: redesign.color.darkScreen, padding: 14, overflow: 'hidden', ...redesign.shadow.cta }, cardStyle]}>
-      <LinearGradient pointerEvents="none" colors={['rgba(124,63,242,0.45)', 'transparent']} start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.85 }} style={{ position: 'absolute', top: -24, right: -24, width: 150, height: 150, borderRadius: 75 }} />
+      <LinearGradient pointerEvents="none" colors={['rgba(99,80,184,0.45)', 'transparent']} start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.85 }} style={{ position: 'absolute', top: -24, right: -24, width: 150, height: 150, borderRadius: 75 }} />
       <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9.5, fontWeight: '800', letterSpacing: 1.2, fontFamily: typography.fontFamily, marginBottom: 8 }}>● LIVE LEADERBOARD · 50</Text>
 
       <View style={{ height: BODY_H, overflow: 'hidden' }}>

@@ -14,7 +14,7 @@ export function AuthLayout({ children }: Props) {
       {/* Single restrained holographic glow, top-right — accent only */}
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(124,63,242,0.10)', 'rgba(31,200,232,0.05)', 'transparent']}
+        colors={['rgba(99,80,184,0.08)', 'rgba(99,80,184,0.02)', 'transparent']}
         start={{ x: 1, y: 0 }}
         end={{ x: 0.2, y: 0.5 }}
         style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}

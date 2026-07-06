@@ -77,7 +77,7 @@ export default function LeaderboardPage() {
       {/* Holographic radial glow, top-right */}
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(124,63,242,0.35)', 'rgba(31,200,232,0.10)', 'transparent']}
+        colors={['rgba(99,80,184,0.30)', 'rgba(99,80,184,0.06)', 'transparent']}
         start={{ x: 1, y: 0 }} end={{ x: 0.2, y: 0.55 }}
         style={{ position: 'absolute', top: 0, right: 0, width: 360, height: 360 }}
       />
@@ -110,8 +110,7 @@ export default function LeaderboardPage() {
             {/* Prize pool banner — holographic gradient border */}
             <Animated.View entering={FadeInDown.duration(280)}>
               <LinearGradient
-                colors={redesign.gradient.holographic}
-                locations={redesign.gradient.holographicLocations}
+                colors={['#6350B8', 'rgba(99,80,184,0.35)']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={{ borderRadius: 22, padding: 1.4 }}
               >
@@ -142,7 +141,7 @@ export default function LeaderboardPage() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   {/* Rank badge */}
                   <LinearGradient
-                    colors={redesign.gradient.avatarRing}
+                    colors={['#6350B8', '#6350B8']}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                     style={{ width: 60, height: 60, borderRadius: 18, padding: 1.5, alignItems: 'center', justifyContent: 'center' }}
                   >
@@ -156,7 +155,7 @@ export default function LeaderboardPage() {
                       {ordinal(myRank)} of {total} creators
                     </Text>
                     <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: FAINT }}>
-                      {inPayoutZone ? "You're in the reward zone 🎉" : `Climb to top ${payoutCount || 5} to earn a reward`}
+                      {inPayoutZone ? "You’re in the reward zone" : `Climb to top ${payoutCount || 5} to earn a reward`}
                     </Text>
                   </View>
                 </View>
@@ -173,7 +172,7 @@ export default function LeaderboardPage() {
                   </View>
                   <View style={{ height: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
                     <LinearGradient
-                      colors={redesign.gradient.accent}
+                      colors={['#6350B8', '#6350B8']}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                       style={{ height: '100%', width: `${progress}%`, borderRadius: 999 }}
                     />
@@ -197,12 +196,12 @@ export default function LeaderboardPage() {
                         borderRadius: 16,
                         overflow: 'hidden',
                         borderWidth: 1,
-                        borderColor: isYou ? 'rgba(124,63,242,0.7)' : 'rgba(255,255,255,0.08)',
+                        borderColor: isYou ? 'rgba(99,80,184,0.7)' : 'rgba(255,255,255,0.08)',
                       }}
                     >
                       {isYou ? (
                         <LinearGradient
-                          colors={['rgba(124,63,242,0.28)', 'rgba(31,200,232,0.18)']}
+                          colors={['rgba(99,80,184,0.28)', 'rgba(99,80,184,0.12)']}
                           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                           style={{ position: 'absolute', inset: 0 }}
                         />
@@ -237,9 +236,9 @@ export default function LeaderboardPage() {
 
                 {/* Your row when below the payout cutoff */}
                 {myRank > payoutCount ? (
-                  <View style={{ borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(124,63,242,0.7)' }}>
+                  <View style={{ borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(99,80,184,0.7)' }}>
                     <LinearGradient
-                      colors={['rgba(124,63,242,0.28)', 'rgba(31,200,232,0.18)']}
+                      colors={['rgba(99,80,184,0.28)', 'rgba(99,80,184,0.12)']}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       style={{ position: 'absolute', inset: 0 }}
                     />
