@@ -32,6 +32,10 @@ export type ReferralStats = {
 //   5. Route https://likelab.io/invite/<code> to signup with the code pre-filled.
 //   Once (1)+(3) exist this function returns live data automatically (isLive=true).
 // ─────────────────────────────────────────────────────────────────────────────
+// Remembers the last real backend code we saw this session, so a transient error
+// (network drop / 5xx) doesn't flash the non-redeemable local fallback in its place.
+let _lastBackendCode: string | null = null
+
 export async function getReferralStats(): Promise<ReferralStats> {
   const userId = await getCurrentUserId()
   const fallback: ReferralStats = { code: fallbackReferralCode(userId), invitedCount: 0, joinedCount: 0, isLive: false, hasBackendCode: false }
@@ -43,6 +47,12 @@ export async function getReferralStats(): Promise<ReferralStats> {
     const { data, error } = await supabase.from('creator_profiles').select('referral_code').eq('user_id', userId).maybeSingle()
     if (!error && data && typeof data.referral_code === 'string' && data.referral_code) {
       code = data.referral_code
+      hasBackendCode = true
+      _lastBackendCode = data.referral_code
+    } else if (error && _lastBackendCode) {
+      // A transient failure AFTER we already knew the real code — keep showing it
+      // rather than downgrading to the local fallback a friend can't redeem.
+      code = _lastBackendCode
       hasBackendCode = true
     }
   } catch {

@@ -24,6 +24,10 @@ export function useDeliverableRealtime(userId: string) {
         { event: '*', schema: 'public', table: 'deliverables', filter: `creator_id=eq.${userId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['deliverables'] })
+          // A brand approving a deliverable grants XP server-side, so refresh the
+          // real account level too — otherwise the tier ring and the level-up
+          // celebration stay stale for the whole session.
+          queryClient.invalidateQueries({ queryKey: ['creator-level'] })
         }
       )
       // Brand feedback arriving while the app is open — refresh the per-deliverable thread

@@ -91,8 +91,8 @@ function mapProfile(creator: Row, profile: Row, userId: string): CreatorProfile 
     reviewStatus,
     completionPercentage: completionPercentage(creator),
     approved: reviewStatus === 'approved',
-    tiktokFollowers: toStatString(creator['tiktok_follower_count'] || creator['followers']),
-    tiktokLikes: toStatString(creator['tiktok_likes_count'] || creator['likes']),
+    tiktokFollowers: toStatString(creator['tiktok_follower_count'] ?? creator['followers']),
+    tiktokLikes: toStatString(creator['tiktok_likes_count'] ?? creator['likes']),
     tiktokViews: toStatString(creator['views']),
     tiktokConnected: creator['tiktok_connected'] === true || Boolean(creator['tiktok_open_id']),
     tiktokOpenId: textValue(creator, ['tiktok_open_id']),
@@ -220,6 +220,11 @@ export async function getCreatorLevel(): Promise<CreatorLevel> {
     .select('xp, level')
     .eq('creator_id', userId)
     .maybeSingle()
-  if (error || !data) return { xp: 0, level: 1 }
+  // Throw on a real query failure so React Query retries and keeps the last good
+  // cache (via placeholderData) instead of caching a fake {level:1}, which would
+  // both show a wrong tier and trip LevelUpHost into a bogus level-up celebration.
+  // Only a genuinely absent row (no XP yet) yields the level-1 baseline.
+  if (error) throw new Error(error.message)
+  if (!data) return { xp: 0, level: 1 }
   return { xp: Number(data.xp) || 0, level: Number(data.level) || 1 }
 }

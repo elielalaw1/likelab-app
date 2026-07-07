@@ -56,13 +56,17 @@ export async function savePushToken(token: string, userId: string): Promise<void
 export async function deletePushToken(userId: string, token?: string): Promise<void> {
   const deviceToken = token ?? lastRegisteredToken
 
+  // A device that never registered a token owns nothing to clear. Bail out instead
+  // of running an unfiltered UPDATE — that would null the column for the whole user
+  // and silently kill another device's push notifications.
+  if (!deviceToken) return
+
   // Clear the Live push token, but only if it still holds THIS device's token
   // (avoids one device's logout clobbering a token another device just wrote).
-  let query = supabase
+  const { error } = await supabase
     .from('creator_profiles')
     .update({ push_token: null })
     .eq('user_id', userId)
-  if (deviceToken) query = query.eq('push_token', deviceToken)
-  const { error } = await query
+    .eq('push_token', deviceToken)
   if (error) console.warn('[push] failed to clear push token:', error.message)
 }

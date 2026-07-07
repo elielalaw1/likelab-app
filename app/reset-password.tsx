@@ -53,6 +53,9 @@ export default function ResetPasswordPage() {
       if (params.type !== 'recovery' || !params.access_token || !params.refresh_token) {
         return
       }
+      // Cold start (getInitialURL) and warm open (getLinkingURL) can both surface the
+      // same recovery URL — only act on the first.
+      if (settled) return
       settled = true
       if (graceTimer) clearTimeout(graceTimer)
       setInvalid(false)
@@ -71,6 +74,13 @@ export default function ResetPasswordPage() {
     Linking.getInitialURL().then((url) => {
       if (url) void initSession(url)
     })
+
+    // Warm open: the app was already running when the reset link was tapped, so the
+    // 'url' event fired before this screen mounted (RN doesn't replay it) and
+    // getInitialURL only holds the cold-start URL. getLinkingURL returns the most
+    // recent URL the native module cached, which still carries the recovery tokens.
+    const warmUrl = Linking.getLinkingURL()
+    if (warmUrl) void initSession(warmUrl)
 
     const sub = Linking.addEventListener('url', ({ url }) => { void initSession(url) })
 

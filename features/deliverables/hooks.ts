@@ -74,7 +74,12 @@ export function useLatestSubmission(deliverableId?: string) {
     queryKey: ['latest-submission', deliverableId],
     queryFn: () => getLatestSubmission(deliverableId || ''),
     enabled: Boolean(deliverableId),
-    staleTime: 2 * 60 * 1000,
+    // This drives VideoUploadRow's remount recovery, so it must reflect the true
+    // current submission — not a stale snapshot. Without this it inherits the global
+    // refetchOnMount:false and can re-offer the dropzone (duplicate upload) or adopt
+    // a superseded row after the sheet is closed and reopened.
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 

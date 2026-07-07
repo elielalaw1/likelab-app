@@ -16,7 +16,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "io.likelab.app",
       "buildNumber": "17",
-      "associatedDomains": ["applinks:likelab.io"],
+      "associatedDomains": [
+        "applinks:likelab.io"
+      ],
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "LikeLab needs access to your photo library to let you select a profile photo.",
         "NSPhotoLibraryAddUsageDescription": "LikeLab needs access to save media to your photo library.",
@@ -40,8 +42,17 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "likelab.io", "pathPrefix": "/invite" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "https",
+              "host": "likelab.io",
+              "pathPrefix": "/invite"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -83,7 +94,8 @@
           }
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

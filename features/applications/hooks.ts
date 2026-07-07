@@ -74,6 +74,9 @@ function useInvitationStatusMutation(
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      // Accepting creates the campaign's deliverables server-side — refresh the
+      // Projects tab too (it has refetchOnMount:false, so nothing else pulls it in).
+      queryClient.invalidateQueries({ queryKey: ['deliverables'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })

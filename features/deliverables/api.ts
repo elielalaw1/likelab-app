@@ -1,5 +1,6 @@
 import { File } from 'expo-file-system'
 import { createUploadTask, FileSystemUploadType } from 'expo-file-system/legacy'
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase'
 import { Deliverable, DeliverableFeedback, DeliverableSubmission, mapFeedbackRow, mapSubmissionRow } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
@@ -112,11 +113,13 @@ export async function uploadVideo(params: {
   const encodedPath = storagePath.split('/').map(encodeURIComponent).join('/')
   // Stream via an upload TASK (not one-shot uploadAsync) so we can bound it —
   // expo-file-system has no built-in timeout, so a dead connection would
-  // otherwise leave the UI stuck on "uploading" forever. We use ONLY a generous
-  // ceiling (4 min): a stall-detection scheme that cancels on "no progress for
-  // N seconds" mis-fires on healthy uploads, because progress events pause while
-  // the app is backgrounded (e.g. during the photo-permission prompt) or on slow
-  // links. The ceiling catches a genuinely dead upload without false-cancelling.
+  // otherwise leave the UI stuck on "uploading" forever. We use ONLY a ceiling
+  // (not a "no progress for N seconds" stall detector): progress events pause
+  // while the app is backgrounded (e.g. during the photo-permission prompt) or on
+  // slow links, so stall-detection false-cancels healthy uploads. The ceiling is
+  // scaled to the file size at a conservative minimum uplink throughput (floored
+  // at 4 min, capped at 20 min) so a large clip on weak cellular isn't cancelled
+  // while it is still genuinely transferring.
   const task = createUploadTask(
     `${supabaseUrl}/storage/v1/object/deliverable-videos/${encodedPath}`,
     fileUri,
@@ -133,11 +136,15 @@ export async function uploadVideo(params: {
     },
   )
 
+  const uploadTimeoutMs = Math.min(
+    20 * 60_000,
+    Math.max(240_000, Math.ceil(fileSizeBytes / 90_000) * 1000),
+  )
   let aborted = false
   const watchdog = setTimeout(() => {
     aborted = true
     void task.cancelAsync().catch(() => {})
-  }, 240_000)
+  }, uploadTimeoutMs)
 
   let uploadResult: Awaited<ReturnType<typeof task.uploadAsync>>
   try {
@@ -169,19 +176,22 @@ export async function uploadVideo(params: {
 
   if (error) throw new Error(error.message)
 
+  const failStuckSubmission = (invokeError: unknown) => {
+    console.warn('[uploadVideo] process-video-upload failed:', invokeError)
+    // The processor never started — don't leave the row stuck on 'uploading'
+    // forever (the client poller would spin every few seconds indefinitely).
+    // Flip it to 'failed' so the UI can show an error and offer a retry.
+    void supabase
+      .from('deliverable_submissions')
+      .update({ status: 'failed', error_message: 'Could not start video processing. Please try uploading again.' })
+      .eq('id', data.id)
+      .then(undefined, () => {})
+  }
+  // functions.invoke resolves with { error } for HTTP/relay/fetch failures rather
+  // than rejecting, so inspect the resolved error too — a bare .catch() never fires.
   supabase.functions
     .invoke('process-video-upload', { body: { submission_id: data.id } })
-    .catch((invokeError: unknown) => {
-      console.warn('[uploadVideo] process-video-upload failed:', invokeError)
-      // The processor never started — don't leave the row stuck on 'uploading'
-      // forever (the client poller would spin every few seconds indefinitely).
-      // Flip it to 'failed' so the UI can show an error and offer a retry.
-      void supabase
-        .from('deliverable_submissions')
-        .update({ status: 'failed', error_message: 'Could not start video processing. Please try uploading again.' })
-        .eq('id', data.id)
-        .then(undefined, () => {})
-    })
+    .then(({ error: invokeError }) => { if (invokeError) failStuckSubmission(invokeError) }, failStuckSubmission)
 
   return mapSubmissionRow((data || {}) as Row)
 }
@@ -240,9 +250,12 @@ export async function getMyVideos(): Promise<MyVideo[]> {
   // so signing its path would only yield a URL that 404s. We still surface the row via its
   // retained thumbnail + TikTok link below.
   const livePaths = rows.filter((r) => !r.video_archived_at).map((r) => r.video_storage_path)
-  const { data: signed } = livePaths.length
+  const { data: signed, error: signError } = livePaths.length
     ? await supabase.storage.from('deliverable-videos').createSignedUrls(livePaths, 6 * 3600)
-    : { data: [] as { signedUrl: string | null; path: string | null }[] }
+    : { data: [] as { signedUrl: string | null; path: string | null }[], error: null }
+  // Surface a signing failure (storage-js resolves with { error } instead of throwing)
+  // so React Query shows its error/retry state rather than a false "No videos yet".
+  if (signError) throw new Error(signError.message)
 
   const byPath = new Map((signed || []).filter((s) => s.signedUrl && s.path).map((s) => [s.path as string, s.signedUrl as string]))
 
@@ -320,7 +333,20 @@ export async function deleteDeliverableVideo(deliverableId: string): Promise<voi
   const { data, error } = await supabase.functions.invoke('delete-deliverable-video', {
     body: { deliverable_id: deliverableId },
   })
-  if (error) throw new Error(error.message)
+  if (error) {
+    // invoke's error.message is only the generic "non-2xx" string; the real reason
+    // (ownership/state/transient) lives in the response body on FunctionsHttpError.
+    let detail = error.message
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const parsed = await error.context.json()
+        detail = parsed?.error || parsed?.message || detail
+      } catch {
+        // Body wasn't JSON / already consumed — keep the generic message.
+      }
+    }
+    throw new Error(detail)
+  }
   const result = data as { error?: string } | null
   if (result?.error) throw new Error(result.error)
 }

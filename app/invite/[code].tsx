@@ -12,8 +12,10 @@ export default function InviteRedirectPage() {
   const { session, loading } = useAuthSession()
 
   useEffect(() => {
-    if (code) setPendingReferralCode(code)
-  }, [code])
+    // Only stash the code for a logged-out visitor — an already-signed-in user isn't
+    // redeeming a fresh invite, and capturing it would wrongly refer their account.
+    if (code && !loading && !session) setPendingReferralCode(code)
+  }, [code, loading, session])
 
   if (loading) return null
 

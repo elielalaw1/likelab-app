@@ -18,19 +18,26 @@ export function ReferralLinkHandler() {
       if (data.user) void redeemPendingReferral(data.user.id)
     }
 
+    // Only capture an invite code for a logged-OUT visitor. An already-signed-in
+    // creator tapping an invite link is NOT a fresh invitee — storing + redeeming
+    // it would wrongly record their established account as referred (same reasoning
+    // as the clipboard guard in redeem.ts).
+    const captureIfLoggedOut = async (url: string) => {
+      const { data } = await supabase.auth.getSession()
+      if (data.session) return
+      setPendingReferralCode(url)
+      void tryRedeem()
+    }
+
     // 1) Capture the code from the cold-start URL + any links while running.
     Linking.getInitialURL()
       .then((url) => {
-        if (url) {
-          setPendingReferralCode(url)
-          void tryRedeem()
-        }
+        if (url) void captureIfLoggedOut(url)
       })
       .catch(() => {})
 
     const linkSub = Linking.addEventListener('url', ({ url }) => {
-      setPendingReferralCode(url)
-      void tryRedeem()
+      void captureIfLoggedOut(url)
     })
 
     // 2) Redeem on the current session + on any future sign-in.
