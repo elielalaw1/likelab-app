@@ -22,9 +22,9 @@ export function useCampaigns() {
 
 export function useCampaign(campaignId?: string) {
   const queryClient = useQueryClient()
-  // Unique per hook instance so the detail screen and a stacked leaderboard
-  // screen don't share one channel topic (removeChannel on one would tear down
-  // the other's live updates).
+  // Unique per hook instance so two stacked screens using this hook don't share
+  // one channel topic (removeChannel on one would tear down the other's live
+  // updates).
   const instanceId = useId()
 
   const query = useQuery({

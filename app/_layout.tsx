@@ -1,10 +1,10 @@
 import { Stack, router } from 'expo-router'
-import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { queryClient } from '@/lib/query-client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { useFonts } from 'expo-font'
 import {
@@ -78,6 +78,30 @@ const NOTIF_EXPLAIN_KEY = 'notif_explain_shown_v2'
 // realtime publication doesn't include the deliverables table.
 const DELIVERABLE_NOTIF_TYPES = new Set(['deliverable_assigned', 'deliverable_revision', 'deliverable_approved'])
 
+// Refresh the caches a given push type makes stale. Push is the reliable fallback
+// when a change happened while the app was backgrounded (Supabase realtime events
+// aren't replayed on resume and refetchOnMount is off), so these mirror the realtime
+// handlers. Shared by the tap handler and the foreground listener.
+function invalidateForNotificationType(queryClient: QueryClient, type: string | undefined) {
+  if (!type) return
+  if (DELIVERABLE_NOTIF_TYPES.has(type)) {
+    queryClient.invalidateQueries({ queryKey: ['deliverables'] })
+    // A brand approving a deliverable grants XP server-side — refresh the level too.
+    if (type === 'deliverable_approved') queryClient.invalidateQueries({ queryKey: ['creator-level'] })
+  }
+  if (type === 'feedback_added') {
+    queryClient.invalidateQueries({ queryKey: ['deliverable-feedback'] })
+    queryClient.invalidateQueries({ queryKey: ['feedback-unread'] })
+  }
+  if (type === 'application_accepted' || type === 'campaign_invitation' || type === 'application_rejected') {
+    queryClient.invalidateQueries({ queryKey: ['applications'] })
+    queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+    queryClient.invalidateQueries({ queryKey: ['deliverables'] })
+  } else if (type === 'new_campaign' || type === 'campaign_phase_change') {
+    queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+  }
+}
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     // Foreground: suppress the native banner/alert — the app's own in-app toast
@@ -106,23 +130,17 @@ function PushNotificationSetup() {
   // Shared handling for a notification tap (background, closed, or cold-start). Runs
   // cache invalidation, fire-and-forget open tracking, and navigation. De-duplicates
   // by the notification's request identifier so the same tap isn't handled twice.
-  const handleNotificationResponse = (response: Notifications.NotificationResponse, uid: string) => {
+  const handleNotificationResponse = useCallback((response: Notifications.NotificationResponse, uid: string) => {
     const identifier = response.notification.request.identifier
     if (handledResponseIds.current.has(identifier)) return
     handledResponseIds.current.add(identifier)
 
     const data = response.notification.request.content.data as Record<string, unknown>
 
-    // Refresh deliverables before navigating so the target screen renders the
-    // up-to-date stage rather than the pre-approval one.
+    // Refresh the caches this push makes stale before navigating, so the target
+    // screen (and the tabs behind it) render up-to-date state, not the pre-event one.
     const type = data?.type as string | undefined
-    if (type && DELIVERABLE_NOTIF_TYPES.has(type)) {
-      queryClient.invalidateQueries({ queryKey: ['deliverables'] })
-    }
-    if (type === 'feedback_added') {
-      queryClient.invalidateQueries({ queryKey: ['deliverable-feedback'] })
-      queryClient.invalidateQueries({ queryKey: ['feedback-unread'] })
-    }
+    invalidateForNotificationType(queryClient, type)
 
     // Fire-and-forget open tracking for analytics
     const batchId = data?.batch_id
@@ -136,7 +154,7 @@ function PushNotificationSetup() {
 
     const route = resolveNotificationRoute(data)
     if (route) router.push(route as never)
-  }
+  }, [queryClient])
 
   useEffect(() => {
     if (!userId) return
@@ -188,15 +206,10 @@ function PushNotificationSetup() {
       const { title, body, data } = notification.request.content
       const type = (data as Record<string, unknown> | undefined)?.type as string | undefined
 
-      // Refresh deliverables so the screen advances (e.g. approval reveals the
-      // "paste your TikTok link" field) the moment the notification lands.
-      if (type && DELIVERABLE_NOTIF_TYPES.has(type)) {
-        queryClient.invalidateQueries({ queryKey: ['deliverables'] })
-      }
-      if (type === 'feedback_added') {
-        queryClient.invalidateQueries({ queryKey: ['deliverable-feedback'] })
-        queryClient.invalidateQueries({ queryKey: ['feedback-unread'] })
-      }
+      // Refresh whatever this push makes stale so the open app advances immediately
+      // (e.g. approval reveals the "paste your TikTok link" field; a new campaign
+      // shows up on Discover).
+      invalidateForNotificationType(queryClient, type)
 
       // The approval tutorial already celebrates approval, so suppress the redundant
       // "You're approved" toast when the app is foregrounded.
@@ -225,7 +238,7 @@ function PushNotificationSetup() {
       notificationResponseListener.current?.remove()
       notificationResponseListener.current = null
     }
-  }, [userId, queryClient])
+  }, [userId, queryClient, handleNotificationResponse])
 
   return null
 }
@@ -308,7 +321,6 @@ export default function RootLayout() {
                   <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
                   <Stack.Screen name="applications" />
                   <Stack.Screen name="campaigns/[id]" />
-                  <Stack.Screen name="leaderboard/[id]" />
                   <Stack.Screen name="insights" />
                   <Stack.Screen name="tiers" />
                   <Stack.Screen name="invite" />

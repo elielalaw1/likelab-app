@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import Animated, {
   Easing,
@@ -19,60 +19,14 @@ import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { redesign, typography } from '@/features/core/theme'
+import { Bone } from '@/features/shared/ui/SkeletonCard'
+import { AnimatedCounter } from '@/features/shared/ui/AnimatedCounter'
 import { formatCompactCount } from '@/features/auth/api'
 import { useInsights } from '@/features/insights/hooks'
 import { buildChart, computeTrend, type Trend } from '@/features/insights/logic'
 import type { CampaignInsight } from '@/features/insights/api'
 
-const AnimatedText = Animated.createAnimatedComponent(TextInput)
 const AnimatedPath = Animated.createAnimatedComponent(Path)
-
-// ─── Animated counter ─────────────────────────────────────────────────────────
-// Ticks from 0 up to the target when it mounts. Formatting happens INSIDE the
-// worklet (no external JS call), so the value spins on the UI thread without a
-// per-frame React re-render — same pattern as welcome.tsx's SpinViews.
-function AnimatedCounter({
-  value,
-  mode = 'count',
-  delay = 0,
-  style,
-}: {
-  value: number
-  mode?: 'count' | 'rank'
-  delay?: number
-  style: object
-}) {
-  const progress = useSharedValue(0)
-  useEffect(() => {
-    progress.value = 0
-    progress.value = withDelay(delay, withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) }))
-  }, [value, delay, progress])
-
-  const animatedProps = useAnimatedProps(() => {
-    const v = Math.round(interpolate(progress.value, [0, 1], [0, value], Extrapolation.CLAMP))
-    let text: string
-    if (mode === 'rank') {
-      text = `#${v}`
-    } else if (v >= 1_000_000) {
-      text = `${(v / 1_000_000).toFixed(1)}M`
-    } else if (v >= 1_000) {
-      text = `${(v / 1_000).toFixed(1)}K`
-    } else {
-      text = `${v}`
-    }
-    return { text, defaultValue: text } as Partial<{ text: string; defaultValue: string }>
-  })
-
-  return (
-    <AnimatedText
-      editable={false}
-      pointerEvents="none"
-      underlineColorAndroid="transparent"
-      animatedProps={animatedProps as never}
-      style={style}
-    />
-  )
-}
 
 // ─── Trend pill ("+34% vs last campaign") ────────────────────────────────────
 function TrendBadge({ trend }: { trend: Trend }) {
@@ -97,7 +51,7 @@ function TrendBadge({ trend }: { trend: Trend }) {
 }
 
 // ─── Summary cells ────────────────────────────────────────────────────────────
-function SummaryCell({ label, value, mode, delay, placeholder }: { label: string; value: number | null; mode: 'count' | 'rank'; delay: number; placeholder?: string }) {
+function SummaryCell({ label, value, delay }: { label: string; value: number; delay: number }) {
   const valueStyle = { fontFamily: typography.fontFamily, fontSize: 24, fontWeight: '800' as const, color: redesign.color.ink, letterSpacing: -0.8, fontVariant: ['tabular-nums' as const], minWidth: 30, textAlign: 'center' as const, padding: 0 }
   return (
     <View
@@ -114,11 +68,7 @@ function SummaryCell({ label, value, mode, delay, placeholder }: { label: string
         ...redesign.shadow.card,
       }}
     >
-      {value == null ? (
-        <Text maxFontSizeMultiplier={1.4} style={valueStyle}>{placeholder ?? '–'}</Text>
-      ) : (
-        <AnimatedCounter value={value} mode={mode} delay={delay} style={valueStyle} />
-      )}
+      <AnimatedCounter value={value} delay={delay} style={valueStyle} />
       <Text style={{ fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', color: redesign.color.faint, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' }}>
         {label}
       </Text>
@@ -128,7 +78,7 @@ function SummaryCell({ label, value, mode, delay, placeholder }: { label: string
 
 // ─── Views trend chart ────────────────────────────────────────────────────────
 // Per-campaign views in chronological order. NOTE: the backend stores only the
-// current leaderboard position, not historical snapshots, so this is a trend
+// current totals, not historical snapshots, so this is a trend
 // across campaigns (each happened at a point in time) — not a day-by-day curve.
 // A true time-series needs the backend to persist periodic snapshots first.
 function ViewsChart({ values }: { values: number[] }) {
@@ -240,18 +190,12 @@ function TopPerformerCard({ item }: { item: CampaignInsight }) {
             <Text numberOfLines={1} style={{ fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>
               {item.campaignTitle}
             </Text>
-            {item.rank != null ? (
-              <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>
-                Ranked #{item.rank}{item.totalCreators != null ? ` of ${item.totalCreators} creators` : ''}
-              </Text>
-            ) : null}
           </View>
 
           <View style={{ flexDirection: 'row', gap: 22 }}>
             <View style={{ gap: 3 }}>
               <AnimatedCounter
                 value={item.views}
-                mode="count"
                 delay={260}
                 style={{ fontFamily: typography.fontFamily, fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.8, fontVariant: ['tabular-nums'], padding: 0, minWidth: 40 }}
               />
@@ -260,21 +204,11 @@ function TopPerformerCard({ item }: { item: CampaignInsight }) {
             <View style={{ gap: 3 }}>
               <AnimatedCounter
                 value={item.likes}
-                mode="count"
                 delay={340}
                 style={{ fontFamily: typography.fontFamily, fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.8, fontVariant: ['tabular-nums'], padding: 0, minWidth: 40 }}
               />
               <Text style={{ fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Likes</Text>
             </View>
-            <Pressable
-              onPress={() => router.push(`/leaderboard/${item.campaignId}`)}
-              accessibilityRole="button"
-              accessibilityLabel={`Open leaderboard for ${item.campaignTitle}`}
-              hitSlop={8}
-              style={{ marginLeft: 'auto', alignSelf: 'center', width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <MaterialCommunityIcons name="arrow-top-right" size={20} color="#fff" />
-            </Pressable>
           </View>
         </View>
       </LinearGradient>
@@ -283,7 +217,6 @@ function TopPerformerCard({ item }: { item: CampaignInsight }) {
 }
 
 function CampaignRow({ item, index }: { item: CampaignInsight; index: number }) {
-  const pct = item.topViews > 0 ? Math.max(4, (item.views / item.topViews) * 100) : 4
   return (
     <Animated.View
       entering={FadeInDown.delay(60 + index * 50).duration(360)}
@@ -294,20 +227,7 @@ function CampaignRow({ item, index }: { item: CampaignInsight; index: number }) 
           <Text numberOfLines={1} style={{ fontFamily: typography.fontFamily, fontWeight: '800', fontSize: 14.5, color: redesign.color.ink, letterSpacing: -0.2 }}>
             {item.campaignTitle}
           </Text>
-          {item.rank != null ? (
-            <Text style={{ fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '500', color: redesign.color.muted, marginTop: 1 }}>
-              #{item.rank}{item.totalCreators != null ? ` of ${item.totalCreators} creators` : ''}
-            </Text>
-          ) : null}
         </View>
-        <Pressable
-          onPress={() => router.push(`/leaderboard/${item.campaignId}`)}
-          accessibilityRole="button"
-          accessibilityLabel={`Open leaderboard for ${item.campaignTitle}`}
-          hitSlop={8}
-        >
-          <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
-        </Pressable>
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -317,10 +237,6 @@ function CampaignRow({ item, index }: { item: CampaignInsight; index: number }) 
         <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: redesign.color.muted, fontVariant: ['tabular-nums'] }}>
           {formatCompactCount(item.likes)} likes
         </Text>
-      </View>
-
-      <View style={{ height: 8, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
-        <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${pct}%`, borderRadius: 999 }} />
       </View>
     </Animated.View>
   )
@@ -383,8 +299,18 @@ export default function InsightsPage() {
       </Animated.View>
 
       {isLoading && !data ? (
-        <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={redesign.color.purple} />
+        <View style={{ gap: 14, marginTop: 4 }}>
+          {/* Summary cells */}
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Bone width="48.5%" height={86} borderRadius={18} />
+            <Bone width="48.5%" height={86} borderRadius={18} />
+          </View>
+          {/* Top performer + chart cards */}
+          <Bone width="100%" height={170} borderRadius={24} />
+          <Bone width="100%" height={196} borderRadius={22} />
+          {/* Per-campaign rows */}
+          <Bone width="100%" height={96} borderRadius={20} />
+          <Bone width="100%" height={96} borderRadius={20} />
         </View>
       ) : null}
 
@@ -396,7 +322,7 @@ export default function InsightsPage() {
         data.campaignsTracked === 0 ? (
           <EmptyState
             title="No data yet"
-            subtitle="Once your campaign videos go live, your views, likes and ranking will show up here."
+            subtitle="Once your campaign videos go live, your views and likes will show up here."
             icon="chart-line"
           />
         ) : (
@@ -409,11 +335,10 @@ export default function InsightsPage() {
                 </Text>
               </View>
             ) : null}
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <SummaryCell label="Total views" value={data.totalViews} mode="count" delay={120} />
-              <SummaryCell label="Total likes" value={data.totalLikes} mode="count" delay={200} />
-              <SummaryCell label="Best rank" value={data.bestRank} mode="rank" delay={280} placeholder="–" />
-            </View>
+            <Animated.View entering={FadeInDown.duration(300)} style={{ flexDirection: 'row', gap: 10 }}>
+              <SummaryCell label="Total views" value={data.totalViews} delay={120} />
+              <SummaryCell label="Total likes" value={data.totalLikes} delay={200} />
+            </Animated.View>
 
             {topPerformer ? <TopPerformerCard item={topPerformer} /> : null}
 
@@ -430,7 +355,7 @@ export default function InsightsPage() {
             </View>
 
             <Text style={{ fontSize: 12, fontWeight: '500', color: redesign.color.faint, fontFamily: typography.fontFamily, lineHeight: 18, textAlign: 'center', marginTop: 4 }}>
-              Figures reflect your current leaderboard position. Day-by-day trends arrive once campaign history is tracked.
+              Figures reflect your current campaign totals. Day-by-day trends arrive once campaign history is tracked.
             </Text>
           </>
         )

@@ -35,8 +35,8 @@ export function useCreatorProfile() {
 }
 
 // Creator account level + tier progress, read from the REAL backend `creator_levels`
-// view (XP earned from brand-approved deliverables, campaign completions, leaderboard
-// placements). The single place every surface (profile strip, /tiers screen) reads
+// view (XP earned from brand-approved deliverables and campaign completions).
+// The single place every surface (profile strip, /tiers screen) reads
 // the creator's standing from. RLS scopes it to the creator's own row.
 export function useReputation(): { tier: TierProgress } {
   const { data } = useQuery({

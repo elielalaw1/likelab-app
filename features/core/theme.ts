@@ -198,7 +198,7 @@ export const redesign = {
     hairline: 'rgba(11,11,15,0.05)',
     hairlineStrong: 'rgba(11,11,15,0.08)',
     card: '#FFFFFF',
-    darkScreen: '#0E0E13',    // leaderboard / wallet screen
+    darkScreen: '#0E0E13',    // dark hero cards / wallet screen
     darkCard: '#141420',
     darkCardAlt: '#15151F',
     purple: '#6350B8',
