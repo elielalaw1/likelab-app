@@ -7,8 +7,8 @@ import * as SecureStore from 'expo-secure-store'
 // are visual components, not data.
 export const WHATS_NEW = {
   enabled: true,
-  version: 'v2',
-  headline: 'The biggest LikeLab update yet',
+  version: 'v3',
+  headline: 'LikeLab just got a glow-up',
 }
 
 const SEEN_KEY = 'likelab_whatsnew_seen_version'

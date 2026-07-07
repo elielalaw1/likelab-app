@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Modal, Pressable, ScrollView, StyleSheet, Text, Vibration, useWindowDimensions, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated'
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
 import { Reveal, useReveal } from '@/features/shared/ui/motion'
-import ConfettiCannon from 'react-native-confetti-cannon'
+import { HeartBurst } from '@/features/shared/ui/HeartBurst'
 import { redesign, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
+import * as Haptics from 'expo-haptics'
 import { WHATS_NEW, hasSeenWhatsNew, markWhatsNewSeen } from '@/features/whatsnew/whatsNew'
+import { ElectricBorder } from '@/features/shared/ui/ElectricBorder'
 import { ProjectCardPreview } from '@/features/shared/ui/ProjectCardPreview'
+import { TierCoin } from '@/features/shared/ui/TierBorder'
 
 // ── Module-level opener (Toast pattern) so the AppHeader CTA can open the single
 //    modal owned by <WhatsNewHost />. ──────────────────────────────────────────
@@ -40,18 +43,179 @@ export function WhatsNewButton() {
 
 // ── Animated mockups — each mirrors the real new UI with one looping motion. ────
 
-// A gentle breathing pulse shared by the actionable affordances.
-function usePulse(amount = 0.06) {
-  const v = useSharedValue(0)
+// The signature interaction — the hold-to-apply button charging on loop.
+function MockHold({ active }: { active: boolean }) {
+  const p = useReveal(active)
+  const charge = useSharedValue(0)
   useEffect(() => {
-    v.value = withRepeat(withSequence(withTiming(1, { duration: 950, easing: Easing.inOut(Easing.ease) }), withTiming(0, { duration: 950, easing: Easing.inOut(Easing.ease) })), -1, false)
-    return () => {
-      v.value = 0
-    }
-  }, [v])
-  return useAnimatedStyle(() => ({ transform: [{ scale: 1 + v.value * amount }] }))
+    charge.value = withRepeat(
+      withSequence(withTiming(0, { duration: 600 }), withTiming(1, { duration: 1500, easing: Easing.linear }), withTiming(1, { duration: 500 })),
+      -1,
+      false
+    )
+    return () => { charge.value = 0 }
+  }, [charge])
+  const fill = useAnimatedStyle(() => ({ width: `${charge.value * 100}%` }))
+  return (
+    <View style={{ width: 250, gap: 10 }}>
+      <Reveal p={p} index={0} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 12, ...redesign.shadow.card }}>
+        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: 'rgba(99,80,184,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="star-four-points" size={15} color={redesign.color.purple} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Glow Kit launch</Text>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily }}>ClearSkin · 3d left</Text>
+        </View>
+      </Reveal>
+      <Reveal p={p} index={1}>
+        <View style={{ height: 50, borderRadius: 999, backgroundColor: 'rgba(8,8,12,0.96)', overflow: 'hidden', justifyContent: 'center' }}>
+          <Animated.View style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#26262E' }, fill]}>
+            <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.85)' }} />
+          </Animated.View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <MaterialCommunityIcons name="gesture-tap-hold" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', fontFamily: typography.fontFamily }}>Hold to apply</Text>
+          </View>
+        </View>
+      </Reveal>
+    </View>
+  )
 }
 
+// Gold + Partner frames, side by side — the partner one is the REAL live border.
+function MockTiers({ active }: { active: boolean }) {
+  const p = useReveal(active)
+  return (
+    <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+      <Reveal p={p} index={0}>
+        <View style={{ borderRadius: 19, padding: 3.5, overflow: 'hidden' }}>
+          <LinearGradient colors={['#F7E7A9', '#D4A537', '#B8860B', '#F1D585']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+          <View style={{ width: 100, height: 122, borderRadius: 15, backgroundColor: redesign.color.card, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <TierCoin tier="gold" size={30} />
+            <Text style={{ fontSize: 12, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Gold</Text>
+          </View>
+        </View>
+      </Reveal>
+      <Reveal p={p} index={1}>
+        <ElectricBorder radius={19} color="#7C5CFF">
+          <View style={{ width: 107, height: 129, borderRadius: 19, backgroundColor: redesign.color.card, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <TierCoin tier="partner" size={30} />
+            <Text style={{ fontSize: 12, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Partner</Text>
+          </View>
+        </ElectricBorder>
+      </Reveal>
+    </View>
+  )
+}
+
+// The five-second glance card from the new campaign page.
+function MockGlance({ active }: { active: boolean }) {
+  const p = useReveal(active)
+  const rows = [
+    { icon: 'gift-outline' as const, label: 'YOU GET', value: '1 × product to keep' },
+    { icon: 'video-outline' as const, label: 'YOU MAKE', value: '2 TikTok videos' },
+    { icon: 'clock-outline' as const, label: 'DEADLINE', value: '8 days left' },
+  ]
+  return (
+    <View style={{ width: 258, backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 14, ...redesign.shadow.card }}>
+      {rows.map((row, i) => (
+        <Reveal key={row.label} p={p} index={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderTopColor: redesign.color.hairlineStrong }}>
+          <MaterialCommunityIcons name={row.icon} size={14} color={redesign.color.faint} />
+          <Text style={{ flex: 1, fontSize: 9, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontFamily: typography.fontFamily }}>{row.label}</Text>
+          <Text style={{ fontSize: 13.5, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>{row.value}</Text>
+        </Reveal>
+      ))}
+    </View>
+  )
+}
+
+// Post straight to TikTok — approved video flies into the TikTok inbox.
+function MockTikTok({ active }: { active: boolean }) {
+  const p = useReveal(active)
+  const fly = useSharedValue(0)
+  useEffect(() => {
+    fly.value = withRepeat(
+      withSequence(withTiming(0, { duration: 600 }), withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) }), withTiming(1, { duration: 400 })),
+      -1,
+      false
+    )
+    return () => { fly.value = 0 }
+  }, [fly])
+  const plane = useAnimatedStyle(() => ({
+    transform: [{ translateX: fly.value * 30 }, { translateY: fly.value * -12 }],
+    opacity: 1 - fly.value * 0.95,
+  }))
+  return (
+    <View style={{ width: 250, gap: 10 }}>
+      <Reveal p={p} index={0} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 12, ...redesign.shadow.card }}>
+        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: 'rgba(16,159,110,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="check-decagram" size={16} color={redesign.color.successText} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Glow routine 🎬</Text>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: redesign.color.successText, fontFamily: typography.fontFamily }}>Approved — ready to post</Text>
+        </View>
+      </Reveal>
+      <Reveal p={p} index={1}>
+        <View style={{ height: 50, borderRadius: 999, backgroundColor: '#010101', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' }}>
+          <MaterialCommunityIcons name="music-note" size={16} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', fontFamily: typography.fontFamily }}>Send to TikTok</Text>
+          <Animated.View style={[{ position: 'absolute', right: 16 }, plane]}>
+            <MaterialCommunityIcons name="send" size={15} color="#fff" />
+          </Animated.View>
+        </View>
+      </Reveal>
+      <Reveal p={p} index={2}>
+        <Text style={{ fontSize: 11.5, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily, textAlign: 'center' }}>
+          Lands in your TikTok inbox — post it from there
+        </Text>
+      </Reveal>
+    </View>
+  )
+}
+
+// Haptics — expanding rings off a fingertip.
+function MockFeel({ active }: { active: boolean }) {
+  const p = useReveal(active)
+  const ring = useSharedValue(0)
+  useEffect(() => {
+    ring.value = withRepeat(withTiming(1, { duration: 1300, easing: Easing.out(Easing.quad) }), -1, false)
+    return () => { ring.value = 0 }
+  }, [ring])
+  const r1 = useAnimatedStyle(() => ({ transform: [{ scale: 1 + ring.value * 0.9 }], opacity: (1 - ring.value) * 0.5 }))
+  const r2 = useAnimatedStyle(() => ({ transform: [{ scale: 1 + ring.value * 1.6 }], opacity: (1 - ring.value) * 0.28 }))
+  return (
+    <Reveal p={p} index={0} style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={[{ position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: redesign.color.purple }, r1]} />
+      <Animated.View style={[{ position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: redesign.color.purple }, r2]} />
+      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', ...redesign.shadow.cta }}>
+        <MaterialCommunityIcons name="gesture-tap" size={28} color="#fff" />
+      </View>
+    </Reveal>
+  )
+}
+
+// Brand → creator feedback as an SMS-style chat.
+function MockChat({ active }: { active: boolean }) {
+  const p = useReveal(active)
+  return (
+    <View style={{ width: 250, gap: 8 }}>
+      <Reveal p={p} index={0} style={{ alignSelf: 'flex-start', maxWidth: 210, backgroundColor: redesign.color.card, borderRadius: 16, borderBottomLeftRadius: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 13, paddingVertical: 9, ...redesign.shadow.card }}>
+        <Text style={{ fontSize: 9.5, fontWeight: '800', color: redesign.color.purple, fontFamily: typography.fontFamily, marginBottom: 2 }}>CLEARSKIN</Text>
+        <Text style={{ fontSize: 12.5, fontWeight: '500', color: redesign.color.ink, fontFamily: typography.fontFamily, lineHeight: 17 }}>Love it! Can you tighten the hook in the first 2s? 🔥</Text>
+      </Reveal>
+      <Reveal p={p} index={1} style={{ alignSelf: 'flex-end', backgroundColor: redesign.color.ink, borderRadius: 16, borderBottomRightRadius: 5, paddingHorizontal: 13, paddingVertical: 9 }}>
+        <Text style={{ fontSize: 12.5, fontWeight: '500', color: '#fff', fontFamily: typography.fontFamily }}>On it 🙌</Text>
+      </Reveal>
+      <Reveal p={p} index={2} style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(99,80,184,0.10)' }}>
+        <MaterialCommunityIcons name="message-text" size={12} color={redesign.color.purple} />
+        <Text style={{ fontSize: 10.5, fontWeight: '800', color: redesign.color.purple, fontFamily: typography.fontFamily }}>Right on each video</Text>
+      </Reveal>
+    </View>
+  )
+}
+
+// Creator levels — tier row with the XP bar filling on loop.
 function MockLevels({ active }: { active: boolean }) {
   const p = useReveal(active)
   const fill = useSharedValue(0.1)
@@ -60,20 +224,17 @@ function MockLevels({ active }: { active: boolean }) {
       withSequence(
         withTiming(0.62, { duration: 1300, easing: Easing.out(Easing.cubic) }),
         withTiming(0.62, { duration: 700 }),
-        withTiming(0.1, { duration: 0 }),
+        withTiming(0.1, { duration: 0 })
       ),
       -1,
-      false,
+      false
     )
-    return () => {
-      fill.value = 0.1
-    }
+    return () => { fill.value = 0.1 }
   }, [fill])
   const barStyle = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }))
   return (
-    <View style={{ width: 290, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 14, paddingVertical: 12, ...redesign.shadow.card }}>
+    <View style={{ width: 270, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 14, paddingVertical: 12, ...redesign.shadow.card }}>
       <Reveal p={p} index={0}>
-        {/* Tier ring emblem — mirrors the real TierRow */}
         <View style={{ width: 36, height: 36, borderRadius: 13, borderWidth: 2, borderColor: redesign.color.purple, backgroundColor: redesign.color.card, alignItems: 'center', justifyContent: 'center' }}>
           <MaterialCommunityIcons name="star-four-points" size={16} color={redesign.color.purple} />
         </View>
@@ -81,88 +242,51 @@ function MockLevels({ active }: { active: boolean }) {
       <View style={{ flex: 1, gap: 6 }}>
         <Reveal p={p} index={1} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13.5, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>Rising creator</Text>
-          <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily }}>200 to Pro</Text>
+          <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily }}>2 to Pro</Text>
         </Reveal>
         <Reveal p={p} index={2} style={{ height: 6, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
-          <Animated.View style={[{ height: '100%', borderRadius: 999, overflow: 'hidden' }, barStyle]}>
-            <View style={{ flex: 1, backgroundColor: redesign.color.purple }} />
-          </Animated.View>
+          <Animated.View style={[{ height: '100%', borderRadius: 999, backgroundColor: redesign.color.purple }, barStyle]} />
         </Reveal>
       </View>
-      <MaterialCommunityIcons name="chevron-right" size={20} color={redesign.color.faint} />
     </View>
   )
 }
 
-function MockInstant({ active }: { active: boolean }) {
+// TikTok-style portfolio grid on the profile.
+function MockGrid({ active }: { active: boolean }) {
   const p = useReveal(active)
-  const pulse = usePulse(0.08)
+  const views = ['12.4K', '8.1K', '31K', '5.2K', '19K', '2.8K']
   return (
-    <View style={{ width: 230, borderRadius: 20, backgroundColor: redesign.color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 14, gap: 10, ...redesign.shadow.card }}>
-      <Reveal p={p} index={0} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(16,159,110,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-          <MaterialCommunityIcons name="check-decagram" size={18} color={redesign.color.successText} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 12.5, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Glow Kit · Video 1</Text>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: redesign.color.successText, fontFamily: typography.fontFamily }}>Approved just now</Text>
-        </View>
-      </Reveal>
-      <Reveal p={p} index={1} style={{ alignSelf: 'flex-start' }}>
-        <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingLeft: 9, paddingRight: 12, paddingVertical: 6, backgroundColor: redesign.color.ink }, pulse]}>
-          <MaterialCommunityIcons name="message-text" size={13} color="#fff" />
-          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: typography.fontFamily }}>New feedback from the brand</Text>
-        </Animated.View>
-      </Reveal>
-    </View>
-  )
-}
-
-function MockDiscover({ active }: { active: boolean }) {
-  const p = useReveal(active)
-  const pulse = usePulse(0.05)
-  return (
-    <View style={{ width: 236, borderRadius: 26, padding: 4, backgroundColor: 'rgba(11,11,15,0.04)', borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong }}>
-      {/* Double-bezel mini of the real FeaturedCampaign card */}
-      <View style={{ borderRadius: 22, overflow: 'hidden', backgroundColor: redesign.color.card, ...redesign.shadow.card }}>
-        <Reveal p={p} index={0} style={{ height: 82 }}>
-          <LinearGradient colors={['rgba(99,80,184,0.45)', 'rgba(99,80,184,0.15)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-          <LinearGradient colors={['rgba(0,0,0,0.35)', 'transparent']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 44 }} />
-          <View style={{ position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingLeft: 7, paddingRight: 9, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.92)' }}>
-            <MaterialCommunityIcons name="star-four-points" size={9} color={redesign.color.purple} />
-            <Text style={{ color: redesign.color.ink, fontSize: 8, fontWeight: '900', letterSpacing: 0.6, fontFamily: typography.fontFamily }}>FEATURED</Text>
+    <View style={{ width: 252, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      {views.map((v, i) => (
+        <Reveal key={i} p={p} index={i} style={{ width: 80, height: 104, borderRadius: 12, backgroundColor: '#15151F', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+          <LinearGradient colors={['rgba(99,80,184,0.35)', 'rgba(11,11,15,0)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
+          <MaterialCommunityIcons name="play" size={20} color="rgba(255,255,255,0.85)" />
+          <View style={{ position: 'absolute', bottom: 6, left: 7, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <MaterialCommunityIcons name="eye-outline" size={10} color="rgba(255,255,255,0.8)" />
+            <Text style={{ fontSize: 9.5, fontWeight: '800', color: 'rgba(255,255,255,0.9)', fontFamily: typography.fontFamily }}>{v}</Text>
           </View>
         </Reveal>
-        <View style={{ padding: 12, gap: 8 }}>
-          <Reveal p={p} index={1} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: 'rgba(99,80,184,0.14)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 8, fontWeight: '900', color: redesign.color.purple, fontFamily: typography.fontFamily }}>C</Text>
-            </View>
-            <Text style={{ color: redesign.color.muted, fontSize: 11, fontWeight: '700', fontFamily: typography.fontFamily }}>ClearSkin</Text>
-          </Reveal>
-          <Reveal p={p} index={2}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.5, lineHeight: 19, fontFamily: typography.fontFamily }}>Glow Kit launch</Text>
-          </Reveal>
-          <Reveal p={p} index={3} style={{ flexDirection: 'row', gap: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(99,80,184,0.10)' }}>
-              <MaterialCommunityIcons name="gift-outline" size={10} color={redesign.color.purple} />
-              <Text style={{ fontSize: 9, fontWeight: '800', color: redesign.color.purple, fontFamily: typography.fontFamily }}>Cash</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: redesign.color.bg }}>
-              <MaterialCommunityIcons name="calendar-blank-outline" size={10} color={redesign.color.muted} />
-              <Text style={{ fontSize: 9, fontWeight: '800', color: redesign.color.muted, fontFamily: typography.fontFamily }}>3d left</Text>
-            </View>
-          </Reveal>
-          <Reveal p={p} index={4}>
-            <Animated.View style={[{ height: 38, borderRadius: 13, paddingHorizontal: 12, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' }, pulse]}>
-              <Text style={{ color: '#fff', fontSize: 12.5, fontWeight: '800', fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>View &amp; apply</Text>
-              <View style={{ position: 'absolute', right: 5, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialCommunityIcons name="arrow-top-right" size={13} color="#fff" />
-              </View>
-            </Animated.View>
-          </Reveal>
+      ))}
+    </View>
+  )
+}
+
+// Invite friends — code pill + Connector badge.
+function MockInvite({ active }: { active: boolean }) {
+  const p = useReveal(active)
+  return (
+    <View style={{ width: 250, gap: 10, alignItems: 'center' }}>
+      <Reveal p={p} index={0} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 12, ...redesign.shadow.card }}>
+        <Text style={{ fontSize: 18, fontWeight: '900', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: 2 }}>ELI-4X2</Text>
+        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="content-copy" size={14} color="#fff" />
         </View>
-      </View>
+      </Reveal>
+      <Reveal p={p} index={1} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: 'rgba(99,80,184,0.10)' }}>
+        <MaterialCommunityIcons name="account-group" size={14} color={redesign.color.purple} />
+        <Text style={{ fontSize: 11.5, fontWeight: '800', color: redesign.color.purple, fontFamily: typography.fontFamily }}>3 friends join → Connector badge</Text>
+      </Reveal>
     </View>
   )
 }
@@ -171,24 +295,54 @@ type WhatsNewSlide = { title: string; body: string; mock: (active: boolean) => R
 
 const SLIDES: WhatsNewSlide[] = [
   {
-    title: 'Your work, all in one place',
-    body: 'The new Projects hub shows each campaign as a card — clearly tagged with exactly what to do next.',
+    title: 'Hold to apply',
+    body: 'Applying is a hold, not a tap — charge the button and feel it rumble all the way to sent.',
+    mock: (active) => <MockHold active={active} />,
+  },
+  {
+    title: 'Gold & Partner campaigns',
+    body: 'The biggest collabs now stand out on sight — a gold frame for Gold campaigns, a live electric frame for official LikeLab partners.',
+    mock: (active) => <MockTiers active={active} />,
+  },
+  {
+    title: 'A calmer campaign page',
+    body: 'What you get, what you make and the deadline — answered in five seconds. Accepted? A guided walkthrough shows you exactly how to nail it.',
+    mock: (active) => <MockGlance active={active} />,
+  },
+  {
+    title: 'Post straight to TikTok',
+    body: 'Approved videos fly into your TikTok inbox with one tap — no downloads, no re-uploads. Open TikTok, tap it, post.',
+    mock: (active) => <MockTikTok active={active} />,
+  },
+  {
+    title: 'Projects is now Your studio',
+    body: 'Every campaign is a card that tells you exactly what to do next — upload, post, done.',
     mock: () => <ProjectCardPreview />,
   },
   {
-    title: 'Creator Levels are here',
-    body: 'Earn XP from brand-approved work and climb the levels. Your standing as a creator, finally visible.',
+    title: 'Chat with brands',
+    body: 'Feedback now lands as a conversation on each video — reply, tweak, resubmit without leaving the app.',
+    mock: (active) => <MockChat active={active} />,
+  },
+  {
+    title: 'Creator levels',
+    body: 'Every completed campaign moves you up the ladder — your standing as a creator, visible in the app.',
     mock: (active) => <MockLevels active={active} />,
   },
   {
-    title: 'Everything updates instantly',
-    body: 'Approvals, feedback and invitations now arrive live — no more pull-to-refresh.',
-    mock: (active) => <MockInstant active={active} />,
+    title: 'Your videos, your portfolio',
+    body: 'A TikTok-style grid of everything you have posted, with views and likes tracked in Insights.',
+    mock: (active) => <MockGrid active={active} />,
   },
   {
-    title: 'A fresh Discover',
-    body: 'A redesigned Discover that leads with a featured campaign and what’s open to you right now.',
-    mock: (active) => <MockDiscover active={active} />,
+    title: 'Bring your friends',
+    body: 'Share your invite code — when 3 creators join, you earn the Connector badge.',
+    mock: (active) => <MockInvite active={active} />,
+  },
+  {
+    title: 'It feels alive',
+    body: 'New motion and haptics across the whole app — every tap, pull and hold now answers back.',
+    mock: (active) => <MockFeel active={active} />,
   },
 ]
 
@@ -204,19 +358,47 @@ function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose: () => 
   const unfold = useSharedValue(0)
   useEffect(() => {
     if (visible) {
+      // The Modal unmounts its children while hidden, so the ScrollView remounts at
+      // slide 0 on reopen — reset index to match, or the dots/CTA point at a stale
+      // slide and the first tap closes instead of advancing.
+      setIndex(0)
+      scrollRef.current?.scrollTo({ x: 0, animated: false })
       unfold.value = 0
-      unfold.value = withSpring(1, { damping: 13, stiffness: 150, mass: 0.9 })
+      unfold.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) })
     } else {
       unfold.value = 0
     }
   }, [visible, unfold])
   const unfoldStyle = useAnimatedStyle(() => ({
-    opacity: Math.min(1, unfold.value * 3),
-    transform: [{ perspective: 900 }, { scaleY: 0.03 + unfold.value * 0.97 }],
+    opacity: unfold.value,
+    transform: [{ scale: 0.94 + unfold.value * 0.06 }],
   }))
 
+  // Full-power haptic demo — the "It feels alive" slide doesn't tell, it shows:
+  // continuous system vibration + stacked Heavy/Rigid impacts for a second.
+  const blastTimerRef = useRef<{ iv: ReturnType<typeof setInterval>; to: ReturnType<typeof setTimeout> } | null>(null)
+  const stopBlast = () => {
+    if (!blastTimerRef.current) return
+    clearInterval(blastTimerRef.current.iv)
+    clearTimeout(blastTimerRef.current.to)
+    blastTimerRef.current = null
+    Vibration.cancel()
+  }
+  useEffect(() => () => stopBlast(), [])
+  const feelTheApp = () => {
+    stopBlast()
+    Vibration.vibrate([0, 1], true)
+    const iv = setInterval(() => {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid)
+    }, 32)
+    const to = setTimeout(() => stopBlast(), 900)
+    blastTimerRef.current = { iv, to }
+  }
+
   const goNext = () => {
-    haptic.selection()
+    if (SLIDES[index]?.title === 'It feels alive') feelTheApp()
+    else haptic.selection()
     if (last) {
       onClose()
       return
@@ -230,7 +412,7 @@ function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose: () => 
         {/* Celebration burst — this is the biggest update ever */}
         {visible ? (
           <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-            <ConfettiCannon count={130} origin={{ x: width / 2, y: -20 }} autoStart fadeOut explosionSpeed={480} fallSpeed={4200} />
+            <HeartBurst count={26} origin={{ x: width / 2, y: height * 0.3 }} />
           </View>
         ) : null}
 
@@ -279,7 +461,7 @@ function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose: () => 
             {/* Dots */}
             <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 6, marginTop: 18, marginBottom: 16 }}>
               {SLIDES.map((s, i) => (
-                <View key={s.title} style={{ width: i === index ? 20 : 7, height: 7, borderRadius: 4, backgroundColor: i === index ? redesign.color.purple : redesign.color.hairlineStrong }} />
+                <View key={s.title} style={{ width: i === index ? 20 : 7, height: 7, borderRadius: 4, backgroundColor: i === index ? redesign.color.ink : redesign.color.hairlineStrong }} />
               ))}
             </View>
 

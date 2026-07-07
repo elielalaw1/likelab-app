@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Modal, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native'
+import { Modal, Pressable, Text, useWindowDimensions, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import * as SecureStore from 'expo-secure-store'
-import ConfettiCannon from 'react-native-confetti-cannon'
-import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated'
+import { HeartBurst } from '@/features/shared/ui/HeartBurst'
+import Animated, { Easing, FadeInDown, LinearTransition, ZoomIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated'
 import { redesign, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
@@ -103,33 +105,6 @@ function MockSubmit({ arrow }: { arrow: object }) {
   )
 }
 
-function MockLeaderboard({ arrow }: { arrow: object }) {
-  const rows = [
-    { medal: '🥇', label: 'Position 1', you: false },
-    { medal: '🥈', label: 'Position 2', you: false },
-    { medal: '🥉', label: 'You', you: true },
-  ]
-  return (
-    <View style={{ width: 230, borderRadius: 20, backgroundColor: redesign.color.darkScreen, padding: 12, gap: 8, overflow: 'hidden', ...redesign.shadow.cta }}>
-      <LinearGradient pointerEvents="none" colors={['rgba(99,80,184,0.4)', 'transparent']} start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.8 }} style={{ position: 'absolute', top: -20, right: -20, width: 140, height: 140, borderRadius: 70 }} />
-      {rows.map((r) => (
-        <View key={r.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10, borderWidth: r.you ? 1 : 0, borderColor: 'rgba(99,80,184,0.7)', backgroundColor: r.you ? 'rgba(99,80,184,0.22)' : 'rgba(255,255,255,0.05)' }}>
-          <Text style={{ fontSize: 15 }}>{r.medal}</Text>
-          <Text style={{ flex: 1, color: '#fff', fontSize: 12.5, fontWeight: '800', fontFamily: typography.fontFamily }}>{r.label}</Text>
-          <View style={{ backgroundColor: 'rgba(59,214,138,0.16)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-            <Text style={{ color: redesign.color.payoutGreen, fontSize: 9, fontWeight: '800', fontFamily: typography.fontFamily }}>REWARD</Text>
-          </View>
-          {r.you ? (
-            <Animated.View style={[{ position: 'absolute', right: -30, top: 8 }, arrow]}>
-              <MaterialCommunityIcons name="arrow-left-bold" size={26} color={redesign.color.purple} />
-            </Animated.View>
-          ) : null}
-        </View>
-      ))}
-    </View>
-  )
-}
-
 function MockWelcome() {
   return (
     <View style={{ width: 120, height: 120, borderRadius: 40, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', ...redesign.shadow.cta }}>
@@ -160,15 +135,14 @@ function MockLevels() {
   )
 }
 
-type Slide = { title: string; body: string; mock: (arrow: object, arrowH: object) => React.ReactNode }
+type Slide = { title: string; body: string; mock: (arrow: object) => React.ReactNode }
 
 const SLIDES: Slide[] = [
   { title: 'You’re approved', body: 'Welcome to LikeLab. Here’s how it works in a few quick steps.', mock: () => <MockWelcome /> },
-  { title: 'Discover & apply', body: 'Browse open campaigns and tap Apply on the ones that fit you.', mock: (a) => <MockDiscover arrow={a} /> },
+  { title: 'Discover & apply', body: 'Browse open campaigns and hold the Apply button on the ones that fit you.', mock: (a) => <MockDiscover arrow={a} /> },
   { title: 'Get selected', body: 'Brands review creators and pick their favourites — you’ll be notified when you’re in.', mock: () => <MockAccepted /> },
-  { title: 'Film & get approved', body: 'Your campaigns land in Projects — each card tells you exactly what to do next: upload, review, post, live. The brand gives the green light (or asks for tweaks).', mock: () => <ProjectCardPreview /> },
-  { title: 'Post & go live', body: 'Once approved, post it on TikTok and drop the link in the app to confirm it’s live.', mock: (a) => <MockSubmit arrow={a} /> },
-  { title: 'Compete & earn', body: 'Your views feed the live leaderboard as they grow — the top creators earn the reward.', mock: (_a, ah) => <MockLeaderboard arrow={ah} /> },
+  { title: 'Film your video', body: 'Your campaigns live in Projects — each card tells you exactly what to do next. Some brands review your video first; your card always shows the next step.', mock: () => <ProjectCardPreview /> },
+  { title: 'Post & go live', body: 'Post it on TikTok and drop the link in the app — that’s what takes it live.', mock: (a) => <MockSubmit arrow={a} /> },
   { title: 'Level up as a creator', body: 'Every time the brand approves your work you earn XP and climb the creator levels — your standing, right in the app.', mock: () => <MockLevels /> },
 ]
 
@@ -178,11 +152,6 @@ export function TutorialOverlay() {
   const { width } = useWindowDimensions()
   const [visible, setVisible] = useState(false)
   const [index, setIndex] = useState(0)
-  // Bumped on every open to remount the ScrollView so it starts fresh at offset 0.
-  // Without this the ScrollView keeps its previous offset, and the stale onScroll it
-  // fires on re-present overrides setIndex(0) — leaving the tutorial on the last slide.
-  const [scrollKey, setScrollKey] = useState(0)
-  const scrollRef = useRef<ScrollView>(null)
 
   const status = (profile?.reviewStatus || '').toLowerCase().trim()
   const userId = profile?.id
@@ -192,7 +161,6 @@ export function TutorialOverlay() {
 
   const openAtStart = () => {
     setIndex(0)
-    setScrollKey((k) => k + 1)
     // iOS can only present one Modal at a time. When approval fires, the
     // WelcomePendingOverlay Modal is dismissing in the same frame; presenting the
     // tutorial simultaneously gets dropped silently. Defer until that dismiss finishes.
@@ -207,7 +175,6 @@ export function TutorialOverlay() {
     bounce.value = withRepeat(withTiming(1, { duration: 650, easing: Easing.inOut(Easing.quad) }), -1, true)
   }, [bounce])
   const arrowDown = useAnimatedStyle(() => ({ transform: [{ translateY: bounce.value * 8 }] }))
-  const arrowSide = useAnimatedStyle(() => ({ transform: [{ translateX: bounce.value * 8 }] }))
 
   // Fire on the transition INTO approved. Uses an in-memory previous status (race-free for
   // live updates) + a per-user "seen" flag that is cleared whenever the account is observed
@@ -222,7 +189,10 @@ export function TutorialOverlay() {
       if (shownRef.current) return
       shownRef.current = true
       openAtStart()
-      SecureStore.setItemAsync(key, '1').catch(() => {})
+      // The seen flag is persisted in the Modal's onShow, NOT here: iOS presents only
+      // one Modal at a time, so if What's New auto-opens on the same approval frame
+      // this tutorial's Modal is dropped. Marking it seen before it presents would lose
+      // the one-time onboarding forever; onShow fires only once it actually appears.
     }
 
     if (status === 'approved') {
@@ -254,86 +224,92 @@ export function TutorialOverlay() {
   }
 
   const isLast = index === SLIDES.length - 1
-  const nextLabel = isLast ? 'View profile' : 'Next'
+  const slide = SLIDES[Math.min(index, SLIDES.length - 1)]
   const handleNext = () => {
+    haptic.light()
+    if (isLast) { haptic.success(); finish(); return }
+    setIndex((i) => i + 1)
+  }
+  const handleBack = () => {
     haptic.selection()
-    if (isLast) { finish(); return }
-    scrollRef.current?.scrollTo({ x: width * (index + 1), animated: true })
+    setIndex((i) => Math.max(0, i - 1))
   }
 
   return (
-    <Modal visible={visible} animationType="fade" onRequestClose={finish}>
-      <View style={{ flex: 1, backgroundColor: redesign.color.bg }}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={['rgba(99,80,184,0.10)', 'rgba(99,80,184,0.03)', 'transparent']}
-          start={{ x: 1, y: 0 }} end={{ x: 0.2, y: 0.55 }}
-          style={{ position: 'absolute', top: 0, right: 0, width: 380, height: 380 }}
-        />
-        {/* Celebration confetti on the welcome step */}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={finish}
+      onShow={() => { if (userId) SecureStore.setItemAsync(`${SEEN_PREFIX}${userId}`, '1').catch(() => {}) }}
+    >
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, paddingBottom: Math.max(20, insets.bottom) }}>
+        <BlurView intensity={26} tint="dark" style={{ position: 'absolute', inset: 0 }} />
+
+        {/* The floating story card — same language as the campaign brief walkthrough */}
+        <Animated.View
+          entering={ZoomIn.duration(240)}
+          layout={LinearTransition.duration(240)}
+          style={{ width: Math.min(width - 40, 400), borderRadius: 28, backgroundColor: redesign.color.card, paddingHorizontal: 22, paddingTop: 20, paddingBottom: 18, gap: 16 }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' }}>
+              How it works
+            </Text>
+            {!isLast ? (
+              <Pressable onPress={finish} hitSlop={10} accessibilityRole="button" accessibilityLabel="Skip tutorial">
+                <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '700' }}>Skip</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {/* Slide content — remounts per step so the cascade replays */}
+          <Animated.View key={slide.title} style={{ alignItems: 'center', gap: 14 }}>
+            <Animated.View entering={ZoomIn.duration(220).delay(60)} style={{ minHeight: 170, justifyContent: 'center' }}>
+              {slide.mock(arrowDown)}
+            </Animated.View>
+            <Animated.View entering={FadeInDown.duration(280).delay(140)}>
+              <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 23, fontWeight: '800', letterSpacing: -0.7, lineHeight: 28, textAlign: 'center' }}>
+                {slide.title}
+              </Text>
+            </Animated.View>
+            <Animated.View entering={FadeInDown.duration(300).delay(200)}>
+              <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 14.5, fontWeight: '500', lineHeight: 21, textAlign: 'center', maxWidth: 310 }}>
+                {slide.body}
+              </Text>
+            </Animated.View>
+          </Animated.View>
+
+          <View style={{ gap: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              {SLIDES.map((_, i) => (
+                <Animated.View
+                  key={i}
+                  layout={LinearTransition.duration(200)}
+                  style={{ width: i === index ? 22 : 7, height: 7, borderRadius: 999, backgroundColor: i === index ? redesign.color.ink : redesign.color.hairlineStrong }}
+                />
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {index > 0 ? (
+                <Pressable onPress={handleBack} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back" style={{ paddingVertical: 12, paddingHorizontal: 14 }}>
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700', color: redesign.color.muted }}>Back</Text>
+                </Pressable>
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <LiquidButton label={isLast ? 'View profile' : 'Next'} onPress={handleNext} minHeight={50} hapticFeedback={false} />
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Celebration confetti on the welcome step — above everything */}
         {visible && index === 0 ? (
           <View pointerEvents="none" style={{ position: 'absolute', inset: 0 }}>
-            <ConfettiCannon count={140} origin={{ x: width / 2, y: -20 }} autoStart fadeOut explosionSpeed={420} fallSpeed={3200} />
+            <HeartBurst count={24} />
           </View>
         ) : null}
-        <View style={{ flex: 1, paddingBottom: insets.bottom }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,80,184,0.10)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 }}>
-              <Text style={{ color: redesign.color.purple, fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>How it works</Text>
-            </View>
-            {!isLast ? (
-              <Pressable onPress={finish} hitSlop={8}>
-                <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700' }}>Skip</Text>
-              </Pressable>
-            ) : <View style={{ width: 1 }} />}
-          </View>
-
-          <ScrollView
-            key={scrollKey}
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onScroll={(e) => {
-              const i = Math.round(e.nativeEvent.contentOffset.x / width)
-              if (i !== index) setIndex(i)
-            }}
-            style={{ flex: 1 }}
-          >
-            {SLIDES.map((slide, i) => (
-              <View key={slide.title} style={{ width, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' }}>
-                <View style={{ minHeight: 240, justifyContent: 'center', marginBottom: 36 }}>
-                  {i === index ? <Animated.View entering={FadeIn.duration(260)}>{slide.mock(arrowDown, arrowSide)}</Animated.View> : slide.mock(arrowDown, arrowSide)}
-                </View>
-                <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 28, fontWeight: '900', letterSpacing: -0.9, lineHeight: 32, textAlign: 'center', marginBottom: 10 }}>
-                  {slide.title}
-                </Text>
-                <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '500', lineHeight: 22, textAlign: 'center', maxWidth: 320 }}>
-                  {slide.body}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: 24 }}>
-            {SLIDES.map((_, i) => (
-              <View key={i} style={{ width: i === index ? 22 : 7, height: 7, borderRadius: 999, backgroundColor: i === index ? redesign.color.purple : redesign.color.hairlineStrong }} />
-            ))}
-          </View>
-
-          <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
-            <Pressable
-              onPress={handleNext}
-              style={{ minHeight: 56, borderRadius: 999, paddingHorizontal: 20, backgroundColor: redesign.color.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', ...redesign.shadow.cta }}
-            >
-              <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.2 }}>{nextLabel}</Text>
-              <View style={{ position: 'absolute', right: 8, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
-              </View>
-            </Pressable>
-          </View>
-        </View>
       </View>
     </Modal>
   )

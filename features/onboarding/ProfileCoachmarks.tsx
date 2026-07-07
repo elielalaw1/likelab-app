@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated'
+import Animated, { Easing, FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated'
 import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
 import { onStartProfileTour } from '@/features/onboarding/profileTourControl'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 type Rect = { x: number; y: number; width: number; height: number }
 
@@ -18,20 +18,6 @@ export type CoachStep = {
 const SPOT_PAD = 7 // padding around the highlighted element for the spotlight frame
 const SPOT_RADIUS = 20 // rounded corners on the cutout, to match the profile cards
 const DIM = 'rgba(14,14,26,0.55)'
-
-// Bobbing arrow that points at the highlighted element.
-function BobArrow({ left, top, down }: { left: number; top: number; down: boolean }) {
-  const t = useSharedValue(0)
-  useEffect(() => {
-    t.value = withRepeat(withTiming(1, { duration: 650, easing: Easing.inOut(Easing.quad) }), -1, true)
-  }, [t])
-  const style = useAnimatedStyle(() => ({ transform: [{ translateY: (down ? 1 : -1) * t.value * 7 }] }))
-  return (
-    <Animated.View pointerEvents="none" style={[{ position: 'absolute', left, top }, style]}>
-      <MaterialCommunityIcons name={down ? 'arrow-down-bold' : 'arrow-up-bold'} size={34} color={redesign.color.purple} />
-    </Animated.View>
-  )
-}
 
 // Guided tour over the REAL profile elements — dims the screen, cuts a spotlight
 // around each element in turn, and points an arrow + tooltip at it. Rendered as a
@@ -48,6 +34,15 @@ export function ProfileCoachmarks({ steps, scrollRef, contentY }: {
   const [active, setActive] = useState(false)
   const [idx, setIdx] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
+  // True while scrolling/measuring the next element — the tooltip hides until
+  // the spotlight lands.
+  const [measuring, setMeasuring] = useState(true)
+  const pulse = useSharedValue(0)
+  useEffect(() => {
+    if (!active) return
+    pulse.value = 0
+    pulse.value = withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }), -1, false)
+  }, [active, pulse])
   // The overlay fills the screen via absoluteFill, but how SafeAreaView lays out
   // (padding vs. shrink) decides its real height. Measure it instead of guessing
   // from insets — that mismatch was placing the tooltip on top of its element.
@@ -69,17 +64,17 @@ export function ProfileCoachmarks({ steps, scrollRef, contentY }: {
   const begin = useCallback(() => {
     setIdx(0)
     setRect(null)
+    setMeasuring(true)
     setActive(true)
   }, [])
 
   useEffect(() => onStartProfileTour(begin), [begin])
 
-  // Bring the target into view, then point at it. One smooth scroll toward
-  // "element ~32% down the viewport", wait for it to settle, then measure once and
-  // place the spotlight. Only correct (at most twice) if the element landed clearly
-  // off-screen — re-measuring on a tight loop is what made the scroll jitter and
-  // re-adjust forever. Bottom elements (e.g. Contact Us) can't scroll that high →
-  // they settle low and the tooltip flips above them with a downward arrow.
+  // Bring the target into view, polling until the position is stable — the
+  // spotlight appears the moment two consecutive measurements agree, instead of
+  // waiting a fixed (worst-case) beat. NOTE: the spotlight itself is STATIC per
+  // step — animating that huge dim-border view's layout props is what made this
+  // lag. Only transforms/opacity animate here.
   useEffect(() => {
     if (!active) return
     const steps = stepsRef.current
@@ -87,23 +82,24 @@ export function ProfileCoachmarks({ steps, scrollRef, contentY }: {
     const contentY = contentYRef.current
     const step = steps[idx]
     if (!step) return
-    setRect(null)
+    setMeasuring(true)
 
     let cancelled = false
     let timer: ReturnType<typeof setTimeout>
     const desired = vhRef.current * 0.32
     let offset = Math.max(0, (contentY.current?.[step.key] ?? 0) - desired)
     let corrections = 0
+    let lastPos: Rect | null = null
     let waits = 0
 
     scrollRef.current?.scrollTo({ y: offset, animated: true })
 
-    const place = () => {
+    const poll = () => {
       if (cancelled) return
       const node = step.viewRef.current
       const root = rootRef.current
       if (!node || !root) {
-        if (waits++ < 30) timer = setTimeout(place, 150)
+        if (waits++ < 40) timer = setTimeout(poll, 120)
         return
       }
       root.measureInWindow((ox, oy, _ow, oh) => {
@@ -115,33 +111,40 @@ export function ProfileCoachmarks({ steps, scrollRef, contentY }: {
         node.measureInWindow((x, y, w, h) => {
           if (cancelled) return
           if (w === 0) {
-            if (waits++ < 30) timer = setTimeout(place, 150)
+            if (waits++ < 40) timer = setTimeout(poll, 120)
             return
           }
-          const localY = y - oy
-          const tooHigh = localY < 56
-          const tooLow = localY + Math.min(h, 140) > viewportH - 56
-          // Only re-scroll if it's actually clipped, and only a couple of times.
+          const cur: Rect = { x: x - ox, y: y - oy, width: w, height: h }
+          const settled = !!lastPos && Math.abs(lastPos.y - cur.y) < 1.5 && Math.abs(lastPos.x - cur.x) < 1.5
+          lastPos = cur
+          if (!settled) {
+            timer = setTimeout(poll, 90)
+            return
+          }
+          const tooHigh = cur.y < 56
+          const tooLow = cur.y + Math.min(h, 140) > viewportH - 56
           if ((tooHigh || tooLow) && corrections < 2) {
             corrections++
-            offset = Math.max(0, offset + (localY - desired))
+            offset = Math.max(0, offset + (cur.y - desired))
             scrollRef.current?.scrollTo({ y: offset, animated: true })
-            timer = setTimeout(place, 380)
+            lastPos = null
+            timer = setTimeout(poll, 160)
             return
           }
-          setRect({ x: x - ox, y: localY, width: w, height: h })
+          haptic.light()
+          setRect(cur)
+          setMeasuring(false)
         })
       })
     }
-    // Wait for the initial scroll animation to finish before the first measure.
-    timer = setTimeout(place, 380)
+    timer = setTimeout(poll, 90)
     return () => {
       cancelled = true
       clearTimeout(timer)
     }
+    // spotX/Y/W/H are stable shared-value refs — safe to omit.
+     
   }, [active, idx])
-
-  if (!active) return null
 
   const step = steps[idx]
   const isLast = idx >= steps.length - 1
@@ -153,6 +156,7 @@ export function ProfileCoachmarks({ steps, scrollRef, contentY }: {
       setRect(null)
     } else {
       setRect(null)
+      setMeasuring(true)
       setIdx((i) => i + 1)
     }
   }
@@ -161,92 +165,93 @@ export function ProfileCoachmarks({ steps, scrollRef, contentY }: {
     setRect(null)
   }
 
-  // Spotlight frame around the element.
+  // Spotlight frame (static values for tooltip placement — the visual hole itself
+  // is driven by the animated shared values so it can glide between elements).
   const sx = rect ? Math.max(0, rect.x - SPOT_PAD) : 0
   const sy = rect ? Math.max(0, rect.y - SPOT_PAD) : 0
   const sw = rect ? rect.width + SPOT_PAD * 2 : 0
   const sh = rect ? rect.height + SPOT_PAD * 2 : 0
 
+  const B = Math.max(W, H)
+  // Soft breathing halo — transform + opacity ONLY (layout props on the huge dim
+  // view are what caused the previous lag).
+  const haloStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + pulse.value * 0.045 }],
+    opacity: (1 - pulse.value) * 0.55,
+  }))
+
   // Place the tooltip on whichever side of the element has more room, so it never
   // covers the thing it describes. Arrow points back at the element.
   const below = rect ? vh - (sy + sh) >= sy : true
-  const arrowLeft = rect ? Math.min(Math.max(rect.x + rect.width / 2 - 17, 18), W - 52) : 0
+
+  if (!active || !step) return null
 
   return (
     <View ref={rootRef} style={StyleSheet.absoluteFill}>
       {rect ? (
         <>
-          {/* Dim everything except a ROUNDED cutout around the element. A single
-              view whose huge border IS the dim: its inner edge (border radius −
-              border width) rounds the hole, so corners match the cards instead of
-              looking square. */}
-          {(() => {
-            const B = Math.max(W, H) // border wide enough to reach every screen edge
-            return (
-              <View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  left: sx - B,
-                  top: sy - B,
-                  width: sw + B * 2,
-                  height: sh + B * 2,
-                  borderWidth: B,
-                  borderColor: DIM,
-                  borderRadius: B + SPOT_RADIUS,
-                }}
-              />
-            )
-          })()}
-          {/* Highlight border around the cutout */}
-          <View pointerEvents="none" style={{ position: 'absolute', left: sx, top: sy, width: sw, height: sh, borderRadius: SPOT_RADIUS, borderWidth: 2, borderColor: redesign.color.purple }} />
+          {/* Dim everything except a rounded cutout — STATIC per step (animating
+              this huge bordered view's layout was the lag). The group fades in. */}
+          <Animated.View key={`spot-${step.key}`} entering={FadeIn.duration(160)} pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <View
+              pointerEvents="none"
+              style={{ position: 'absolute', left: sx - B, top: sy - B, width: sw + B * 2, height: sh + B * 2, borderWidth: B, borderColor: DIM, borderRadius: B + SPOT_RADIUS }}
+            />
+            {/* Breathing halo (transform+opacity only) + crisp ring */}
+            <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: sx, top: sy, width: sw, height: sh, borderRadius: SPOT_RADIUS, borderWidth: 2, borderColor: redesign.color.purple }, haloStyle]} />
+            <View pointerEvents="none" style={{ position: 'absolute', left: sx, top: sy, width: sw, height: sh, borderRadius: SPOT_RADIUS, borderWidth: 2, borderColor: redesign.color.purple }} />
+          </Animated.View>
 
           {/* Tap-blocker over the dimmed area — taps do nothing; use the buttons */}
           <Pressable style={StyleSheet.absoluteFill} onPress={() => {}} />
 
-          <BobArrow left={arrowLeft} top={below ? sy + sh + 4 : sy - 38} down={!below} />
-
-          <View
-            style={[
-              { position: 'absolute', left: 18, right: 18, backgroundColor: redesign.color.card, borderRadius: 18, paddingTop: 8, paddingBottom: 12, paddingHorizontal: 16, gap: 4, borderWidth: 1, borderColor: redesign.color.hairlineStrong, ...redesign.shadow.cta },
-              below ? { top: sy + sh + 40 } : { bottom: vh - sy + 40 },
-            ]}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontVariant: ['tabular-nums'] }}>
-                {idx + 1} / {steps.length}
-              </Text>
-              {!isLast ? (
-                <Pressable onPress={skip} hitSlop={8}>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700', color: redesign.color.muted }}>Skip</Text>
-                </Pressable>
-              ) : null}
-            </View>
-            <Text style={{ fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.3 }}>{step.title}</Text>
-            <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: redesign.color.muted, lineHeight: 18 }}>{step.body}</Text>
-            <Pressable
-              onPress={next}
-              style={{ marginTop: 4, minHeight: 40, borderRadius: 999, backgroundColor: redesign.color.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            >
-              <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>{isLast ? 'Done' : 'Next'}</Text>
-              <MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />
-            </Pressable>
-          </View>
+          {!measuring ? (
+            <>
+              <Animated.View
+                key={step.key}
+                entering={FadeInDown.duration(240)}
+                style={[
+                  { position: 'absolute', left: 18, right: 18, backgroundColor: redesign.color.card, borderRadius: 20, paddingTop: 10, paddingBottom: 14, paddingHorizontal: 16, gap: 5, borderWidth: 1, borderColor: redesign.color.hairlineStrong, ...redesign.shadow.cta },
+                  below ? { top: sy + sh + 40 } : { bottom: vh - sy + 40 },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', gap: 5 }}>
+                    {steps.map((_, i) => (
+                      <View key={i} style={{ width: i === idx ? 16 : 6, height: 6, borderRadius: 999, backgroundColor: i === idx ? redesign.color.purple : redesign.color.hairlineStrong }} />
+                    ))}
+                  </View>
+                  {!isLast ? (
+                    <Pressable onPress={skip} hitSlop={8}>
+                      <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '700', color: redesign.color.muted }}>Skip</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.3 }}>{step.title}</Text>
+                <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '500', color: redesign.color.muted, lineHeight: 18 }}>{step.body}</Text>
+                <View style={{ marginTop: 6 }}>
+                  <LiquidButton label={isLast ? 'Done' : 'Next'} onPress={next} minHeight={44} hapticFeedback={false} />
+                </View>
+              </Animated.View>
+            </>
+          ) : null}
         </>
       ) : (
-        // Measuring the next element — dim the screen so the jump isn't jarring,
+        // Measuring the first element — dim the screen so the start isn't jarring,
         // and swallow taps until the spotlight lands. Always keep a Skip escape so a
         // measurement that never resolves can't soft-lock the user on a dim,
         // tap-swallowing screen.
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: DIM }]} onPress={() => {}}>
-          <Pressable
-            onPress={skip}
-            hitSlop={10}
-            style={{ position: 'absolute', top: 60, right: 18, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)' }}
-          >
-            <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '800', color: '#fff' }}>Skip</Text>
+        <Animated.View entering={FadeIn.duration(200)} style={StyleSheet.absoluteFill}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: DIM }]} onPress={() => {}}>
+            <Pressable
+              onPress={skip}
+              hitSlop={10}
+              style={{ position: 'absolute', top: 60, right: 18, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)' }}
+            >
+              <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '800', color: '#fff' }}>Skip</Text>
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </Animated.View>
       )}
     </View>
   )

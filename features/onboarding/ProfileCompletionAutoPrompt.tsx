@@ -12,9 +12,13 @@ import { isCompletionPromptDismissed } from '@/features/onboarding/completionPro
 export function ProfileCompletionAutoPrompt() {
   const { data: profile, isFetched } = useCreatorProfile()
   const fired = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (fired.current) return
+    // Bail if we've already presented, or a timer is already armed — the profile
+    // object changes identity on every refetch (e.g. a realtime TikTok-stats
+    // update), and re-arming/clearing here would silently cancel the pending prompt.
+    if (fired.current || timerRef.current) return
     if (!isFetched || !profile) return
     // Only after the earlier gates are satisfied — don't stack on top of the
     // connect-TikTok or pending-review states.
@@ -23,12 +27,19 @@ export function ProfileCompletionAutoPrompt() {
     if (getProfileCompletion(profile).isComplete) return
     if (isCompletionPromptDismissed()) return
 
-    fired.current = true
     // Small delay so first-run overlays (tutorial/welcome) settle and the navigator
-    // is fully ready before we present the flow.
-    const t = setTimeout(() => router.push('/complete-profile'), 900)
-    return () => clearTimeout(t)
+    // is fully ready before we present the flow. Kept in a ref so a refetch within
+    // the window doesn't cancel it.
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null
+      fired.current = true
+      router.push('/complete-profile')
+    }, 900)
   }, [profile, isFetched])
+
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+  }, [])
 
   return null
 }

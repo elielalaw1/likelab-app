@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Image, ImageBackground, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native'
-import { router } from 'expo-router'
+import { Image, ImageBackground, Pressable, Text, View, useWindowDimensions } from 'react-native'
+import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import ConfettiCannon from 'react-native-confetti-cannon'
@@ -12,7 +13,6 @@ import Animated, {
   FadeInDown,
   interpolate,
   type SharedValue,
-  useAnimatedProps,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -21,20 +21,18 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
 import { redesign, typography } from '@/features/core/theme'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { ElectricBorder } from '@/features/shared/ui/ElectricBorder'
 import { designBackground, designWordmark } from '@/design/assets'
 
 // Value-first welcome carousel — shown when a creator taps "Sign up", before the
-// account form. Three animated mini mock-ups of the real app: a live feed of
-// campaigns with a pulsing Apply CTA, a LIVE leaderboard where "You" (the user)
-// climbs from the bottom past everyone to #1, and a reward showcase of what we
-// actually deliver. Card shimmer + confetti on the final payoff slide.
+// account form. Animated mini mock-ups of the real app: a live feed of campaigns
+// with a pulsing Apply CTA, the create-and-get-approved flow, and a reward
+// showcase of what we actually deliver. Card shimmer + confetti on the final
+// payoff slide.
 
 type Drivers = { float: SharedValue<number>; pulse: SharedValue<number>; bounce: SharedValue<number> }
-
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput)
 
 // ─── Small primitives ─────────────────────────────────────────────────────────
 function Chip({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) {
@@ -94,214 +92,70 @@ const CAMPAIGNS = [
   { brand: 'Lumière', title: 'Skincare ritual', reward: 'REWARD · EXPERIENCE', days: '5d left' },
 ]
 
-function DiscoverMock({ float, pulse, bounce }: Drivers) {
+function DiscoverMock({ float, bounce }: Drivers) {
   const cardStyle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(float.value, [0, 1], [-8, 8]) }] }))
-  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.06]) }] }))
   const arrowStyle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(bounce.value, [0, 1], [0, 7]) }] }))
   const c = useCycle(CAMPAIGNS.length, 2200)
   const camp = CAMPAIGNS[c]
   const applied = useLiveCount(142, 80)
-  return (
-    <Animated.View style={[{ width: 236, borderRadius: 24, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, overflow: 'hidden', ...redesign.shadow.card }, cardStyle]}>
-      <View style={{ height: 80, padding: 10, justifyContent: 'space-between' }}>
-        <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0, opacity: 0.5 }} />
-        <Animated.View key={`b${c}`} entering={FadeIn.duration(360)} style={{ backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <MaterialCommunityIcons name="check-decagram" size={11} color={redesign.color.purple} />
-          <Text style={{ fontSize: 10, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>{camp.brand}</Text>
-        </Animated.View>
-        <View style={{ backgroundColor: 'rgba(11,11,15,0.55)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
-          <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#fff', fontFamily: typography.fontFamily }}>{applied} applied</Text>
-        </View>
-      </View>
-      <View style={{ padding: 14, gap: 10 }}>
-        <Animated.View key={`t${c}`} entering={FadeIn.duration(360)} style={{ gap: 8 }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>{camp.title}</Text>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Chip bg="rgba(99,80,184,0.10)" color={redesign.color.purple}>{camp.reward}</Chip>
-            <Chip bg={redesign.color.bg} color={redesign.color.muted}>{camp.days}</Chip>
-          </View>
-        </Animated.View>
-        <View style={{ marginTop: 2 }}>
-          <Animated.View style={[{ position: 'absolute', top: -34, alignSelf: 'center', zIndex: 2 }, arrowStyle]}>
-            <MaterialCommunityIcons name="gesture-tap" size={26} color={redesign.color.purple} />
-          </Animated.View>
-          <Animated.View style={[{ height: 42, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, ctaStyle]}>
-            <Text style={{ color: '#fff', fontSize: 13.5, fontWeight: '800', fontFamily: typography.fontFamily }}>Apply now</Text>
-            <MaterialCommunityIcons name="arrow-right" size={15} color="#fff" />
-          </Animated.View>
-        </View>
-      </View>
-      <Shimmer />
-    </Animated.View>
-  )
-}
-
-// ─── Slide 2 · You climb 50 places to #1 ──────────────────────────────────────
-// "You" starts at #50, dead last. A camera follows you up the 50-deep board as
-// you overtake name after name (they whoosh past). Near the top you lift OVER
-// the leaders, take the crown, and the top names bump down a step — their medals
-// (shown in a column BESIDE each name) hand off to the new owners.
-const ROW_H = 34
-const VISIBLE = 7
-const TOTAL = 50
-const CENTER = 3 // the screen row You rests on while the board scrolls past
-const BODY_H = VISIBLE * ROW_H
-const MAX_SCROLL = (TOTAL - VISIBLE) * ROW_H
-const YOU_FROM = (TOTAL - 1) * ROW_H
-
-type Row = { name: string; color: string; slot: number }
-const NAMED: Row[] = [
-  { name: 'Eli', color: redesign.color.cyan, slot: 0 },
-  { name: 'Leo', color: redesign.color.magenta, slot: 1 },
-  { name: 'Markus', color: redesign.color.yellow, slot: 2 },
-  { name: 'Khader', color: '#5B8DEF', slot: 3 },
-  { name: 'Theo', color: redesign.color.payoutGreen, slot: 4 },
-  { name: 'Hugo', color: '#F2994A', slot: 5 },
-]
-const FILLER_NAMES = ['Noah', 'Liam', 'Vera', 'Saga', 'Iris', 'Nora', 'Alva', 'Sven', 'Wilma', 'Otto', 'Ines', 'Tuva', 'Ebba', 'Axel', 'Folke', 'Greta', 'Nils', 'Maja', 'Stina', 'Edith', 'Bo', 'Frans', 'Alma', 'Loke']
-const REEL_COLORS = ['#5B8DEF', '#F2994A', '#9B5DE5', redesign.color.cyan, redesign.color.magenta, redesign.color.yellow, redesign.color.payoutGreen]
-// Fillers occupy every slot between the named leaders and You (#50).
-const FILLERS: Row[] = Array.from({ length: TOTAL - 1 - NAMED.length }, (_, i) => ({
-  name: FILLER_NAMES[i % FILLER_NAMES.length],
-  color: REEL_COLORS[i % REEL_COLORS.length],
-  slot: NAMED.length + i,
-}))
-
-// Rank marker shown beside a name: crown / silver / bronze / plain number.
-function RankBadge({ slot }: { slot: number }) {
-  if (slot === 0) return <MaterialCommunityIcons name="crown" size={15} color={redesign.color.gold} />
-  if (slot === 1) return <Text style={{ fontSize: 13 }}>🥈</Text>
-  if (slot === 2) return <Text style={{ fontSize: 13 }}>🥉</Text>
-  return <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '800', fontFamily: typography.fontFamily }}>{slot + 1}</Text>
-}
-
-// Shared row pill: [rank cell][avatar][name][right].
-function RowShell({ color, label, you, children, right }: { color: string; label: string; you?: boolean; children: React.ReactNode; right: React.ReactNode }) {
-  return (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, paddingHorizontal: 8, borderWidth: you ? 1 : 0, borderColor: 'rgba(99,80,184,0.9)', backgroundColor: you ? 'rgba(99,80,184,0.3)' : 'rgba(255,255,255,0.05)' }}>
-      <View style={{ width: 22, height: ROW_H - 5, alignItems: 'center', justifyContent: 'center' }}>{children}</View>
-      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-        {you ? <MaterialCommunityIcons name="account" size={14} color="#fff" /> : <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', fontFamily: typography.fontFamily }}>{label[0]}</Text>}
-      </View>
-      <Text style={{ flex: 1, color: '#fff', fontSize: 12.5, fontWeight: '800', fontFamily: typography.fontFamily }} numberOfLines={1}>{label}</Text>
-      {right}
-    </View>
-  )
-}
-
-const PositionedRow = ({ slot, children }: { slot: number; children: React.ReactNode }) => (
-  <View style={{ position: 'absolute', top: slot * ROW_H, left: 0, right: 0, height: ROW_H - 5 }}>{children}</View>
-)
-
-const Bar = () => <View style={{ height: 6, width: 34, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' }} />
-
-// A leader near the top whose medal hands down one rank when You takes #1.
-function NamedRow({ item, climb }: { item: Row; climb: SharedValue<number> }) {
-  const fromStyle = useAnimatedStyle(() => ({ opacity: interpolate(climb.value, [0.8, 0.9], [1, 0], Extrapolation.CLAMP) }))
-  const toStyle = useAnimatedStyle(() => ({ opacity: interpolate(climb.value, [0.84, 0.94], [0, 1], Extrapolation.CLAMP) }))
-  return (
-    <PositionedRow slot={item.slot}>
-      <RowShell color={item.color} label={item.name} right={<Bar />}>
-        <Animated.View style={[{ position: 'absolute' }, fromStyle]}><RankBadge slot={item.slot} /></Animated.View>
-        <Animated.View style={[{ position: 'absolute' }, toStyle]}><RankBadge slot={item.slot + 1} /></Animated.View>
-      </RowShell>
-    </PositionedRow>
-  )
-}
-
-function LeaderboardMock({ float, bounce }: Drivers) {
-  const cardStyle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(float.value, [0, 1], [-7, 7]) }] }))
-  // climb: 0 (You at #50) → 1 (You at #1). Long ease-out rise, hold, reset, loop.
-  const climb = useSharedValue(0)
+  // The app's signature interaction, demoed on loop: the hold-to-apply button
+  // charging from empty to full, then resetting.
+  const charge = useSharedValue(0)
   useEffect(() => {
-    climb.value = withRepeat(
+    charge.value = withRepeat(
       withSequence(
         withTiming(0, { duration: 700 }),
-        withTiming(1, { duration: 3400, easing: Easing.out(Easing.cubic) }),
-        withTiming(1, { duration: 1700 }),
-        withTiming(0, { duration: 0 }),
+        withTiming(1, { duration: 1600, easing: Easing.linear }),
+        withTiming(1, { duration: 600 })
       ),
       -1,
-      false,
+      false
     )
-  }, [climb])
-
-  // Camera follows You: keeps You on the CENTER screen row, clamped at top/bottom.
-  const cameraStyle = useAnimatedStyle(() => {
-    const youY = interpolate(climb.value, [0, 0.88, 1], [YOU_FROM, 0, 0], Extrapolation.CLAMP)
-    const scroll = Math.min(Math.max(youY - CENTER * ROW_H, 0), MAX_SCROLL)
-    return { transform: [{ translateY: -scroll }] }
-  })
-  // The whole board bumps down one row as You lands on #1.
-  const bumpStyle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(climb.value, [0.8, 0.93], [0, ROW_H], Extrapolation.CLAMP) }] }))
-  const youStyle = useAnimatedStyle(() => {
-    const youY = interpolate(climb.value, [0, 0.88, 1], [YOU_FROM, 0, 0], Extrapolation.CLAMP)
-    return {
-      zIndex: 10,
-      transform: [
-        { translateY: youY + interpolate(float.value, [0, 1], [-2, 2]) },
-        { scale: interpolate(climb.value, [0, 0.12, 0.85, 1], [1, 1.05, 1.05, 1], Extrapolation.CLAMP) },
-      ],
-    }
-  })
-  const chevronStyle = useAnimatedStyle(() => ({ opacity: interpolate(climb.value, [0.8, 0.9], [1, 0], Extrapolation.CLAMP), transform: [{ translateY: interpolate(bounce.value, [0, 1], [2, -4]) }] }))
-  const crownStyle = useAnimatedStyle(() => ({ opacity: interpolate(climb.value, [0.86, 1], [0, 1], Extrapolation.CLAMP) }))
-
+  }, [charge])
+  const chargeStyle = useAnimatedStyle(() => ({ width: `${charge.value * 100}%` }))
   return (
-    <Animated.View style={[{ width: 258, borderRadius: 24, backgroundColor: redesign.color.darkScreen, padding: 14, overflow: 'hidden', ...redesign.shadow.cta }, cardStyle]}>
-      <LinearGradient pointerEvents="none" colors={['rgba(99,80,184,0.45)', 'transparent']} start={{ x: 1, y: 0 }} end={{ x: 0.3, y: 0.85 }} style={{ position: 'absolute', top: -24, right: -24, width: 150, height: 150, borderRadius: 75 }} />
-      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9.5, fontWeight: '800', letterSpacing: 1.2, fontFamily: typography.fontFamily, marginBottom: 8 }}>● LIVE LEADERBOARD · 50</Text>
-
-      <View style={{ height: BODY_H, overflow: 'hidden' }}>
-        <Animated.View style={[{ position: 'absolute', left: 0, right: 0, top: 0, height: TOTAL * ROW_H }, cameraStyle]}>
-          {/* Background board (bumps down one row at the climax) */}
-          <Animated.View style={[{ position: 'absolute', left: 0, right: 0, top: 0, height: TOTAL * ROW_H }, bumpStyle]}>
-            {FILLERS.map((f) => (
-              <PositionedRow key={`f${f.slot}`} slot={f.slot}>
-                <RowShell color={f.color} label={f.name} right={<Bar />}>
-                  <RankBadge slot={f.slot} />
-                </RowShell>
-              </PositionedRow>
-            ))}
-            {NAMED.map((n) => (
-              <NamedRow key={n.name} item={n} climb={climb} />
-            ))}
-          </Animated.View>
-
-          {/* You — lifts over everyone */}
-          <Animated.View style={[{ position: 'absolute', left: 0, right: 0, top: 0, height: ROW_H - 5 }, youStyle]}>
-            <RowShell color={redesign.color.purple} label="You" you right={<SpinViews climb={climb} />}>
-              <Animated.View style={[{ position: 'absolute' }, chevronStyle]}>
-                <MaterialCommunityIcons name="chevron-up" size={18} color={redesign.color.payoutGreen} />
+    <Animated.View style={[{ width: 236 }, cardStyle]}>
+      {/* Partner-campaign electric frame — the same live border as in the app */}
+      <ElectricBorder radius={24} color="#7C5CFF">
+        <View style={{ borderRadius: 24, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
+          <View style={{ height: 80, padding: 10, justifyContent: 'space-between' }}>
+            <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0, opacity: 0.5 }} />
+            <Animated.View key={`b${c}`} entering={FadeIn.duration(360)} style={{ backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <MaterialCommunityIcons name="check-decagram" size={11} color={redesign.color.purple} />
+              <Text style={{ fontSize: 10, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>{camp.brand}</Text>
+            </Animated.View>
+            <View style={{ backgroundColor: 'rgba(11,11,15,0.55)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
+              <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#fff', fontFamily: typography.fontFamily }}>{applied} applied</Text>
+            </View>
+          </View>
+          <View style={{ padding: 14, gap: 10 }}>
+            <Animated.View key={`t${c}`} entering={FadeIn.duration(360)} style={{ gap: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>{camp.title}</Text>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <Chip bg="rgba(99,80,184,0.10)" color={redesign.color.purple}>{camp.reward}</Chip>
+                <Chip bg={redesign.color.bg} color={redesign.color.muted}>{camp.days}</Chip>
+              </View>
+            </Animated.View>
+            <View style={{ marginTop: 2 }}>
+              <Animated.View style={[{ position: 'absolute', top: -34, alignSelf: 'center', zIndex: 2 }, arrowStyle]}>
+                <MaterialCommunityIcons name="gesture-tap-hold" size={26} color={redesign.color.purple} />
               </Animated.View>
-              <Animated.View style={[{ position: 'absolute' }, crownStyle]}>
-                <MaterialCommunityIcons name="crown" size={15} color={redesign.color.gold} />
-              </Animated.View>
-            </RowShell>
-          </Animated.View>
-        </Animated.View>
-      </View>
-      <Shimmer />
+              {/* Hold-to-apply, charging on loop */}
+              <View style={{ height: 42, borderRadius: 999, backgroundColor: 'rgba(8,8,12,0.96)', overflow: 'hidden', justifyContent: 'center' }}>
+                <Animated.View style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#26262E' }, chargeStyle]}>
+                  <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.85)' }} />
+                </Animated.View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <MaterialCommunityIcons name="gesture-tap-hold" size={15} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', fontFamily: typography.fontFamily }}>Hold to apply</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+          <Shimmer />
+        </View>
+      </ElectricBorder>
     </Animated.View>
-  )
-}
-
-// Views that spin UP the higher You climbs — driven by the same shared value via
-// useAnimatedProps, so it stays on the UI thread (no per-frame React re-render).
-function SpinViews({ climb }: { climb: SharedValue<number> }) {
-  const animatedProps = useAnimatedProps(() => {
-    const v = Math.round(interpolate(climb.value, [0, 1], [1200, 248000], Extrapolation.CLAMP))
-    const text = v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`
-    return { text, defaultValue: text } as Partial<{ text: string; defaultValue: string }>
-  })
-  return (
-    <AnimatedTextInput
-      editable={false}
-      pointerEvents="none"
-      underlineColorAndroid="transparent"
-      animatedProps={animatedProps as never}
-      style={{ minWidth: 46, textAlign: 'right', padding: 0, color: redesign.color.payoutGreen, fontSize: 11.5, fontWeight: '800', fontFamily: typography.fontFamily }}
-    />
   )
 }
 
@@ -395,18 +249,13 @@ type Slide = {
 const SLIDES: Slide[] = [
   {
     title: 'Collab with brands\nyou love',
-    subtitle: 'Discover campaigns that match your style and apply in seconds.',
+    subtitle: 'Discover campaigns that match your style — hold to apply in seconds.',
     render: (d) => <DiscoverMock {...d} />,
   },
   {
     title: 'Create &\nget approved',
     subtitle: 'Film your video in the app — brands review and greenlight it.',
     render: (d) => <ContentMock {...d} />,
-  },
-  {
-    title: 'Climb to #1\non the leaderboard',
-    subtitle: 'Your views rise live — overtake the other creators and reach the top.',
-    render: (d) => <LeaderboardMock {...d} />,
   },
   {
     title: 'Win real\nrewards',
@@ -416,6 +265,7 @@ const SLIDES: Slide[] = [
 ]
 
 export default function WelcomePage() {
+  const { session } = useAuthSession()
   const { width } = useWindowDimensions()
   const scrollX = useSharedValue(0)
   const scrollRef = useRef<Animated.ScrollView>(null)
@@ -438,13 +288,18 @@ export default function WelcomePage() {
   const isLast = index === SLIDES.length - 1
 
   const goNext = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    // LiquidButton fires the press haptic itself.
     if (isLast) {
       router.replace('/signup')
       return
     }
     scrollRef.current?.scrollTo({ x: width * (index + 1), animated: true })
   }
+
+  // A session can resolve AFTER index.tsx already routed here (slow cold start /
+  // token refresh that exceeded the auth failsafe). Bounce a signed-in creator into
+  // the app instead of stranding them on the welcome carousel.
+  if (session) return <Redirect href="/(tabs)/overview" />
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F6F2' }}>
