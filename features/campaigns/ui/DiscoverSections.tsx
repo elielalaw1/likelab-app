@@ -7,6 +7,9 @@ import { redesign, typography } from '@/features/core/theme'
 import { Campaign } from '@/features/core/types'
 import { formatRewardType, getDaysLeft, isCampaignClosed } from '@/features/core/format'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
+import { TierBorder } from '@/features/shared/ui/TierBorder'
+import { TiltShimmer } from '@/features/shared/ui/TiltShimmer'
+import { haptic } from '@/features/shared/haptics'
 
 // A small deadline descriptor + whether it's urgent (≤ 3 days), used to colour the
 // closing chip so closing-soon campaigns stand out — real urgency, no faked numbers.
@@ -34,10 +37,9 @@ export function FeaturedCampaign({ campaign, onPress }: { campaign: Campaign; on
   const dl = deadline(campaign)
   return (
     <Animated.View entering={FadeInDown.duration(320)}>
-      {/* Double-bezel — the card sits in a machined tray for physical depth */}
-      <View style={{ borderRadius: 30, padding: 5, backgroundColor: 'rgba(11,11,15,0.04)', borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong }}>
+      <TierBorder tier={campaign.campaignTier} radius={24}>
         <Pressable
-          onPress={onPress}
+          onPress={() => { haptic.light(); onPress() }}
           accessibilityRole="button"
           accessibilityLabel={`Featured campaign: ${campaign.title}`}
           style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: redesign.color.card, ...redesign.shadow.card }}
@@ -83,8 +85,10 @@ export function FeaturedCampaign({ campaign, onPress }: { campaign: Campaign; on
               </View>
             </View>
           </View>
+          {/* Holographic tilt shimmer — the card answers when the phone moves */}
+          <TiltShimmer intensity={0.18} />
         </Pressable>
-      </View>
+      </TierBorder>
     </Animated.View>
   )
 }
@@ -113,7 +117,7 @@ export function ActiveCampaignRail({
           return (
             <Pressable
               key={c.id}
-              onPress={() => onPress(c)}
+              onPress={() => { haptic.light(); onPress(c) }}
               style={{ width: 168, borderRadius: 18, overflow: 'hidden', backgroundColor: redesign.color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: todo > 0 ? 'rgba(99,80,184,0.45)' : redesign.color.hairlineStrong, ...redesign.shadow.card }}
             >
               <View style={{ height: 92 }}>

@@ -20,3 +20,11 @@ export const tiktokApiFeaturesEnabled = isOn(process.env.EXPO_PUBLIC_TIKTOK_API_
 // dev build (EXPO_PUBLIC_DIRECT_DELIVERY=on) untagged campaigns default to standard so
 // the new combined-delivery flow is exercisable end-to-end.
 export const directDeliveryEnabled = isOn(process.env.EXPO_PUBLIC_DIRECT_DELIVERY)
+
+// TEMP (#tier-preview): forces a campaign tier for visual QA of the gold/partner card
+// borders while the campaign_tier column only exists on the Test backend. Values:
+// 'gold' | 'partner' | 'mixed' (mixed alternates per campaign so both show at once).
+// Remove once campaign_tier is live on the Live project.
+const preview = (process.env.EXPO_PUBLIC_TIER_PREVIEW || '').toLowerCase()
+export const tierPreview: 'gold' | 'partner' | 'mixed' | null =
+  preview === 'gold' || preview === 'partner' || preview === 'mixed' ? preview : null

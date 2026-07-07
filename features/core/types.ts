@@ -67,6 +67,21 @@ export type Campaign = {
   // (backend pending) — resolved in campaigns/api.ts.
   requiresReview?: boolean
   campaignTier?: 'standard' | 'gold' | 'partner' | null
+  // Pricing package from the brand wizard — drives the reward presentation:
+  // bronze/silver/gold = cash prize pool (top-N), cpm = paid per view, partner = product only.
+  campaignLevel?: 'bronze' | 'silver' | 'gold' | 'cpm' | 'partner' | null
+  cpmRate?: number | null
+  winnerCount?: number | null
+  bonusRewardsEnabled?: boolean | null
+  bonusRewardsDescription?: string | null
+  productUrl?: string | null
+  productValueSek?: number | null
+  productAmount?: number | null
+  targetRegions?: string[] | null
+  targetCategories?: string[] | null
+  // Parsed from the video_requirements JSON ({ styles, direction }).
+  adStyles?: string[] | null
+  videoDirection?: string | null
   rewardType?: string | null
   rewardValue?: string | null
   rewardAmount?: number | null

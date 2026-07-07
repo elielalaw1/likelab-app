@@ -11,6 +11,7 @@ import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { useTheme } from '@/features/core/useTheme'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { PressableScale } from '@/features/shared/ui/PressableScale'
+import { TierBorder, TierCoin } from '@/features/shared/ui/TierBorder'
 import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, cancelAnimation } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 
@@ -28,6 +29,18 @@ type Props = {
 function formatPlatform(platform?: string | null) {
   if (!platform) return 'TikTok'
   return platform.replace(/[_-]+/g, ' ').trim().replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+// Soft breathing dot for imminent deadlines (last day / tomorrow) — real urgency,
+// animated only while such a card is mounted.
+function PulseDot() {
+  const p = useSharedValue(0)
+  useEffect(() => {
+    p.value = withRepeat(withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.sin) }), -1, true)
+    return () => cancelAnimation(p)
+  }, [p])
+  const st = useAnimatedStyle(() => ({ opacity: 0.35 + p.value * 0.65, transform: [{ scale: 0.8 + p.value * 0.35 }] }))
+  return <Animated.View style={[{ width: 7, height: 7, borderRadius: 999, backgroundColor: '#E5484D' }, st]} />
 }
 
 function isExpired(campaign: Campaign): boolean {
@@ -146,13 +159,16 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
     </Pressable>
   )
 
+  const tier = campaign.campaignTier
+  const tiered2 = tier === 'gold' || tier === 'partner' ? tier : null
+
   const content = compact ? (
     <View
       style={{
         backgroundColor: redesign.color.card,
         borderRadius: redesign.radius.cardSm,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: redesign.color.hairlineStrong,
+        borderWidth: tiered2 ? 1.5 : StyleSheet.hairlineWidth,
+        borderColor: tiered2 === 'gold' ? 'rgba(212,165,55,0.75)' : tiered2 === 'partner' ? 'rgba(124,92,255,0.65)' : redesign.color.hairlineStrong,
         overflow: 'hidden',
         ...redesign.shadow.card,
       }}
@@ -178,6 +194,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           style={{ position: 'absolute', inset: 0 }}
         />
         <View style={{ position: 'absolute', left: 8, top: 8 }}>{brandChip}</View>
+        {tiered2 ? (
+          <View style={{ position: 'absolute', right: 8, bottom: 8 }}>
+            <TierCoin tier={tiered2} size={22} />
+          </View>
+        ) : null}
         {badge ? (
           <View style={{ position: 'absolute', right: 8, top: 8, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
             <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', fontFamily: 'System' }}>{badge}</Text>
@@ -185,7 +206,8 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
         ) : null}
       </View>
       <View style={{ padding: 12, gap: 6 }}>
-        <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.3 }} numberOfLines={2}>
+        {/* Fixed two-line title box so grid rows stay level regardless of title length */}
+        <Text style={{ fontFamily: typography.fontFamily, fontSize: 14, lineHeight: 18, minHeight: 36, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.3 }} numberOfLines={2}>
           {campaign.title}
         </Text>
         <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '500' }} numberOfLines={1}>
@@ -266,8 +288,11 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
             </Text>
           </View>
           <View style={{ flex: 1, borderRadius: redesign.radius.cell, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairline }}>
-            <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '700', marginBottom: 4 }}>Closes</Text>
-            <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+              <Text style={{ color: redesign.color.faint, fontFamily: typography.fontFamily, fontSize: 10.5, fontWeight: '700' }}>Closes</Text>
+              {!closed && days != null && days <= 1 ? <PulseDot /> : null}
+            </View>
+            <Text style={{ color: !closed && days != null && days <= 1 ? '#E5484D' : redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.3, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
               {closed ? 'Closed' : days == null ? 'Open' : days === 0 ? 'Last day' : `${days}d`}
             </Text>
           </View>
@@ -363,9 +388,19 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
     />
   )
 
+  // Tier rings only on full-width cards — in the two-column grid the rings, seals
+  // and the electric border's outside-the-frame strokes crowd/overlap neighbours.
+  const tiered = compact ? (
+    content
+  ) : (
+    <TierBorder tier={campaign.campaignTier} radius={redesign.radius.card}>
+      {content}
+    </TierBorder>
+  )
+
   const wrapped = (
-    <Animated.View entering={FadeInDown.duration(200).delay(index * 80)}>
-      {onPress ? <PressableScale onPress={onPress} haptic={false}>{content}</PressableScale> : content}
+    <Animated.View entering={FadeInDown.duration(200).delay(Math.min(index, 6) * 60)}>
+      {onPress ? <PressableScale onPress={onPress} haptic={false}>{tiered}</PressableScale> : tiered}
     </Animated.View>
   )
 

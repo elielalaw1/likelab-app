@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { ApplicationStatus, Campaign, CampaignApplyForm, CreatorInvitation, Deliverable } from '@/features/core/types'
 import { getCurrentUserId, numberValue, textValue } from '@/features/core/supabase-utils'
-import { directDeliveryEnabled } from '@/features/core/flags'
+import { directDeliveryEnabled, tierPreview } from '@/features/core/flags'
 
 type Row = Record<string, unknown>
 
@@ -10,6 +10,14 @@ type Row = Record<string, unknown>
 // until it ships we fall back to the current review flow in prod, and to the new direct
 // flow in a dev build (EXPO_PUBLIC_DIRECT_DELIVERY=on) so it can be exercised.
 function resolveTier(row: Row): { tier: Campaign['campaignTier']; requiresReview: boolean } {
+  // TEMP (#tier-preview): visual QA override for the tier card borders — see flags.ts.
+  if (tierPreview) {
+    const forced =
+      tierPreview === 'mixed'
+        ? ((String(row['id'] || '').charCodeAt(0) || 0) % 2 === 0 ? 'gold' : 'partner')
+        : tierPreview
+    return { tier: forced, requiresReview: true }
+  }
   const raw = (textValue(row, ['campaign_tier', 'tier']) || '').toLowerCase()
   if (raw === 'gold' || raw === 'partner') return { tier: raw, requiresReview: true }
   if (raw === 'standard') return { tier: 'standard', requiresReview: false }
@@ -108,6 +116,23 @@ function parseApplyForm(raw: unknown): CampaignApplyForm | null {
   return { message, collectSize, questions }
 }
 
+// video_requirements holds JSON ({ styles: string[], direction: string }) from the
+// new wizard, but legacy campaigns stored plain text — parse defensively.
+function parseVideoRequirements(raw: string | null): { adStyles: string[] | null; videoDirection: string | null } {
+  if (!raw) return { adStyles: null, videoDirection: null }
+  try {
+    const parsed = JSON.parse(raw) as { styles?: unknown; direction?: unknown }
+    const adStyles = Array.isArray(parsed.styles) ? parsed.styles.map(String).filter(Boolean) : null
+    const videoDirection = typeof parsed.direction === 'string' && parsed.direction.trim() ? parsed.direction.trim() : null
+    return { adStyles, videoDirection }
+  } catch {
+    // Legacy plain-text requirements read as direction so nothing is lost.
+    return { adStyles: null, videoDirection: raw }
+  }
+}
+
+const CAMPAIGN_LEVELS = new Set(['bronze', 'silver', 'gold', 'cpm', 'partner'])
+
 function mapCampaign(row: Row): Campaign {
   return {
     id: String(row.id || ''),
@@ -146,6 +171,20 @@ function mapCampaign(row: Row): Campaign {
     keyMessages: toStringArray(row.key_messages),
     preferredCreators: textValue(row, ['preferred_creators']),
     prizeDistribution: toPrizeDistribution(row.prize_distribution),
+    ...(() => {
+      const raw = (textValue(row, ['campaign_level']) || '').toLowerCase()
+      return { campaignLevel: (CAMPAIGN_LEVELS.has(raw) ? raw : null) as Campaign['campaignLevel'] }
+    })(),
+    cpmRate: numberValue(row, ['cpm_rate']),
+    winnerCount: numberValue(row, ['winner_count']),
+    bonusRewardsEnabled: row.bonus_rewards_enabled === true,
+    bonusRewardsDescription: textValue(row, ['bonus_rewards_description']),
+    productUrl: textValue(row, ['product_url']),
+    productValueSek: numberValue(row, ['product_value_sek']),
+    productAmount: numberValue(row, ['product_amount']),
+    targetRegions: toStringArray(row.target_regions),
+    targetCategories: toStringArray(row.target_categories),
+    ...parseVideoRequirements(textValue(row, ['video_requirements'])),
   }
 }
 
@@ -183,8 +222,12 @@ async function getCampaignAssets(campaignIds: string[]) {
 
   if (error) throw new Error(error.message)
 
-  // Preserve per-campaign order; a slot is either a direct URL or a storage path to sign.
-  type Slot = { direct?: string; path?: string }
+  // A slot is either a direct URL or a storage path to sign. Slots are ordered
+  // cover → product (reward_image) → other: the wizard uploads product photos
+  // (step 4) BEFORE the cover (step 6), so raw created_at order would put a
+  // product shot as the hero frame.
+  type Slot = { direct?: string; path?: string; rank: number }
+  const TYPE_RANK: Record<string, number> = { cover: 0, reward_image: 1 }
   const slotsByCampaign = new Map<string, Slot[]>()
   const toSign: string[] = []
 
@@ -196,16 +239,21 @@ async function getCampaignAssets(campaignIds: string[]) {
     const raw = textValue(record, ['url', 'asset_url', 'file_url', 'image_url', 'thumbnail_url'])
     if (!raw) continue
 
+    const type = (textValue(record, ['type', 'asset_type']) || '').toLowerCase()
+    const rank = TYPE_RANK[type] ?? 2
     const storagePath = extractStoragePath(raw)
     const slots = slotsByCampaign.get(campaignId) || []
     if (storagePath) {
-      slots.push({ path: storagePath })
+      slots.push({ path: storagePath, rank })
       toSign.push(storagePath)
     } else if (raw.startsWith('http')) {
-      slots.push({ direct: raw })
+      slots.push({ direct: raw, rank })
     }
     slotsByCampaign.set(campaignId, slots)
   }
+
+  // Stable sort: created_at order within each type group is preserved.
+  for (const slots of slotsByCampaign.values()) slots.sort((a, b) => a.rank - b.rank)
 
   const signedByPath = new Map<string, string>()
   if (toSign.length) {
