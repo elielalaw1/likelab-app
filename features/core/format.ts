@@ -39,7 +39,10 @@ export function formatDateRange(start?: string | null, end?: string | null) {
     if (!input) return ''
     const d = new Date(input)
     if (Number.isNaN(d.getTime())) return ''
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    // Format in UTC to match getDaysLeft/isCampaignClosed below — a date-only
+    // "YYYY-MM-DD" parses as UTC midnight, so local formatting shows the day before
+    // for users west of UTC and contradicts the days-left badge on the same row.
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   }
   const s = asDate(start)
   const e = asDate(end)
