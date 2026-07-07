@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import { spacing, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
+import { haptic } from '@/features/shared/haptics'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { WhatsNewButton } from '@/features/whatsnew/WhatsNewModal'
@@ -76,7 +77,7 @@ export function AppHeader({ trailing = 'profile' }: { trailing?: 'profile' | 'se
           />
         </Pressable>
       </Modal>
-      <Pressable onPress={handleLogoPress} hitSlop={8}>
+      <Pressable onPress={() => { haptic.selection(); handleLogoPress() }} hitSlop={8}>
         <Image source={topLogo} style={{ width: 78, height: 78 }} resizeMode="contain" />
       </Pressable>
 
@@ -84,7 +85,7 @@ export function AppHeader({ trailing = 'profile' }: { trailing?: 'profile' | 'se
         <WhatsNewButton />
         {trailing === 'settings' ? (
           <Pressable
-            onPress={() => router.push('/settings')}
+            onPress={() => { haptic.selection(); router.push('/settings') }}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Settings"
@@ -102,7 +103,7 @@ export function AppHeader({ trailing = 'profile' }: { trailing?: 'profile' | 'se
             <MaterialCommunityIcons name="cog-outline" size={21} color={palette.textMuted} />
           </Pressable>
         ) : (
-          <Pressable onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
+          <Pressable onPress={() => { haptic.selection(); router.push('/(tabs)/profile') }} hitSlop={8}>
             {profile?.avatarUrl ? (
               <Image source={{ uri: profile.avatarUrl }} style={{ width: 38, height: 38, borderRadius: 19 }} />
             ) : (

@@ -1,15 +1,16 @@
 import { ReactNode, RefObject, useState, useCallback, useEffect, useRef } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
-import Animated, { useSharedValue, withTiming } from 'react-native-reanimated'
+import Animated, { type SharedValue, useAnimatedScrollHandler, useSharedValue, withTiming } from 'react-native-reanimated'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { spacing } from '@/features/core/theme'
+import { haptic } from '@/features/shared/haptics'
 import { useTheme } from '@/features/core/useTheme'
 import { WallpaperBackground } from '@/features/shared/ui/WallpaperBackground'
 import { RefreshHeader } from '@/features/shared/ui/RefreshHeader'
 import { useFloatingTabBarVisibility, useTabScrollHandler } from '@/features/navigation/FloatingTabBarVisibility'
 import { getFloatingTabBarSpace, TAB_HEADER_HEIGHT } from '@/features/navigation/floatingTabBar.constants'
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useIsFocused } from '@react-navigation/native'
 
 type GradientSpec = {
   colors: readonly [string, string, ...string[]]
@@ -33,13 +34,24 @@ type Props = {
   // own top safe-area inset and pads its content down by the header's height so the
   // content scrolls beneath the blur instead of starting under it.
   headerOverlay?: boolean
+  /** Mirror of the scroll offset for parallax effects. Only wired on non-tabAware
+      screens (tab screens already own the scroll handler for the tab bar). */
+  scrollOffsetY?: SharedValue<number>
 }
 
-export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap, headerOverlay = false }: Props) {
+export function Screen({ children, scroll = true, tabAware = true, overlay, overlayPadding = 0, scrollRef, onRefresh, gradient, wallpaper, bgColor, contentGap, headerOverlay = false, scrollOffsetY }: Props) {
   const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const { setVisible, resetScrollTracking } = useFloatingTabBarVisibility()
-  const scrollHandler = useTabScrollHandler()
+  // Mirror navigation focus into a shared value so the scroll worklet can ignore
+  // events from this screen while it's a backgrounded (but still-mounted) tab.
+  const isFocused = useIsFocused()
+  const focusedSV = useSharedValue(isFocused)
+  focusedSV.value = isFocused
+  const scrollHandler = useTabScrollHandler(focusedSV)
+  const offsetHandler = useAnimatedScrollHandler((e) => {
+    if (scrollOffsetY) scrollOffsetY.value = e.contentOffset.y
+  })
   const bottomPad = spacing.xxl + (tabAware ? getFloatingTabBarSpace(insets.bottom) : 12) + overlayPadding
   const topPad = headerOverlay ? insets.top + TAB_HEADER_HEIGHT + spacing.sm : spacing.sm
   const [refreshing, setRefreshing] = useState(false)
@@ -58,6 +70,7 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
   const handleRefresh = useCallback(async () => {
     if (!onRefresh || busy.current) return
     busy.current = true
+    haptic.light()
     setRefreshing(true)
     // Hold the refresh open for a minimum beat so the branded loading video actually plays
     // (and the header visibly opens) instead of collapsing the instant cached data resolves.
@@ -95,7 +108,7 @@ export function Screen({ children, scroll = true, tabAware = true, overlay, over
       {scroll ? (
         <Animated.ScrollView
           ref={scrollRef as never}
-          onScroll={tabAware ? scrollHandler : undefined}
+          onScroll={tabAware ? scrollHandler : scrollOffsetY ? offsetHandler : undefined}
           scrollEventThrottle={16}
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"

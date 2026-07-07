@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
+import { haptic } from '@/features/shared/haptics'
 
 type Tone = 'primary' | 'neutral' | 'success' | 'danger'
 
@@ -17,6 +18,8 @@ type Props = {
   minHeight?: number
   borderRadius?: number
   style?: StyleProp<ViewStyle>
+  /** Haptic fired on press — every primary CTA thumps by default. Pass false to silence. */
+  hapticFeedback?: keyof typeof haptic | false
 }
 
 export function LiquidButton({
@@ -29,6 +32,7 @@ export function LiquidButton({
   minHeight = 52,
   borderRadius = 20,
   style,
+  hapticFeedback = 'medium',
 }: Props) {
   const { colors, palette } = useTheme()
 
@@ -78,7 +82,7 @@ export function LiquidButton({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={onPress ? () => { if (hapticFeedback) haptic[hapticFeedback](); onPress() } : undefined}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}

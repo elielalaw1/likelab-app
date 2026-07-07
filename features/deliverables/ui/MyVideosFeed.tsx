@@ -10,6 +10,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails'
 import { useQuery } from '@tanstack/react-query'
 import { getMyVideos, MyVideo } from '@/features/deliverables/api'
 import { redesign, typography } from '@/features/core/theme'
+import { haptic } from '@/features/shared/haptics'
 
 // Generated thumbnails are local file URIs that persist for the session — cache by video id
 // so re-renders (and signed-URL refetches) don't regenerate them.
@@ -47,7 +48,7 @@ function GridCell({ video, width, onPress }: { video: MyVideo; width: number; on
   }, [video.id, video.url, video.thumbnailUrl, video.archived, genThumb])
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Play video" style={{ width, height: width * 1.5, borderRadius: 12, overflow: 'hidden', backgroundColor: '#15151F', alignItems: 'center', justifyContent: 'center' }}>
+    <Pressable onPress={() => { haptic.light(); onPress() }} accessibilityRole="button" accessibilityLabel="Play video" style={{ width, height: width * 1.5, borderRadius: 12, overflow: 'hidden', backgroundColor: '#15151F', alignItems: 'center', justifyContent: 'center' }}>
       {thumb ? (
         <ExpoImage source={{ uri: thumb }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" transition={150} />
       ) : (
@@ -123,7 +124,7 @@ function FeedVideoItem({ video, active, width, height }: { video: MyVideo; activ
   const poster = video.thumbnailUrl ?? thumbCache.get(video.id) ?? null
 
   return (
-    <Pressable onPress={() => setPaused((p) => !p)} accessibilityRole="button" accessibilityLabel={paused ? 'Play' : 'Pause'} style={{ width, height, backgroundColor: '#000' }}>
+    <Pressable onPress={() => { haptic.selection(); setPaused((p) => !p) }} accessibilityRole="button" accessibilityLabel={paused ? 'Play' : 'Pause'} style={{ width, height, backgroundColor: '#000' }}>
       <VideoView player={player} style={{ flex: 1 }} contentFit="cover" nativeControls={false} />
       {!started && poster ? (
         <ExpoImage source={{ uri: poster }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" />
@@ -236,7 +237,7 @@ export function MyVideosFeed({ pagePadding = 16, title = 'My videos' }: { pagePa
             />
           ) : null}
           <View style={{ position: 'absolute', top: 0, left: 0, paddingTop: Math.max(insets.top, 50) + 6, paddingLeft: 14 }}>
-            <Pressable onPress={() => setOpenIndex(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+            <Pressable onPress={() => { haptic.selection(); setOpenIndex(null) }} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name="chevron-left" size={26} color="#fff" />
             </Pressable>
           </View>

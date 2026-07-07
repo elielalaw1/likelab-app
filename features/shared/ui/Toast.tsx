@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AccessibilityInfo, Text, View } from 'react-native'
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -84,7 +84,9 @@ export function ToastContainer() {
     return () => { _setToasts = null }
   }, [])
 
-  const dismiss = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id))
+  // Stable so ToastRow's dismiss-timer effect isn't torn down and restarted every
+  // time the container re-renders (add/remove), which would extend toast lifetimes.
+  const dismiss = useCallback((id: number) => setToasts((prev) => prev.filter((t) => t.id !== id)), [])
 
   if (!toasts.length) return null
 

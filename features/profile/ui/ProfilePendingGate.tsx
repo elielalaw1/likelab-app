@@ -44,11 +44,14 @@ export function ProfilePendingGate({ userId }: Props) {
     }
     try {
       setSubmitting(true)
-      const { error } = await supabase.from('creator_profiles').update({
+      // Select the written row back: an RLS-blocked UPDATE affects 0 rows and
+      // returns NO error, which would otherwise show "Appeal Submitted" while
+      // nothing was persisted (same guard as updateCreatorProfile).
+      const { data, error } = await supabase.from('creator_profiles').update({
         appeal_reason: appealReason.trim(),
         appeal_submitted_at: new Date().toISOString(),
-      }).eq('user_id', userId)
-      if (error) throw error
+      }).eq('user_id', userId).select('user_id').maybeSingle()
+      if (error || !data) throw error || new Error('Appeal could not be saved')
       // Only advance on a confirmed successful save.
       setAppealStep('confirm')
     } catch (_) {

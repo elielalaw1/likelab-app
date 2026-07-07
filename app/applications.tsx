@@ -398,6 +398,9 @@ export default function ApplicationsPage() {
       ) : null}
 
       <FlatList
+        // Re-keying on the active filter remounts the rows, replaying the staggered
+        // entrance so a filter switch reads as a fresh cascade instead of a blink.
+        key={activeFilter}
         data={filteredBlocks}
         keyExtractor={(item) => item.key}
         scrollEnabled={false}
@@ -421,10 +424,12 @@ export default function ApplicationsPage() {
             />
           ) : null
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
+          const stagger = FadeInDown.delay(Math.min(index, 8) * 55).duration(300)
           if (item.type === 'invitation') {
             return (
-              <View
+              <Animated.View
+                entering={stagger}
                 style={{
                   borderRadius: 24,
                   backgroundColor: redesign.color.card,
@@ -459,12 +464,12 @@ export default function ApplicationsPage() {
                     (declineInvitation.isPending && declineInvitation.variables === item.invitation.id)
                   }
                 />
-              </View>
+              </Animated.View>
             )
           }
           if (item.type === 'invitation_closed') {
             return (
-              <View style={{ gap: 8 }}>
+              <Animated.View entering={stagger} style={{ gap: 8 }}>
                 <StatusChip status="declined" />
                 <CampaignCard
                   campaign={{
@@ -480,7 +485,7 @@ export default function ApplicationsPage() {
                   }}
                   onPress={() => router.push({ pathname: '/campaigns/[id]', params: { id: item.invitation.campaignId } } as never)}
                 />
-              </View>
+              </Animated.View>
             )
           }
           const appStatus: AppStatus =
@@ -493,7 +498,7 @@ export default function ApplicationsPage() {
                   : 'pending'
           const todo = appStatus === 'active' ? badgeCounts[item.campaign.id] || 0 : 0
           return (
-            <View style={{ gap: 8 }}>
+            <Animated.View entering={stagger} style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <StatusChip status={appStatus} />
                 {appStatus === 'active' ? (
@@ -515,7 +520,7 @@ export default function ApplicationsPage() {
                 badge={appStatus === 'active' ? badgeCounts[item.campaign.id] : undefined}
                 onPress={() => router.push(campaignRouteParams(item.campaign) as never)}
               />
-            </View>
+            </Animated.View>
           )
         }}
       />

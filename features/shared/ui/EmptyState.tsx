@@ -1,18 +1,23 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { MaterialCommunityIcons } from '@expo/vector-icons'
 import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
+
+// Empty states carry the brand: the LikeLab heart on a soft neutral coin instead
+// of a generic glyph — quiet, but unmistakably ours.
+const likelabLogo = require('@/assets/images/likelablogonew.png')
 
 type Props = {
   title: string
   subtitle: string
+  /** Kept for call-site compatibility — the visual is now the brand mark. */
   icon?: keyof typeof MaterialCommunityIcons.glyphMap
   /** Optional primary action so an empty state is never a dead-end. */
   actionLabel?: string
   onAction?: () => void
 }
 
-export function EmptyState({ title, subtitle, icon = 'information-outline', actionLabel, onAction }: Props) {
+export function EmptyState({ title, subtitle, actionLabel, onAction }: Props) {
   return (
     <View
       style={{
@@ -27,8 +32,8 @@ export function EmptyState({ title, subtitle, icon = 'information-outline', acti
         ...redesign.shadow.card,
       }}
     >
-      <View style={{ width: 54, height: 54, borderRadius: 17, backgroundColor: 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
-        <MaterialCommunityIcons name={icon} size={26} color={redesign.color.purple} />
+      <View style={{ width: 54, height: 54, borderRadius: 17, backgroundColor: 'rgba(11,11,15,0.04)', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
+        <Image source={likelabLogo} style={{ width: 34, height: 34, opacity: 0.92 }} resizeMode="contain" />
       </View>
       <Text style={{ fontFamily: typography.fontFamily, fontSize: 15.5, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.3, textAlign: 'center' }}>
         {title}

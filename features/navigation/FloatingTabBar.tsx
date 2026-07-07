@@ -18,12 +18,15 @@ import Animated, { interpolate, useAnimatedStyle, useSharedValue, withRepeat, wi
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 function ProfileIncompleteDot() {
-  const { data: profile } = useCreatorProfile()
+  const { data: profile, isFetched } = useCreatorProfile()
   const { isComplete } = getProfileCompletion(profile)
   const bounce = useSharedValue(0)
+  // Don't flash the red "action needed" dot while the profile is still loading —
+  // getProfileCompletion(undefined) reads as incomplete for everyone.
+  const shouldShow = isFetched && !!profile && !isComplete
 
   useEffect(() => {
-    if (!isComplete) {
+    if (shouldShow) {
       bounce.value = withRepeat(
         withSequence(withTiming(-5, { duration: 380 }), withTiming(0, { duration: 380 })),
         -1,
@@ -32,11 +35,11 @@ function ProfileIncompleteDot() {
     } else {
       bounce.value = 0
     }
-  }, [isComplete, bounce])
+  }, [shouldShow, bounce])
 
   const dotStyle = useAnimatedStyle(() => ({ transform: [{ translateY: bounce.value }] }))
 
-  if (isComplete) return null
+  if (!shouldShow) return null
 
   return (
     <Animated.View

@@ -1,4 +1,4 @@
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -18,6 +18,7 @@ import { TierRow } from '@/features/profile/ui/TierBadge'
 import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
 import { ScreenHeader } from '@/features/shared/ui/ScreenHeader'
 import { campaignRouteParams } from '@/features/campaigns/navigation'
+import { navigateOnce } from '@/lib/navigate-once'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { useQueryClient } from '@tanstack/react-query'
 import { haptic } from '@/features/shared/haptics'
@@ -94,10 +95,8 @@ export default function ProjectsPage() {
   // Top campaign becomes the editorial featured hero; the rest fill the list/grid.
   const featured = browsable.length > 0 ? browsable[0] : null
   const rest = useMemo(() => (browsable.length > 1 ? browsable.slice(1) : []), [browsable])
-  const browseRows = useMemo(
-    () => Array.from({ length: Math.ceil(rest.length / 2) }, (_, i) => rest.slice(i * 2, i * 2 + 2)),
-    [rest]
-  )
+  const { width: winW } = useWindowDimensions()
+  const gridItemW = Math.floor((winW - 16 * 2 - 10) / 2)
   const { tier } = useReputation()
 
   const isGrid = viewMode === 'grid'
@@ -113,7 +112,7 @@ export default function ProjectsPage() {
       />
 
       {/* In-progress campaigns — what a returning creator cares about first */}
-      <ActiveCampaignDeck campaigns={accepted} badgeCounts={badgeCounts} onPress={(c) => router.push(campaignRouteParams(c) as never)} />
+      <ActiveCampaignDeck campaigns={accepted} badgeCounts={badgeCounts} onPress={(c) => navigateOnce(campaignRouteParams(c) as never)} />
 
       {/* Category filter chips */}
       {categories.length > 1 ? (
@@ -163,7 +162,7 @@ export default function ProjectsPage() {
           </Text>
 
           {featured ? (
-            <FeaturedCampaign campaign={featured} onPress={() => router.push(campaignRouteParams(featured) as never)} />
+            <FeaturedCampaign campaign={featured} onPress={() => navigateOnce(campaignRouteParams(featured) as never)} />
           ) : null}
 
           {rest.length > 0 ? (
@@ -180,31 +179,21 @@ export default function ProjectsPage() {
                 </Pressable>
               </View>
 
-              {isGrid ? (
-                <View style={{ gap: 10 }}>
-                  {browseRows.map((row, i) => (
-                    <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
-                      {row.map((item) => (
-                        <View key={item.id} style={{ flex: 1 }}>
-                          <CampaignCard campaign={item} compact onPress={() => router.push(campaignRouteParams(item) as never)} />
-                        </View>
-                      ))}
-                      {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <FlatList
-                  data={rest}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                  ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-                  renderItem={({ item, index }) => (
+              {/* Re-keying on the view mode remounts the cards, replaying their built-in
+                  staggered FadeInDown — a calm cascade into the new layout instead of a
+                  chaotic full-morph (cards change content AND size between modes). */}
+              <View key={viewMode} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                {rest.map((item, index) => (
+                  <View
+                    key={item.id}
+                    style={{ width: isGrid ? gridItemW : '100%' }}
+                  >
                     <CampaignCard
                       campaign={item}
+                      compact={isGrid}
                       index={index}
                       applyGate={!isApproved ? 'Awaiting approval' : (!profile || !isProfileComplete(profile)) ? 'Complete profile to apply' : undefined}
-                      onPress={() => router.push(campaignRouteParams(item) as never)}
+                      onPress={() => navigateOnce(campaignRouteParams(item) as never)}
                       onApply={async () => {
                         if (!isApproved) {
                           Alert.alert('Awaiting approval', 'Your account is pending review. You\'ll be able to apply once approved.')
@@ -226,9 +215,9 @@ export default function ProjectsPage() {
                         }
                       }}
                     />
-                  )}
-                />
-              )}
+                  </View>
+                ))}
+              </View>
             </>
           ) : null}
         </>

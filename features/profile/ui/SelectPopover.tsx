@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { Option } from '@/features/profile/location-data'
+import { haptic } from '@/features/shared/haptics'
 
 type Props = {
   label: string
@@ -51,7 +52,7 @@ export function SelectPopover({ label, value, options, placeholder, onSelect, se
       ) : null}
 
       <Pressable
-        onPress={() => setOpen(true)}
+        onPress={() => { haptic.selection(); setOpen(true) }}
         style={{
           borderWidth: 1,
           borderColor: palette.borderColor,
@@ -118,6 +119,7 @@ export function SelectPopover({ label, value, options, placeholder, onSelect, se
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => {
+                    haptic.selection()
                     onSelect(item.value)
                     setOpen(false)
                     setQuery('')

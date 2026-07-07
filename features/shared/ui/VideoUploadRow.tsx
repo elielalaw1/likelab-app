@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import * as VideoThumbnails from 'expo-video-thumbnails'
@@ -81,6 +81,9 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
   const [submissionId, setSubmissionId] = useState<string | null>(null)
   const [picked, setPicked] = useState<PickedVideo | null>(null)
   const [thumb, setThumb] = useState<string | null>(null)
+  // Monotonic pick token: thumbnail generation is async and can resolve out of
+  // order, so only the latest pick's poster is allowed to win.
+  const pickSeqRef = useRef(0)
   const { upload, stage, compressionProgress, error } = useUploadVideo()
   const { data: submission, isTimedOut } = useSubmissionStatus(submissionId ?? undefined)
 
@@ -134,12 +137,13 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
     try {
       const result = await pickVideoFromLibrary()
       if (!result) return
+      const mySeq = ++pickSeqRef.current
       setSubmissionId(null)
       setThumb(null)
       setPicked(result)
       // Generate a poster for the preview; non-fatal if it fails (placeholder shows).
       VideoThumbnails.getThumbnailAsync(result.uri, { time: 1000, quality: 0.6 })
-        .then(({ uri }) => setThumb(uri))
+        .then(({ uri }) => { if (pickSeqRef.current === mySeq) setThumb(uri) })
         .catch(() => undefined)
     } catch (pickError) {
       haptic.warning()

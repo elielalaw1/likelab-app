@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import * as Clipboard from 'expo-clipboard'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { AuthInput } from '@/features/auth/components/AuthInput'
 import { signupCreator } from '@/features/auth/api'
 import { setPendingAuth } from '@/lib/pending-auth'
-import { parseReferralCode } from '@/features/referral/logic'
 import { peekPendingReferralCode, setPendingReferralCode } from '@/features/referral/redeem'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { designSignupWordmark } from '@/design/assets'
@@ -16,8 +14,7 @@ import { CountrySelect } from '@/features/profile/ui/CountrySelect'
 import { CATEGORY_OPTIONS, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALITIES, formatCountyLabel } from '@/features/profile/location-data'
 import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
-import { updateCreatorProfile } from '@/features/profile/api'
-import { useMemo } from 'react'
+import { haptic } from '@/features/shared/haptics'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -50,11 +47,11 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
 
 const navButtons = (onBack: () => void, onNext: () => void, nextLabel = 'Next', disabled = false) => (
   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-    <Pressable onPress={onBack} style={{ height: 50, minWidth: 88, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: redesign.color.card }}>
+    <Pressable onPress={() => { haptic.selection(); onBack() }} style={{ height: 50, minWidth: 88, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: redesign.color.card }}>
       <MaterialCommunityIcons name="arrow-left" size={16} color={redesign.color.muted} />
       <Text style={{ fontSize: 15, color: redesign.color.muted, fontWeight: '700', fontFamily: typography.fontFamily }}>Back</Text>
     </Pressable>
-    <Pressable onPress={onNext} disabled={disabled} style={{ height: 50, minWidth: 140, paddingHorizontal: 18, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: disabled ? 0.55 : 1 }}>
+    <Pressable onPress={() => { haptic.medium(); onNext() }} disabled={disabled} style={{ height: 50, minWidth: 140, paddingHorizontal: 18, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: disabled ? 0.55 : 1 }}>
       <Text style={{ fontSize: 15, color: '#fff', fontWeight: '800', fontFamily: typography.fontFamily }}>{nextLabel}</Text>
       <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
     </Pressable>
@@ -63,12 +60,14 @@ const navButtons = (onBack: () => void, onNext: () => void, nextLabel = 'Next', 
 
 export default function SignupPage() {
   const { palette } = useTheme()
+  // verify-otp's "Wrong email? Go back" hands the typed email back so step 1 isn't blank.
+  const { email: emailParam } = useLocalSearchParams<{ email?: string }>()
   const [step, setStep] = useState<Step>(1)
 
   // Step 1 — account
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(typeof emailParam === 'string' ? emailParam : '')
   const [phone, setPhone] = useState('')
   const [instagramHandle, setInstagramHandle] = useState('')
   const [password, setPassword] = useState('')
@@ -79,20 +78,13 @@ export default function SignupPage() {
   // then concatenate into the existing display_name field (no backend change).
   const displayName = `${firstName.trim()} ${lastName.trim()}`.trim()
 
-  // Pre-fill the invite code from a captured deep link, or the clipboard if it
-  // looks like a referral code (best-effort — silently ignored otherwise).
+  // Pre-fill the invite code from the deep link / clipboard code captured at app boot
+  // by ReferralLinkHandler. We deliberately do NOT read the clipboard directly here —
+  // that would trip the iOS paste-permission prompt on every visit to signup (the boot
+  // capture is guarded by hasStringAsync + a once-per-install marker).
   useEffect(() => {
     const pending = peekPendingReferralCode()
-    if (pending) {
-      setInviteCode(pending)
-      return
-    }
-    Clipboard.getStringAsync()
-      .then((clip) => {
-        const parsed = parseReferralCode(clip)
-        if (parsed) setInviteCode(parsed)
-      })
-      .catch(() => {})
+    if (pending) setInviteCode(pending)
   }, [])
 
   // Step 2 — personal
@@ -339,11 +331,11 @@ export default function SignupPage() {
               </Text>
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Pressable onPress={() => setStep(3)} style={{ height: 50, minWidth: 88, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: redesign.color.card }}>
+                <Pressable onPress={() => { haptic.selection(); setStep(3) }} style={{ height: 50, minWidth: 88, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: redesign.color.card }}>
                   <MaterialCommunityIcons name="arrow-left" size={16} color={redesign.color.muted} />
                   <Text style={{ fontSize: 15, color: redesign.color.muted, fontWeight: '700', fontFamily: typography.fontFamily }}>Back</Text>
                 </Pressable>
-                <Pressable onPress={handleCreateAccount} disabled={createLoading} style={{ height: 50, minWidth: 180, paddingHorizontal: 22, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', opacity: createLoading ? 0.55 : 1, flexDirection: 'row' }}>
+                <Pressable onPress={() => { haptic.medium(); handleCreateAccount() }} disabled={createLoading} style={{ height: 50, minWidth: 180, paddingHorizontal: 22, borderRadius: 999, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', opacity: createLoading ? 0.55 : 1, flexDirection: 'row' }}>
                   <Text style={{ fontSize: 15, color: '#fff', fontWeight: '800', fontFamily: typography.fontFamily }}>
                     {createLoading ? 'Creating account…' : 'Create account'}
                   </Text>

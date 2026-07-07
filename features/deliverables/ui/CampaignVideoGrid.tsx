@@ -21,6 +21,7 @@ import { tiktokApiFeaturesEnabled } from '@/features/core/flags'
 import { TikTokVideoPicker } from '@/features/deliverables/ui/TikTokVideoPicker'
 import { SendToTikTokButton } from '@/features/deliverables/ui/SendToTikTokButton'
 import { DeliverablePerformance } from '@/features/deliverables/ui/DeliverablePerformance'
+import { haptic } from '@/features/shared/haptics'
 
 // Session-lived cache of on-device thumbnails, keyed by deliverable id.
 const thumbCache = new Map<string, string>()
@@ -346,7 +347,7 @@ export function CampaignVideoGrid({
   const { width } = useWindowDimensions()
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
-  const { data: myVideos } = useQuery({ queryKey: ['my-videos'], queryFn: getMyVideos, placeholderData: (prev) => prev })
+  const { data: myVideos, isLoading: myVideosLoading } = useQuery({ queryKey: ['my-videos'], queryFn: getMyVideos, placeholderData: (prev) => prev })
   const { data: unreadFeedback } = useUnreadFeedbackCounts()
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -423,7 +424,7 @@ export function CampaignVideoGrid({
                   fullWidth={fullWidth}
                   hasFeedback={(unreadFeedback?.[d.id] ?? 0) > 0}
                   requiresReview={requiresReview}
-                  onPress={() => setOpenId(d.id)}
+                  onPress={() => { haptic.light(); setOpenId(d.id) }}
                 />
               ))}
             </View>
@@ -550,7 +551,7 @@ export function CampaignVideoGrid({
         </KeyboardAvoidingView>
       </Modal>
 
-      {!myVideos ? <ActivityIndicator color={redesign.color.purple} style={{ marginTop: 14 }} /> : null}
+      {!myVideos && myVideosLoading ? <ActivityIndicator color={redesign.color.purple} style={{ marginTop: 14 }} /> : null}
     </View>
   )
 }

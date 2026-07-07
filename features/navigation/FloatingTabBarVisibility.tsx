@@ -70,11 +70,18 @@ export function FloatingTabBarVisibilityProvider({ children }: Props) {
     lastYRef.current = 0
     accumulatedDeltaRef.current = 0
     primeNextRef.current = true
+    targetOffsetRef.current = 0
     // Seed the UI-thread handler too: next worklet event records the (preserved)
     // offset instead of diffing against a stale value.
     accumDelta.value = 0
     primed.value = 1
-  }, [accumDelta, primed])
+    // Reset the header itself to its shown/top state for the newly focused tab —
+    // otherwise it keeps the PREVIOUS tab's collapse/elevation (e.g. stays scrolled
+    // off-screen after switching from a tab that was scrolled down, leaving a blank
+    // band). The primed flag re-seeds the real offset on the new tab's first scroll.
+    headerOffset.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) })
+    scrollY.value = 0
+  }, [accumDelta, primed, headerOffset, scrollY])
 
   const reportScroll = useCallback(
     (rawY: number) => {
@@ -158,11 +165,15 @@ export function useFloatingTabBarVisibility() {
 // worklet, scrollY + headerOffset update every frame regardless of what the JS
 // thread is doing, so the header never stutters. Visibility toggles (which flip
 // React state for the bottom bar) hop back to JS only at the threshold crossings.
-export function useTabScrollHandler() {
+export function useTabScrollHandler(focused?: SharedValue<boolean>) {
   const { scrollY, headerOffset, lastY, accumDelta, primed, setVisible } = useContext(FloatingTabBarVisibilityContext)
   return useAnimatedScrollHandler({
     onScroll: (event) => {
       'worklet'
+      // With lazy:false every tab stays mounted, so an unfocused tab's momentum
+      // scroll would keep driving the shared header/bar state (and steal the primed
+      // flag) after a tab switch. Only the focused tab may move the header.
+      if (focused && !focused.value) return
       const y = Math.max(0, event.contentOffset.y)
       scrollY.value = y
 

@@ -13,6 +13,7 @@ import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBarVisibility'
 import { TAB_HEADER_HEIGHT } from '@/features/navigation/floatingTabBar.constants'
 import { WhatsNewButton } from '@/features/whatsnew/WhatsNewModal'
+import { haptic } from '@/features/shared/haptics'
 
 const topLogo = require('@/assets/images/likelablogonew.png')
 
@@ -61,6 +62,7 @@ export function PersistentTabHeader() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: TAB_HEADER_HEIGHT }}>
           <Pressable
             onPress={() => {
+              haptic.selection()
               router.navigate('/(tabs)/overview')
               scrollEvents.emit('scrollToTop:overview')
             }}
@@ -72,7 +74,7 @@ export function PersistentTabHeader() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <WhatsNewButton />
             <Pressable
-              onPress={() => router.push(onProfile ? '/settings' : '/(tabs)/profile')}
+              onPress={() => { haptic.selection(); router.push(onProfile ? '/settings' : '/(tabs)/profile') }}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={onProfile ? 'Settings' : 'Profile'}

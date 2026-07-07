@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Screen } from '@/features/shared/ui/Screen'
 import { AppHeader } from '@/features/shared/ui/AppHeader'
@@ -35,11 +35,14 @@ function LadderRow({ entry, index }: { entry: TierLadderEntry; index: number }) 
         ...redesign.shadow.card,
       }}
     >
-      <View style={{ opacity: locked ? 0.4 : 1 }}>
+      <Animated.View
+        entering={current ? ZoomIn.springify().damping(10).stiffness(200).delay(260) : undefined}
+        style={{ opacity: locked ? 0.4 : 1 }}
+      >
         <TierRing tier={tier} size={48} radius={16} borderWidth={2.5}>
           <MaterialCommunityIcons name={glyph(tier.emblem)} size={22} color={tier.color} />
         </TierRing>
-      </View>
+      </Animated.View>
 
       <View style={{ flex: 1, gap: 3 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

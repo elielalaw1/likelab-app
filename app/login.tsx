@@ -23,6 +23,7 @@ import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
 import { redesign, typography } from '@/features/core/theme'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { designBackground, designWordmark } from '@/design/assets'
+import { haptic } from '@/features/shared/haptics'
 
 export default function LoginPage() {
   const { session, loading: sessionLoading } = useAuthSession()
@@ -172,12 +173,12 @@ export default function LoginPage() {
                   autoComplete="password"
                   style={{ flex: 1, fontSize: 16, color: redesign.color.ink, fontFamily: showPassword ? typography.fontFamily : undefined }}
                 />
-                <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                <Pressable onPress={() => { haptic.selection(); setShowPassword((v) => !v) }} hitSlop={8}>
                   <MaterialCommunityIcons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={redesign.color.muted} />
                 </Pressable>
               </View>
 
-              <Pressable onPress={() => router.push('/forgot-password')} hitSlop={6}>
+              <Pressable onPress={() => { haptic.selection(); router.push('/forgot-password') }} hitSlop={6}>
                 <Text style={{ color: redesign.color.purple, fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily, textAlign: 'right' }}>
                   Forgot password?
                 </Text>
@@ -200,7 +201,7 @@ export default function LoginPage() {
 
             <View style={{ marginTop: 22, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
               <Text style={{ color: redesign.color.muted, fontSize: 14.5, fontFamily: typography.fontFamily }}>Don&apos;t have an account?</Text>
-              <Pressable onPress={() => router.push('/welcome')} hitSlop={6}>
+              <Pressable onPress={() => { haptic.selection(); router.push('/welcome') }} hitSlop={6}>
                 <Text style={{ color: redesign.color.ink, fontSize: 14.5, fontWeight: '800', fontFamily: typography.fontFamily }}>Sign up</Text>
               </Pressable>
             </View>

@@ -11,13 +11,13 @@ import { Image as ExpoImage } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useCampaigns } from '@/features/campaigns/hooks'
 import { resolveStage, STAGE_UI, type DeliverableStage } from '@/features/deliverables/stage'
-import { getDaysLeft } from '@/features/core/format'
+import { getDaysLeft, isCampaignClosed } from '@/features/core/format'
 import type { Campaign } from '@/features/core/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import Animated, { FadeInDown } from 'react-native-reanimated'
+import Animated, { FadeInDown, LinearTransition, ZoomIn } from 'react-native-reanimated'
 
 // Projects-tab copy per stage. COLORS come from the canonical STAGE_UI (stage.ts)
 // so a stage looks identical here and inside the campaign — the labels stay tuned to
@@ -58,6 +58,9 @@ export default function DeliverablesPage() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['deliverables'] }),
       queryClient.invalidateQueries({ queryKey: ['feedback-unread'] }),
+      // Cards derive stage/deadline/cover from useCampaigns (6h staleTime,
+      // refetchOnMount:false), so refresh it too or those stay stale on pull.
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
     ])
     await refetch()
   }, [queryClient, refetch])
@@ -125,12 +128,15 @@ export default function DeliverablesPage() {
     const ui = STAGE_CARD[c.top]
     const stageColor = STAGE_UI[c.top].color
     const pct = c.total > 0 ? Math.round((c.submitted / c.total) * 100) : 0
+    const closed = c.endDate ? isCampaignClosed(c.endDate) : false
     const days = c.endDate ? getDaysLeft(c.endDate) : null
-    const deadlineLabel = days == null ? null : days <= 0 ? 'Last day' : `${days}d left`
-    const urgent = days != null && days <= 3
+    // getDaysLeft clamps past deadlines to 0, so check closed first — otherwise an
+    // ended campaign shows an urgent red "Last day" forever.
+    const deadlineLabel = closed ? 'Closed' : days == null ? null : days <= 0 ? 'Last day' : `${days}d left`
+    const urgent = !closed && days != null && days <= 3
     const cta = c.actionCount > 1 ? `${ui.cta} · ${c.actionCount} left` : ui.cta
     return (
-      <Animated.View key={c.campaignId} entering={FadeInDown.delay(index * 50).duration(300)}>
+      <Animated.View key={c.campaignId} entering={FadeInDown.delay(index * 50).duration(300)} layout={LinearTransition.springify().damping(18)}>
         <PressableScale onPress={() => openCampaignVideos(c.campaignId)} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: redesign.color.ink, ...redesign.shadow.cta }}>
           {c.cover ? <ExpoImage source={{ uri: c.cover }} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} /> : null}
           <LinearGradient colors={['rgba(11,11,15,0.52)', 'rgba(11,11,15,0.93)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -140,10 +146,10 @@ export default function DeliverablesPage() {
 
           <View style={{ padding: 18, gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingLeft: 8, paddingRight: 11, paddingVertical: 5, backgroundColor: 'rgba(255,255,255,0.16)' }}>
+              <Animated.View key={`stage-${c.top}`} entering={ZoomIn.springify().damping(11).stiffness(220)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingLeft: 8, paddingRight: 11, paddingVertical: 5, backgroundColor: 'rgba(255,255,255,0.16)' }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: stageColor }} />
                 <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '800' }}>{ui.label}</Text>
-              </View>
+              </Animated.View>
               {c.unread > 0 ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(99,80,184,0.42)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
                   <MaterialCommunityIcons name="message-text" size={11} color="#fff" />
@@ -163,7 +169,7 @@ export default function DeliverablesPage() {
 
             <View style={{ gap: 7 }}>
               <View style={{ height: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
-                <View style={{ height: '100%', width: `${Math.max(pct, 3)}%`, borderRadius: 999, backgroundColor: redesign.color.purple }} />
+                <Animated.View layout={LinearTransition.springify().damping(18)} style={{ height: '100%', width: `${Math.max(pct, 3)}%`, borderRadius: 999, backgroundColor: redesign.color.purple }} />
               </View>
               <Text style={{ color: 'rgba(255,255,255,0.65)', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{c.submitted} of {c.total} submitted</Text>
             </View>

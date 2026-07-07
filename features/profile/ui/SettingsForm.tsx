@@ -25,6 +25,7 @@ import { CATEGORY_OPTIONS, COUNTRY_TO_PHONE_CODE, GENDER_OPTIONS, SWEDISH_COUNTI
 import { ProfileCompletionSection, getProfileCompletion } from '@/features/profile/completion'
 import { connectTikTokAccount, disconnectTikTokAccount } from '@/features/auth/tiktok'
 import { replayTutorial } from '@/features/onboarding/tutorialControl'
+import { haptic } from '@/features/shared/haptics'
 
 type SectionId = 'avatar' | 'account' | 'social' | 'personal' | 'location' | 'categories' | 'shipping'
 const stripHandleInput = (value: string) => value.replace(/^@+/, '')
@@ -123,6 +124,11 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         completionPercentage: 0,
         approved: false,
         email: data?.email,
+        // Names aren't editable on this screen, so read them from the loaded
+        // profile — otherwise the checklist's first/last-name items stay unchecked
+        // and the completion card is permanently stuck at ≤80%.
+        firstName: data?.firstName,
+        lastName: data?.lastName,
         displayName: form.displayName,
         phoneCountryCode: form.phoneCountryCode,
         phone: form.phoneDigits.trim() ? `${form.phoneCountryCode}${form.phoneDigits}` : '',
@@ -234,6 +240,9 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
   }
 
   const handleSave = async () => {
+    // Guard against saving the empty initial form before the profile has loaded
+    // (or after a load error) — that would upsert blank values over every field.
+    if (!data) return
     const age = Number(form.ageRange)
     if (form.ageRange.trim() && (!Number.isFinite(age) || age < 15)) {
       Alert.alert('Invalid age', 'Age must be at least 15.')
@@ -378,7 +387,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         <LiquidButton
           label={updateMutation.isPending ? 'Saving…' : 'Save changes'}
           onPress={handleSave}
-          disabled={updateMutation.isPending}
+          disabled={updateMutation.isPending || !data}
           minHeight={52}
         />
       </View>
@@ -454,7 +463,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
       <View onLayout={markSectionY('account')} style={{ gap: 8 }}>
         <SectionHeader>Account</SectionHeader>
         <SectionCard>
-          <Pressable onPress={handlePickAvatar} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Pressable onPress={() => { haptic.selection(); handlePickAvatar() }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: redesign.color.hairlineStrong, backgroundColor: 'rgba(99,80,184,0.08)' }}>
               {form.avatarUrl ? (
                 <Image source={{ uri: form.avatarUrl }} style={{ width: '100%', height: '100%' }} />
@@ -498,7 +507,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
             onChangeText={(value) => setForm((prev) => ({ ...prev, instagramHandle: stripHandleInput(value) }))}
           />
           <Pressable
-            onPress={handleConnectTikTok}
+            onPress={() => { haptic.medium(); handleConnectTikTok() }}
             disabled={connectingTikTok || disconnectingTikTok}
             style={{
               flexDirection: 'row',
@@ -522,7 +531,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
           </Pressable>
           {data?.tiktokConnected ? (
             <Pressable
-              onPress={handleDisconnectTikTok}
+              onPress={() => { haptic.warning(); handleDisconnectTikTok() }}
               disabled={connectingTikTok || disconnectingTikTok}
               style={{
                 flexDirection: 'row',
@@ -711,7 +720,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         <SectionHeader>Help</SectionHeader>
         <SectionCard>
           <Pressable
-            onPress={() => { router.push('/(tabs)/profile'); setTimeout(() => replayTutorial(), 300) }}
+            onPress={() => { haptic.selection(); router.push('/(tabs)/profile'); setTimeout(() => replayTutorial(), 300) }}
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -768,7 +777,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
                 <Text style={{ fontFamily: typography.fontFamily, color: redesign.color.ink }}>Cancel</Text>
               </Pressable>
               <Pressable
-                onPress={handleDeleteAccount}
+                onPress={() => { haptic.warning(); handleDeleteAccount() }}
                 disabled={deleting}
                 style={{
                   paddingHorizontal: 12,

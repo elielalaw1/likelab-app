@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import * as VideoThumbnails from 'expo-video-thumbnails'
@@ -32,6 +32,11 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
   const [phase, setPhase] = useState<Phase>('idle')
   const { upload, stage, compressionProgress } = useUploadVideo()
   const { mutateAsync: submitLink } = useSubmitLink()
+  // Monotonic pick token so an out-of-order thumbnail can't overwrite a newer pick.
+  const pickSeqRef = useRef(0)
+  // Whether the raw file for the current pick already uploaded — so a retry after a
+  // failed link submit doesn't re-upload the whole file and create a duplicate row.
+  const uploadedRef = useRef(false)
 
   const trimmed = url.trim()
   const urlValid = isValidTikTokUrl(trimmed)
@@ -42,10 +47,13 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
     try {
       const result = await pickVideoFromLibrary()
       if (!result) return
+      const mySeq = ++pickSeqRef.current
+      // A new file must be uploaded fresh, even if a previous pick already uploaded.
+      uploadedRef.current = false
       setThumb(null)
       setPicked(result)
       VideoThumbnails.getThumbnailAsync(result.uri, { time: 1000, quality: 0.6 })
-        .then(({ uri }) => setThumb(uri))
+        .then(({ uri }) => { if (pickSeqRef.current === mySeq) setThumb(uri) })
         .catch(() => undefined)
     } catch (pickError) {
       haptic.warning()
@@ -68,18 +76,23 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
 
   const submit = async () => {
     if (!picked || !urlValid) return
-    haptic.medium()
+    // Press haptic comes from LiquidButton.
     setPhase('sending')
     try {
       // Raw file first — stored for the brand. Then the link, which takes it live.
-      await upload({
-        deliverableId,
-        videoUri: picked.uri,
-        fileName: picked.fileName,
-        fileSize: picked.fileSize,
-        mimeType: picked.mimeType,
-        compressionOptions: { quality: 'medium' },
-      })
+      // On a retry after the link step failed, the raw file is already uploaded, so
+      // skip straight to the link instead of re-uploading (which duplicates the row).
+      if (!uploadedRef.current) {
+        await upload({
+          deliverableId,
+          videoUri: picked.uri,
+          fileName: picked.fileName,
+          fileSize: picked.fileSize,
+          mimeType: picked.mimeType,
+          compressionOptions: { quality: 'medium' },
+        })
+        uploadedRef.current = true
+      }
       await submitLink({ deliverableId, url: trimmed })
       haptic.success()
       setPhase('done')

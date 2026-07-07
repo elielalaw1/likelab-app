@@ -3,11 +3,12 @@ import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { useCreatorProfile, useReputation } from '@/features/profile/hooks'
+import { countCompletedDeliverables } from '@/features/profile/reputation'
 import { TierEmblem, TierRow } from '@/features/profile/ui/TierBadge'
 import { useReferral } from '@/features/referral/hooks'
 import { referralMilestone } from '@/features/referral/logic'
 import { ConnectorBadge } from '@/features/referral/ui/ConnectorBadge'
-import { formatCompactCount, stripAtPrefix } from '@/features/auth/api'
+import { stripAtPrefix } from '@/features/auth/api'
 import { AvatarPreviewModal } from '@/features/profile/ui/AvatarPreviewModal'
 import { ProfileCollaborations } from '@/features/profile/ui/ProfileCollaborations'
 import Animated, { FadeInDown } from 'react-native-reanimated'
@@ -25,6 +26,8 @@ import { router } from 'expo-router'
 import { useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { ProfileCoachmarks, type CoachStep } from '@/features/onboarding/ProfileCoachmarks'
+import { AnimatedCounter } from '@/features/shared/ui/AnimatedCounter'
+import { haptic } from '@/features/shared/haptics'
 
 const FAINT_LABEL = {
   fontFamily: typography.fontFamily,
@@ -53,7 +56,7 @@ function SocialPill({ iconNode, handle, gradient, onPress }: { iconNode: ReactNo
     </View>
   )
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={{ borderRadius: 999, overflow: 'hidden' }}>
+    <Pressable onPress={onPress ? () => { haptic.light(); onPress() } : undefined} disabled={!onPress} style={{ borderRadius: 999, overflow: 'hidden' }}>
       {gradient ? (
         <LinearGradient colors={['#6350B8', '#6350B8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           {inner}
@@ -109,7 +112,9 @@ export function ProfileOverview() {
     return {
       activeCampaignsCount: applications.filter((item) => item.status === 'accepted').length,
       applicationsCount: applications.length,
-      deliverablesCount: (deliverables || []).length,
+      // "Delivered" = work that's actually done (approved/published), not every
+      // assigned slot — a fresh acceptance creates 'pending' rows that aren't delivered.
+      deliverablesCount: countCompletedDeliverables(deliverables),
     }
   }, [applicationsData?.applications, deliverables])
 
@@ -127,9 +132,9 @@ export function ProfileOverview() {
   const location = [profile?.city, profile?.country].filter(Boolean).join(', ')
   const niches = [profile?.primaryCategory, profile?.secondaryCategory].filter(Boolean) as string[]
   const audience = [
-    { label: 'Followers', value: formatCompactCount(profile?.tiktokFollowers) || '0' },
-    { label: 'Likes', value: formatCompactCount(profile?.tiktokLikes) || '0' },
-    { label: 'Views', value: formatCompactCount(profile?.tiktokViews) || '0' },
+    { label: 'Followers', value: Number(profile?.tiktokFollowers ?? 0) || 0 },
+    { label: 'Likes', value: Number(profile?.tiktokLikes ?? 0) || 0 },
+    { label: 'Views', value: Number(profile?.tiktokViews ?? 0) || 0 },
   ]
 
   // Coachmark tour plumbing — refs to the real elements + their scroll offsets.
@@ -144,7 +149,7 @@ export function ProfileOverview() {
   const coachSteps: CoachStep[] = [
     { key: 'tier', viewRef: tierRef, title: 'Your creator level', body: 'Complete campaigns to climb the ladder — each delivered video moves you up and unlocks a new emblem. Tap to see all levels.' },
     { key: 'videos', viewRef: videosRef, title: 'My videos', body: 'Every video you post for a campaign lands here — your living portfolio.' },
-    { key: 'insights', viewRef: insightsRef, title: 'Insights', body: 'Track your views, likes and leaderboard ranking across all your campaigns.' },
+    { key: 'insights', viewRef: insightsRef, title: 'Insights', body: 'Track your views and likes across all your campaigns.' },
     { key: 'invite', viewRef: inviteRef, title: 'Invite friends', body: 'Share your code with other creators. When 3 join, you earn the Connector badge.' },
     { key: 'contact', viewRef: contactRef, title: 'We’re here to help', body: 'Questions? Reach the LikeLab team any time from Contact Us.' },
   ]
@@ -175,7 +180,7 @@ export function ProfileOverview() {
         <>
           {/* Identity — editorial */}
           <Animated.View entering={FadeInDown.duration(320)} style={{ alignItems: 'center', paddingTop: 2 }}>
-            <Pressable onPress={() => setAvatarOpen(true)}>
+            <Pressable onPress={() => { haptic.light(); setAvatarOpen(true) }}>
               <View>
                 <LinearGradient
                   colors={tierProgress.tier.ring}
@@ -252,7 +257,11 @@ export function ProfileOverview() {
           <View style={{ flexDirection: 'row', marginTop: 6, paddingVertical: 18, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong }}>
             {audience.map((stat, i) => (
               <View key={stat.label} style={{ flex: 1, alignItems: 'center', gap: 3, borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderLeftColor: redesign.color.hairlineStrong }}>
-                <Text style={{ fontFamily: typography.fontFamily, fontSize: 23, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.5, fontVariant: ['tabular-nums'] }}>{stat.value}</Text>
+                <AnimatedCounter
+                  value={stat.value}
+                  delay={120 + i * 90}
+                  style={{ fontFamily: typography.fontFamily, fontSize: 23, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.5, fontVariant: ['tabular-nums'], padding: 0, minWidth: 30, textAlign: 'center' }}
+                />
                 <Text style={FAINT_LABEL}>{stat.label}</Text>
               </View>
             ))}
@@ -280,8 +289,13 @@ export function ProfileOverview() {
                 { label: 'Applied', value: stats.applicationsCount, onPress: () => router.push('/applications') },
                 { label: 'Delivered', value: stats.deliverablesCount, onPress: () => router.push('/(tabs)/deliverables') },
               ].map((s, i) => (
-                <Pressable key={s.label} onPress={s.onPress} style={{ flex: 1, alignItems: 'center', gap: 3, borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderLeftColor: redesign.color.hairlineStrong }}>
-                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '900', color: redesign.color.ink, letterSpacing: -0.5, fontVariant: ['tabular-nums'] }}>{s.value}</Text>
+                <Pressable key={s.label} onPress={() => { haptic.selection(); s.onPress() }} style={{ flex: 1, alignItems: 'center', gap: 3, borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderLeftColor: redesign.color.hairlineStrong }}>
+                  <AnimatedCounter
+                    value={s.value}
+                    delay={200 + i * 90}
+                    duration={800}
+                    style={{ fontFamily: typography.fontFamily, fontSize: 20, fontWeight: '900', color: redesign.color.ink, letterSpacing: -0.5, fontVariant: ['tabular-nums'], padding: 0, minWidth: 22, textAlign: 'center' }}
+                  />
                   <Text style={FAINT_LABEL}>{s.label}</Text>
                 </Pressable>
               ))}
@@ -291,7 +305,7 @@ export function ProfileOverview() {
           {/* Insights entry — campaign performance (views/likes/rank) */}
           <View ref={insightsRef} onLayout={onLayoutY('insights')}>
           <Pressable
-            onPress={() => router.push('/insights')}
+            onPress={() => { haptic.selection(); router.push('/insights') }}
             accessibilityRole="button"
             accessibilityLabel="View insights"
             style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14 }}
@@ -310,7 +324,7 @@ export function ProfileOverview() {
           {/* Invite friends entry — referral loop */}
           <View ref={inviteRef} onLayout={onLayoutY('invite')}>
           <Pressable
-            onPress={() => router.push('/invite')}
+            onPress={() => { haptic.selection(); router.push('/invite') }}
             accessibilityRole="button"
             accessibilityLabel="Invite friends"
             style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 16, paddingVertical: 14 }}
@@ -360,7 +374,7 @@ export function ProfileOverview() {
       <GlassCard radius={radii.card} style={{ marginTop: 8 }}>
         <View>
         <Pressable
-          onPress={() => setContactOpen((v) => !v)}
+          onPress={() => { haptic.selection(); setContactOpen((v) => !v) }}
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}
         >
           <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '700' }}>
