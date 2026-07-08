@@ -176,14 +176,30 @@ export async function uploadVideo(params: {
 
   if (error) throw new Error(error.message)
 
-  const failStuckSubmission = (invokeError: unknown) => {
+  const failStuckSubmission = async (invokeError: unknown) => {
     console.warn('[uploadVideo] process-video-upload failed:', invokeError)
+    // Pull the REAL reason out of the edge function response — invoke's generic
+    // "non-2xx" message hides it, which made server-side failures undebuggable.
+    let detail = ''
+    if (invokeError instanceof FunctionsHttpError) {
+      try {
+        const parsed = (await invokeError.context.json()) as { error?: string; message?: string } | null
+        detail = parsed?.error || parsed?.message || ''
+      } catch {}
+    } else if (invokeError instanceof Error) {
+      detail = invokeError.message
+    }
     // The processor never started — don't leave the row stuck on 'uploading'
     // forever (the client poller would spin every few seconds indefinitely).
     // Flip it to 'failed' so the UI can show an error and offer a retry.
     void supabase
       .from('deliverable_submissions')
-      .update({ status: 'failed', error_message: 'Could not start video processing. Please try uploading again.' })
+      .update({
+        status: 'failed',
+        error_message: detail
+          ? `Video processing failed: ${detail}`
+          : 'Could not start video processing. Please try uploading again.',
+      })
       .eq('id', data.id)
       .then(undefined, () => {})
   }
