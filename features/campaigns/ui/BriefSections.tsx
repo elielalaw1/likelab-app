@@ -22,6 +22,13 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 // no CPM rates. Creators see what they do and what they receive, never amounts.
 
 
+// Brands paste product links without a scheme ("mystore.com/x") — openURL
+// rejects those outright. Normalize, and let callers await success.
+export function openExternalUrl(raw: string): Promise<void> {
+  const url = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`
+  return Linking.openURL(url)
+}
+
 const BODY_TEXT = { fontSize: 14.5, color: redesign.color.ink, lineHeight: 22, fontWeight: '500' as const, fontFamily: typography.fontFamily }
 const MICRO_LABEL = { fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '800' as const, color: redesign.color.faint, letterSpacing: 1.1, textTransform: 'uppercase' as const }
 
@@ -128,7 +135,7 @@ export function ProductBody({ campaign }: { campaign: Campaign }) {
       ) : null}
       {productUrl ? (
         <Pressable
-          onPress={() => { haptic.selection(); Linking.openURL(productUrl).catch(() => undefined) }}
+          onPress={() => { haptic.selection(); openExternalUrl(productUrl).catch(() => undefined) }}
           accessibilityRole="button"
           accessibilityLabel="View product"
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 48, borderRadius: 999, backgroundColor: redesign.color.ink }}

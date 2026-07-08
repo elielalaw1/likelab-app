@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
@@ -19,7 +19,7 @@ import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { ApplyInfoSheet } from '@/features/campaigns/ui/ApplyInfoSheet'
 import { HoldToApplyButton } from '@/features/campaigns/ui/HoldToApplyButton'
 import { TermsSheet } from '@/features/campaigns/ui/TermsSheet'
-import { AD_STYLES, BriefAccordion, BriefDocument, type BriefDocSection, type BriefStep, BriefWalkthrough, CampaignGlance, DosDontsBody, ExpandableText, type GlanceRow, ProductBody } from '@/features/campaigns/ui/BriefSections'
+import { AD_STYLES, BriefAccordion, BriefDocument, type BriefDocSection, type BriefStep, BriefWalkthrough, CampaignGlance, DosDontsBody, ExpandableText, type GlanceRow, ProductBody, openExternalUrl } from '@/features/campaigns/ui/BriefSections'
 import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/features/campaigns/hooks'
 import { isProfileComplete } from '@/features/profile/api'
@@ -114,7 +114,9 @@ export default function CampaignDetailPage() {
     if (briefIntroCheckedRef.current || !campaignId) return
     if (campaign?.creatorApplicationStatus !== 'accepted') return
     briefIntroCheckedRef.current = true
-    const key = `brief_intro_seen:${campaignId}`
+    // NOTE: SecureStore keys only allow [A-Za-z0-9._-] — a ':' here made every
+    // call reject silently and the walkthrough never auto-opened.
+    const key = `brief_intro_seen_${campaignId}`
     SecureStore.getItemAsync(key)
       .then((seen) => {
         if (seen) return
@@ -214,7 +216,7 @@ export default function CampaignDetailPage() {
             {campaign.briefGuidelines ? <ExpandableText text={campaign.briefGuidelines} /> : null}
             {campaign.productUrl ? (
               <Pressable
-                onPress={() => { haptic.selection(); Linking.openURL(campaign.productUrl!).catch(() => undefined) }}
+                onPress={() => { haptic.selection(); openExternalUrl(campaign.productUrl!).catch(() => undefined) }}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
               >
                 <Text style={{ fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '800', color: redesign.color.purple }}>View the product</Text>
@@ -242,7 +244,7 @@ export default function CampaignDetailPage() {
             {(campaign.exampleLinks || []).map((link, i) => (
               <Pressable
                 key={link}
-                onPress={() => { haptic.selection(); Linking.openURL(link).catch(() => undefined) }}
+                onPress={() => { haptic.selection(); openExternalUrl(link).catch(() => undefined) }}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
               >
                 <Text style={{ fontFamily: typography.fontFamily, fontSize: 13.5, fontWeight: '800', color: redesign.color.purple }}>

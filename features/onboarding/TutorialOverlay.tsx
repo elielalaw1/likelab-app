@@ -16,7 +16,10 @@ import { startProfileTour } from '@/features/onboarding/profileTourControl'
 import { ProjectCardPreview } from '@/features/shared/ui/ProjectCardPreview'
 import { router } from 'expo-router'
 
-const SEEN_PREFIX = 'tutorial_seen_approval:'
+// SecureStore keys only allow [A-Za-z0-9._-] — the old ':' suffix made every
+// call reject silently (the tutorial only ever fired via the live status
+// transition, never via the seen-flag path).
+const SEEN_PREFIX = 'tutorial_seen_approval_'
 
 // ─── Mini mock-ups of the real app, each with an arrow pointing at the action ──
 
