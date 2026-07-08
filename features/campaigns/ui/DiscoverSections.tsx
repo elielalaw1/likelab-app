@@ -7,7 +7,7 @@ import { redesign, typography } from '@/features/core/theme'
 import { Campaign } from '@/features/core/types'
 import { formatRewardType, getDaysLeft, isCampaignClosed } from '@/features/core/format'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
-import { TierBorder } from '@/features/shared/ui/TierBorder'
+import { TierBorder, campaignVisualTier } from '@/features/shared/ui/TierBorder'
 import { TiltShimmer } from '@/features/shared/ui/TiltShimmer'
 import { haptic } from '@/features/shared/haptics'
 
@@ -37,7 +37,7 @@ export function FeaturedCampaign({ campaign, onPress }: { campaign: Campaign; on
   const dl = deadline(campaign)
   return (
     <Animated.View entering={FadeInDown.duration(320)}>
-      <TierBorder tier={campaign.campaignTier} radius={24}>
+      <TierBorder tier={campaignVisualTier(campaign)} radius={24}>
         <Pressable
           onPress={() => { haptic.light(); onPress() }}
           accessibilityRole="button"

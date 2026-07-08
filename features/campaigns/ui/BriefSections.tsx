@@ -112,9 +112,12 @@ export function DosDontsBody({ campaign }: { campaign: Campaign }) {
 
 export function ProductBody({ campaign }: { campaign: Campaign }) {
   const { productDescription, productUrl, productAmount } = campaign
+  // V2 partner campaigns describe the product in bonus_rewards_description;
+  // product_description is only written by the legacy wizard.
+  const text = productDescription || (campaign.campaignLevel === 'partner' ? campaign.bonusRewardsDescription : null)
   return (
     <View style={{ gap: 12 }}>
-      {productDescription ? <ExpandableText text={productDescription} /> : null}
+      {text ? <ExpandableText text={text} /> : null}
       {productAmount ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: redesign.color.bg }}>
           <MaterialCommunityIcons name="cube-outline" size={13} color={redesign.color.muted} />

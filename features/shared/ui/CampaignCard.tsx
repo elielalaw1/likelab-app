@@ -11,7 +11,7 @@ import { BrandSheet } from '@/features/shared/ui/BrandSheet'
 import { useTheme } from '@/features/core/useTheme'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { PressableScale } from '@/features/shared/ui/PressableScale'
-import { TierBorder, TierCoin } from '@/features/shared/ui/TierBorder'
+import { TierBorder, TierCoin, campaignVisualTier } from '@/features/shared/ui/TierBorder'
 import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, cancelAnimation } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 
@@ -159,8 +159,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
     </Pressable>
   )
 
-  const tier = campaign.campaignTier
-  const tiered2 = tier === 'gold' || tier === 'partner' ? tier : null
+  const tiered2 = campaignVisualTier(campaign)
 
   const content = compact ? (
     <View
@@ -393,7 +392,7 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
   const tiered = compact ? (
     content
   ) : (
-    <TierBorder tier={campaign.campaignTier} radius={redesign.radius.card}>
+    <TierBorder tier={tiered2} radius={redesign.radius.card}>
       {content}
     </TierBorder>
   )

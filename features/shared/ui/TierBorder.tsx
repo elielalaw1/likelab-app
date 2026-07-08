@@ -35,12 +35,25 @@ const SEAL_COPY: Record<'gold' | 'partner', { title: string; body: string }> = {
   partner: { title: 'Partner campaign', body: 'An official LikeLab partner brand — the highest tier of collab on the platform.' },
 }
 
+// The frame signals the campaign's PRESTIGE (its level: gold/partner), not its
+// review flow. In V2 a Gold-level campaign may run the direct 'standard' tier —
+// it still gets the gold frame. Falls back to campaign_tier for legacy rows
+// (and the TEMP tier-preview flag) where level is null.
+export function campaignVisualTier(c: Pick<Campaign, 'campaignLevel' | 'campaignTier'>): 'gold' | 'partner' | null {
+  if (c.campaignLevel === 'partner') return 'partner'
+  if (c.campaignLevel === 'gold') return 'gold'
+  if (c.campaignLevel) return null // bronze/silver/cpm — never framed
+  if (c.campaignTier === 'partner') return 'partner'
+  if (c.campaignTier === 'gold') return 'gold'
+  return null
+}
+
 export function TierBorder({
   tier,
   radius,
   children,
 }: {
-  tier: Campaign['campaignTier'] | undefined
+  tier: 'gold' | 'partner' | null | undefined
   /** Corner radius of the wrapped card — the ring hugs it at radius + border width. */
   radius: number
   children: ReactNode

@@ -227,7 +227,8 @@ async function getCampaignAssets(campaignIds: string[]) {
   // (step 4) BEFORE the cover (step 6), so raw created_at order would put a
   // product shot as the hero frame.
   type Slot = { direct?: string; path?: string; rank: number }
-  const TYPE_RANK: Record<string, number> = { cover: 0, reward_image: 1 }
+  // V2 wizard stores the hero as type='image'; legacy rows used 'cover'.
+  const TYPE_RANK: Record<string, number> = { image: 0, cover: 0, reward_image: 1 }
   const slotsByCampaign = new Map<string, Slot[]>()
   const toSign: string[] = []
 
