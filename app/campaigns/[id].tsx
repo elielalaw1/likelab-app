@@ -661,7 +661,7 @@ export default function CampaignDetailPage() {
             />
             {([
               { key: 'brief', icon: 'file-document-outline', label: 'Brief' },
-              { key: 'videos', icon: 'video-outline', label: `Videos ${visibleDeliverables.length}/${campaign.requiredVideos ?? 0}` },
+              { key: 'videos', icon: 'video-outline', label: campaign.requiredVideos ? `Videos ${visibleDeliverables.length}/${campaign.requiredVideos}` : `Videos · ${visibleDeliverables.length}` },
             ] as const).map((tab) => (
               <Pressable
                 key={tab.key}
@@ -708,12 +708,16 @@ export default function CampaignDetailPage() {
                     glanceRows.push({ label: 'You make', icon: 'video-outline', value: `${campaign.requiredVideos} TikTok ${campaign.requiredVideos === 1 ? 'video' : 'videos'}` })
                   }
                 }
-                glanceRows.push({
-                  label: 'Deadline',
-                  icon: urgent ? 'clock-alert-outline' : 'clock-outline',
-                  urgent,
-                  value: closed ? 'Closed' : daysLeft == null ? 'Open now' : daysLeft === 0 ? 'Last day' : `${daysLeft} days left`,
-                })
+                // V2 campaigns have no end_date (yet) — skip the row instead of an
+                // eternal "Open now".
+                if (campaign.endDate) {
+                  glanceRows.push({
+                    label: 'Deadline',
+                    icon: urgent ? 'clock-alert-outline' : 'clock-outline',
+                    urgent,
+                    value: closed ? 'Closed' : daysLeft == null ? 'Open now' : daysLeft === 0 ? 'Last day' : `${daysLeft} days left`,
+                  })
+                }
                 return <CampaignGlance rows={glanceRows} />
               })()}
 
