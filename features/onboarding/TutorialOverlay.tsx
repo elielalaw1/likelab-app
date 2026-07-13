@@ -19,7 +19,7 @@ import { router } from 'expo-router'
 // SecureStore keys only allow [A-Za-z0-9._-] — the old ':' suffix made every
 // call reject silently (the tutorial only ever fired via the live status
 // transition, never via the seen-flag path).
-const SEEN_PREFIX = 'tutorial_seen_approval_'
+export const SEEN_PREFIX = 'tutorial_seen_approval_'
 
 // ─── Mini mock-ups of the real app, each with an arrow pointing at the action ──
 

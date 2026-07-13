@@ -34,7 +34,10 @@ export type ReferralStats = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Remembers the last real backend code we saw this session, so a transient error
 // (network drop / 5xx) doesn't flash the non-redeemable local fallback in its place.
-let _lastBackendCode: string | null = null
+// Scoped to the user it belongs to: a logout→login within the same JS process does
+// NOT restart the module, so an un-scoped cache would serve one creator's code to the
+// next on a transient read error and misattribute their invitees.
+let _lastBackend: { userId: string; code: string } | null = null
 
 export async function getReferralStats(): Promise<ReferralStats> {
   const userId = await getCurrentUserId()
@@ -48,11 +51,12 @@ export async function getReferralStats(): Promise<ReferralStats> {
     if (!error && data && typeof data.referral_code === 'string' && data.referral_code) {
       code = data.referral_code
       hasBackendCode = true
-      _lastBackendCode = data.referral_code
-    } else if (error && _lastBackendCode) {
-      // A transient failure AFTER we already knew the real code — keep showing it
-      // rather than downgrading to the local fallback a friend can't redeem.
-      code = _lastBackendCode
+      _lastBackend = { userId, code: data.referral_code }
+    } else if (error && _lastBackend?.userId === userId) {
+      // A transient failure AFTER we already knew THIS user's real code — keep
+      // showing it rather than downgrading to the local fallback a friend can't
+      // redeem. Gated on userId so we never serve another creator's cached code.
+      code = _lastBackend.code
       hasBackendCode = true
     }
   } catch {

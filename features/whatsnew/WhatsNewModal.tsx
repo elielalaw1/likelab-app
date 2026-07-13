@@ -10,7 +10,9 @@ import { redesign, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
 import * as Haptics from 'expo-haptics'
+import * as SecureStore from 'expo-secure-store'
 import { WHATS_NEW, hasSeenWhatsNew, markWhatsNewSeen } from '@/features/whatsnew/whatsNew'
+import { SEEN_PREFIX as TUTORIAL_SEEN_PREFIX } from '@/features/onboarding/TutorialOverlay'
 import { ElectricBorder } from '@/features/shared/ui/ElectricBorder'
 import { ProjectCardPreview } from '@/features/shared/ui/ProjectCardPreview'
 import { TierCoin } from '@/features/shared/ui/TierBorder'
@@ -498,15 +500,24 @@ export function WhatsNewHost() {
   }, [])
 
   useEffect(() => {
-    if (!WHATS_NEW.enabled || profile?.approved !== true) return
+    if (!WHATS_NEW.enabled || profile?.approved !== true || !profile?.id) return
     let active = true
-    hasSeenWhatsNew().then((seen) => {
-      if (active && !seen) setOpen(true)
+    // Only auto-open for RETURNING creators — those who have already completed the
+    // onboarding tutorial (its per-user seen flag is set). A creator who was just
+    // approved for the first time has that flag unset; auto-opening here would race
+    // the 500ms-deferred TutorialOverlay Modal and, since iOS presents one modal at
+    // a time, silently drop the one-time onboarding tutorial. The corner CTA still
+    // lets any creator open this announcement manually.
+    Promise.all([
+      hasSeenWhatsNew(),
+      SecureStore.getItemAsync(`${TUTORIAL_SEEN_PREFIX}${profile.id}`),
+    ]).then(([seenWhatsNew, tutorialSeen]) => {
+      if (active && !seenWhatsNew && tutorialSeen) setOpen(true)
     })
     return () => {
       active = false
     }
-  }, [profile?.approved])
+  }, [profile?.approved, profile?.id])
 
   const close = () => {
     setOpen(false)

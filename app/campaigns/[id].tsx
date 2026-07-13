@@ -25,7 +25,7 @@ import { useApplyToCampaign, useCampaign, useCampaignDeliverables } from '@/feat
 import { isProfileComplete } from '@/features/profile/api'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { CampaignVideoGrid } from '@/features/deliverables/ui/CampaignVideoGrid'
-import { deliverableStage, STAGE_UI } from '@/features/deliverables/stage'
+import { resolveStage, STAGE_UI } from '@/features/deliverables/stage'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
@@ -789,7 +789,10 @@ export default function CampaignDetailPage() {
 
               {visibleDeliverables.length > 0 ? (() => {
                 const total = visibleDeliverables.length
-                const stages = visibleDeliverables.map(deliverableStage)
+                // Tier-aware, matching the grid below: standard/direct-delivery
+                // campaigns collapse to a single "deliver" (post on TikTok) step, so
+                // the progress card must not show review-flow "Upload" copy for them.
+                const stages = visibleDeliverables.map((d) => resolveStage(d, campaign?.requiresReview ?? true))
                 const submitted = stages.filter((s) => s === 'under_review' || s === 'submit_link' || s === 'live').length
                 const pct = total > 0 ? Math.round((submitted / total) * 100) : 0
                 const nextIdx = stages.findIndex((s) => STAGE_UI[s].actionable)

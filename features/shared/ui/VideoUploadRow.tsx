@@ -121,7 +121,16 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
   const isBusy =
     !isFailed &&
     !isDone &&
-    (stage === 'compressing' || stage === 'uploading' || stage === 'processing')
+    (stage === 'compressing' ||
+      stage === 'uploading' ||
+      stage === 'processing' ||
+      // A remount adopts an in-flight submission (recovery effect above) but the
+      // fresh useUploadVideo() hook resets local `stage` to 'idle'. Without folding
+      // the recovered serverStatus in, the row would render the "Choose your video"
+      // dropzone over an actively-processing upload and a second pick would fire a
+      // duplicate upload — the exact case the recovery effect exists to prevent.
+      serverStatus === 'uploading' ||
+      serverStatus === 'processing')
 
   // Gentle breathing glow used on the invite + the send CTA so an actionable
   // state quietly draws the eye without any decorative gradient.

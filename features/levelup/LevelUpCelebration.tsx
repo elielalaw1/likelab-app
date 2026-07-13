@@ -67,32 +67,47 @@ export function LevelUpHost() {
   })
   const level = data?.level ?? 1
   const [celebrateTier, setCelebrateTier] = useState<Tier | null>(null)
-  const busy = useRef(false)
+  // The last level we've reconciled against, held in a ref so comparison is
+  // synchronous. The SecureStore baseline is read ONCE on mount; after that every
+  // level change is compared against this ref with no async window. The old
+  // busy-guard approach could drop a level change that landed while the async
+  // read was in flight (early-return never re-queued once busy cleared), which
+  // permanently swallowed a real level-up and could even leave the baseline unset.
+  const baseline = useRef<number | null>(null)
+  const [baselineLoaded, setBaselineLoaded] = useState(false)
 
+  // Load the persisted baseline exactly once.
   useEffect(() => {
-    if (!isFetched || !data || busy.current) return
-    busy.current = true
     let active = true
-    getLastCelebratedLevel()
-      .then((last) => {
-        if (!active) return
-        if (last == null) {
-          void setLastCelebratedLevel(level) // baseline — no celebration on first ever load
-        } else if (level > last) {
-          void setLastCelebratedLevel(level)
-          haptic.success()
-          setCelebrateTier(TIERS[Math.min(TIERS.length, Math.max(1, level)) - 1])
-        } else if (level !== last) {
-          void setLastCelebratedLevel(level)
-        }
-      })
-      .finally(() => {
-        busy.current = false
-      })
+    getLastCelebratedLevel().then((last) => {
+      if (!active) return
+      baseline.current = last
+      setBaselineLoaded(true)
+    })
     return () => {
       active = false
     }
-  }, [isFetched, level, data])
+  }, [])
+
+  // Reconcile the live level against the baseline synchronously on every change.
+  useEffect(() => {
+    if (!baselineLoaded || !isFetched || !data) return
+    const last = baseline.current
+    if (last == null) {
+      // First ever value — just set the baseline, never celebrate.
+      baseline.current = level
+      void setLastCelebratedLevel(level)
+    } else if (level > last) {
+      baseline.current = level
+      void setLastCelebratedLevel(level)
+      haptic.success()
+      setCelebrateTier(TIERS[Math.min(TIERS.length, Math.max(1, level)) - 1])
+    } else if (level !== last) {
+      // Level went down (correction/rollback) — resync without celebrating.
+      baseline.current = level
+      void setLastCelebratedLevel(level)
+    }
+  }, [baselineLoaded, isFetched, level, data])
 
   if (!celebrateTier) return null
   return <CelebrationModal tier={celebrateTier} onClose={() => setCelebrateTier(null)} />
