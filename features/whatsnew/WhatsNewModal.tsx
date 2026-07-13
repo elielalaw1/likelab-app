@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics'
 import * as SecureStore from 'expo-secure-store'
 import { WHATS_NEW, hasSeenWhatsNew, markWhatsNewSeen } from '@/features/whatsnew/whatsNew'
 import { SEEN_PREFIX as TUTORIAL_SEEN_PREFIX } from '@/features/onboarding/TutorialOverlay'
+import { useCelebrationSlot } from '@/features/shared/celebrationSlot'
 import { ElectricBorder } from '@/features/shared/ui/ElectricBorder'
 import { ProjectCardPreview } from '@/features/shared/ui/ProjectCardPreview'
 import { TierCoin } from '@/features/shared/ui/TierBorder'
@@ -524,6 +525,11 @@ export function WhatsNewHost() {
     void markWhatsNewSeen()
   }
 
+  // Share the single iOS modal slot with the celebration hosts. Held only while open,
+  // so the manual corner CTA still opens it (queuing behind a live celebration if one
+  // is up); markWhatsNewSeen only runs on an actual close, never while queued.
+  const active = useCelebrationSlot('whatsnew', open)
+
   if (!WHATS_NEW.enabled) return null
-  return <WhatsNewModal visible={open} onClose={close} />
+  return <WhatsNewModal visible={open && active} onClose={close} />
 }

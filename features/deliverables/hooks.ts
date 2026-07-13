@@ -83,15 +83,23 @@ export function useLatestSubmission(deliverableId?: string) {
   })
 }
 
-export function useSubmitLink() {
+// refreshList (default true): invalidate the deliverables list so the UI re-buckets to
+// the new 'live' stage — this is how LinkSubmitRow (review flow) surfaces success.
+// The direct-delivery CombinedDeliveryRow passes false: it shows its OWN in-row "You're
+// live" celebration and would be unmounted mid-animation if the list refresh flipped its
+// parent's stage from 'deliver' to 'live'. It defers the refresh to closeSheet instead.
+export function useSubmitLink(options?: { refreshList?: boolean }) {
   const queryClient = useQueryClient()
+  const refreshList = options?.refreshList ?? true
 
   return useMutation({
     mutationFn: submitLink,
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['deliverables'] })
-      queryClient.invalidateQueries({ queryKey: ['deliverables', 'campaign'] })
       queryClient.invalidateQueries({ queryKey: ['latest-submission', variables.deliverableId] })
+      if (refreshList) {
+        queryClient.invalidateQueries({ queryKey: ['deliverables'] })
+        queryClient.invalidateQueries({ queryKey: ['deliverables', 'campaign'] })
+      }
     },
   })
 }

@@ -37,3 +37,45 @@ export async function setCelebratedLiveIds(ids: string[]): Promise<void> {
     // non-fatal
   }
 }
+
+// ─── In-memory session view ────────────────────────────────────────────────────
+// The persisted set above is hydrated ONCE into this module-level mirror, which then
+// becomes the session source of truth. LiveCelebrationHost reconciles the live set
+// against it SYNCHRONOUSLY (no per-change async SecureStore read), which removes the
+// race where a second deliverables update during an in-flight read dropped a real
+// "You're live" moment. Other flows (the direct-delivery in-row celebration) can also
+// pre-mark an id here so the global host never double-celebrates a video that already
+// had its own in-row moment.
+//   null  → baseline not established yet; the host seeds it silently (celebrates nothing)
+//   Set   → the ids already celebrated this + prior sessions
+let _seen: Set<string> | null = null
+let _hydrated = false
+
+// Load the persisted baseline into memory exactly once.
+export async function hydrateCelebratedLiveIds(): Promise<void> {
+  if (_hydrated) return
+  const ids = await getCelebratedLiveIds()
+  _seen = ids == null ? null : new Set(ids)
+  _hydrated = true
+}
+
+// Current in-memory baseline (null until the host's first reconcile seeds it).
+export function getSeenLiveIds(): Set<string> | null {
+  return _seen
+}
+
+// Replace the whole set — memory + storage. Called by the host after each reconcile.
+export function commitCelebratedLiveIds(ids: string[]): void {
+  _seen = new Set(ids)
+  void setCelebratedLiveIds(ids)
+}
+
+// Mark one id as already celebrated without disturbing the baseline. Used by the
+// direct-delivery in-row celebration so the global "You're live" host skips it. If the
+// baseline isn't established yet (_seen == null) we do nothing: the host will seed its
+// baseline silently on its next reconcile, which already covers this id.
+export function markLiveCelebrated(id: string): void {
+  if (_seen == null || _seen.has(id)) return
+  _seen.add(id)
+  void setCelebratedLiveIds(Array.from(_seen))
+}

@@ -73,7 +73,14 @@ export function isCampaignClosed(endDate?: string | null): boolean {
   if (!endDate) return false
   const end = new Date(endDate)
   if (Number.isNaN(end.getTime())) return false
-  return end.getTime() < Date.now()
+  // A date-only value ("YYYY-MM-DD") parses to UTC midnight, which would read as Closed
+  // for the ENTIRE final day while getDaysLeft still shows "Last day" (0 days left) —
+  // gating Apply a day early (from ~01:00-02:00 local for the sv-SE audience, or the day
+  // before for negative-UTC users). Treat it as ending at the end of that UTC day so the
+  // two stay consistent; full timestamps keep their exact instant.
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(endDate.trim())
+  const endMs = isDateOnly ? end.getTime() + 24 * 60 * 60 * 1000 : end.getTime()
+  return endMs < Date.now()
 }
 
 const COUNTRY_NAME_TO_CODE: Record<string, string> = {

@@ -9,6 +9,7 @@ import { radii, redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
 import { MediaPermissionError, PickedVideo, pickVideoFromLibrary } from '@/lib/video-picker'
 import { useSubmitLink, useUploadVideo } from '@/features/deliverables/hooks'
+import { markLiveCelebrated } from '@/features/deliverables/liveCelebration'
 import { isValidTikTokUrl } from '@/lib/validate-tiktok-url'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
@@ -31,7 +32,10 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
   const [url, setUrl] = useState('')
   const [phase, setPhase] = useState<Phase>('idle')
   const { upload, stage, compressionProgress } = useUploadVideo()
-  const { mutateAsync: submitLink } = useSubmitLink()
+  // refreshList:false — this row shows its own in-row "You're live" celebration below;
+  // refreshing the deliverables list here would flip the parent's stage to 'live' and
+  // unmount this row mid-animation. The list refresh is deferred to closeSheet (onDone).
+  const { mutateAsync: submitLink } = useSubmitLink({ refreshList: false })
   // Monotonic pick token so an out-of-order thumbnail can't overwrite a newer pick.
   const pickSeqRef = useRef(0)
   // Whether the raw file for the current pick already uploaded — so a retry after a
@@ -94,6 +98,10 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
         uploadedRef.current = true
       }
       await submitLink({ deliverableId, url: trimmed })
+      // This flow celebrates in-row (the confetti below). Pre-mark the id so the global
+      // LiveCelebrationHost — which fires on the deferred closeSheet refresh — doesn't
+      // also pop a full-screen "You're live" modal for the same video.
+      markLiveCelebrated(deliverableId)
       haptic.success()
       setPhase('done')
     } catch (submitError) {

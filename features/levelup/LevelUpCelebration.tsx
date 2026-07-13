@@ -10,6 +10,7 @@ import { getCreatorLevel } from '@/features/profile/api'
 import { TIERS, type Tier } from '@/features/profile/tiers'
 import { TierRing } from '@/features/profile/ui/TierBadge'
 import { getLastCelebratedLevel, setLastCelebratedLevel } from '@/features/levelup/levelUp'
+import { useCelebrationSlot } from '@/features/shared/celebrationSlot'
 
 const glyph = (name: string) => name as keyof typeof MaterialCommunityIcons.glyphMap
 
@@ -109,6 +110,10 @@ export function LevelUpHost() {
     }
   }, [baselineLoaded, isFetched, level, data])
 
-  if (!celebrateTier) return null
+  // Share the single iOS modal slot with the other celebration hosts so a work-approval
+  // (which bumps the level AND makes the video live) never presents two Modals at once.
+  const active = useCelebrationSlot('levelup', celebrateTier != null)
+
+  if (!celebrateTier || !active) return null
   return <CelebrationModal tier={celebrateTier} onClose={() => setCelebrateTier(null)} />
 }

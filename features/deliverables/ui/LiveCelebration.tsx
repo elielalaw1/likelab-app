@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import ConfettiCannon from 'react-native-confetti-cannon'
@@ -7,7 +7,8 @@ import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
 import type { Deliverable } from '@/features/core/types'
 import { useDeliverables } from '@/features/deliverables/hooks'
-import { getCelebratedLiveIds, setCelebratedLiveIds } from '@/features/deliverables/liveCelebration'
+import { commitCelebratedLiveIds, getSeenLiveIds, hydrateCelebratedLiveIds } from '@/features/deliverables/liveCelebration'
+import { useCelebrationSlot } from '@/features/shared/celebrationSlot'
 
 // Sky-blue accent (matches STAGE_UI.live) — a restrained, on-brand palette, not rainbow.
 const SKY = '#0EA5E9'
@@ -85,38 +86,41 @@ function isLive(d: Deliverable): boolean {
 export function LiveCelebrationHost() {
   const { data: deliverables, isFetched } = useDeliverables()
   const [count, setCount] = useState(0)
-  const busy = useRef(false)
+  const [hydrated, setHydrated] = useState(false)
 
+  // Hydrate the persisted baseline into memory exactly once.
   useEffect(() => {
-    if (!isFetched || !deliverables || busy.current) return
-    busy.current = true
     let active = true
-    const liveIds = deliverables.filter(isLive).map((d) => d.id)
-
-    getCelebratedLiveIds()
-      .then((seen) => {
-        if (!active) return
-        if (seen == null) {
-          void setCelebratedLiveIds(liveIds) // baseline — never celebrate pre-existing live videos
-          return
-        }
-        const seenSet = new Set(seen)
-        const fresh = liveIds.filter((id) => !seenSet.has(id))
-        // Persist the current live set either way (keeps storage bounded, never re-fires).
-        void setCelebratedLiveIds(liveIds)
-        if (fresh.length > 0) {
-          haptic.success()
-          setCount(fresh.length)
-        }
-      })
-      .finally(() => {
-        busy.current = false
-      })
+    hydrateCelebratedLiveIds().then(() => {
+      if (active) setHydrated(true)
+    })
     return () => {
       active = false
     }
-  }, [isFetched, deliverables])
+  }, [])
 
-  if (count < 1) return null
+  // Reconcile the live set against the in-memory baseline SYNCHRONOUSLY on every
+  // deliverables change. No async read window, so a rapid second update can't drop a
+  // newly-live video (the race the old busy-ref guard suffered from).
+  useEffect(() => {
+    if (!hydrated || !isFetched || !deliverables) return
+    const liveIds = deliverables.filter(isLive).map((d) => d.id)
+    const seen = getSeenLiveIds()
+    if (seen == null) {
+      commitCelebratedLiveIds(liveIds) // baseline — never celebrate pre-existing live videos
+      return
+    }
+    const fresh = liveIds.filter((id) => !seen.has(id))
+    commitCelebratedLiveIds(liveIds) // keeps storage bounded, never re-fires
+    if (fresh.length > 0) {
+      haptic.success()
+      setCount((c) => c + fresh.length)
+    }
+  }, [hydrated, isFetched, deliverables])
+
+  // Share the single iOS modal slot with the other celebration hosts.
+  const active = useCelebrationSlot('live', count > 0)
+
+  if (count < 1 || !active) return null
   return <LiveModal count={count} onClose={() => setCount(0)} />
 }

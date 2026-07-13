@@ -429,6 +429,10 @@ export default function CampaignDetailPage() {
   ) : null
 
   useEffect(() => {
+    // Don't clobber the accepted-creator auto-switch to Videos: on a warm-cache mount
+    // that effect runs first in the same commit and latches autoTabRef, and this reset
+    // (dep [initialTab] never changes) would otherwise win and wedge them on Brief.
+    if (autoTabRef.current) return
     setActiveTab(initialTab === 'videos' ? 'videos' : 'brief')
   }, [initialTab])
 
