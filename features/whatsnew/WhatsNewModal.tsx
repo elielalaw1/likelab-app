@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Modal, Pressable, ScrollView, StyleSheet, Text, Vibration, useWindowDimensions, View } from 'react-native'
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -9,7 +9,6 @@ import { HeartBurst } from '@/features/shared/ui/HeartBurst'
 import { redesign, typography } from '@/features/core/theme'
 import { useCreatorProfile } from '@/features/profile/hooks'
 import { haptic } from '@/features/shared/haptics'
-import * as Haptics from 'expo-haptics'
 import * as SecureStore from 'expo-secure-store'
 import { WHATS_NEW, hasSeenWhatsNew, markWhatsNewSeen } from '@/features/whatsnew/whatsNew'
 import { SEEN_PREFIX as TUTORIAL_SEEN_PREFIX } from '@/features/onboarding/TutorialOverlay'
@@ -17,6 +16,7 @@ import { useCelebrationSlot } from '@/features/shared/celebrationSlot'
 import { ElectricBorder } from '@/features/shared/ui/ElectricBorder'
 import { ProjectCardPreview } from '@/features/shared/ui/ProjectCardPreview'
 import { TierCoin } from '@/features/shared/ui/TierBorder'
+import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 
 // ── Module-level opener (Toast pattern) so the AppHeader CTA can open the single
 //    modal owned by <WhatsNewHost />. ──────────────────────────────────────────
@@ -36,54 +36,15 @@ export function WhatsNewButton() {
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel="What's new"
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingLeft: 9, paddingRight: 11, paddingVertical: 6, backgroundColor: 'rgba(99,80,184,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(99,80,184,0.35)' }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingLeft: 9, paddingRight: 11, paddingVertical: 6, backgroundColor: redesign.color.ink, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(11,11,15,0.12)' }}
     >
-      <MaterialCommunityIcons name="star-four-points" size={13} color={redesign.color.purple} />
-      <Text style={{ color: redesign.color.purple, fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '800', letterSpacing: -0.1 }}>New</Text>
+      <MaterialCommunityIcons name="star-four-points" size={13} color={redesign.color.gold} />
+      <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 12, fontWeight: '800', letterSpacing: -0.1 }}>New</Text>
     </Pressable>
   )
 }
 
 // ── Animated mockups — each mirrors the real new UI with one looping motion. ────
-
-// The signature interaction — the hold-to-apply button charging on loop.
-function MockHold({ active }: { active: boolean }) {
-  const p = useReveal(active)
-  const charge = useSharedValue(0)
-  useEffect(() => {
-    charge.value = withRepeat(
-      withSequence(withTiming(0, { duration: 600 }), withTiming(1, { duration: 1500, easing: Easing.linear }), withTiming(1, { duration: 500 })),
-      -1,
-      false
-    )
-    return () => { charge.value = 0 }
-  }, [charge])
-  const fill = useAnimatedStyle(() => ({ width: `${charge.value * 100}%` }))
-  return (
-    <View style={{ width: 250, gap: 10 }}>
-      <Reveal p={p} index={0} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: redesign.color.card, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 12, ...redesign.shadow.card }}>
-        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: 'rgba(99,80,184,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-          <MaterialCommunityIcons name="star-four-points" size={15} color={redesign.color.purple} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>Glow Kit launch</Text>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: redesign.color.muted, fontFamily: typography.fontFamily }}>ClearSkin · 3d left</Text>
-        </View>
-      </Reveal>
-      <Reveal p={p} index={1}>
-        <View style={{ height: 50, borderRadius: 999, backgroundColor: 'rgba(8,8,12,0.96)', overflow: 'hidden', justifyContent: 'center' }}>
-          <Animated.View style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#26262E' }, fill]}>
-            <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.85)' }} />
-          </Animated.View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <MaterialCommunityIcons name="gesture-tap-hold" size={16} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', fontFamily: typography.fontFamily }}>Hold to apply</Text>
-          </View>
-        </View>
-      </Reveal>
-    </View>
-  )
-}
 
 // Gold + Partner frames, side by side — the partner one is the REAL live border.
 function MockTiers({ active }: { active: boolean }) {
@@ -107,27 +68,6 @@ function MockTiers({ active }: { active: boolean }) {
           </View>
         </ElectricBorder>
       </Reveal>
-    </View>
-  )
-}
-
-// The five-second glance card from the new campaign page.
-function MockGlance({ active }: { active: boolean }) {
-  const p = useReveal(active)
-  const rows = [
-    { icon: 'gift-outline' as const, label: 'YOU GET', value: '1 × product to keep' },
-    { icon: 'video-outline' as const, label: 'YOU MAKE', value: '2 TikTok videos' },
-    { icon: 'clock-outline' as const, label: 'DEADLINE', value: '8 days left' },
-  ]
-  return (
-    <View style={{ width: 258, backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingHorizontal: 14, ...redesign.shadow.card }}>
-      {rows.map((row, i) => (
-        <Reveal key={row.label} p={p} index={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderTopColor: redesign.color.hairlineStrong }}>
-          <MaterialCommunityIcons name={row.icon} size={14} color={redesign.color.faint} />
-          <Text style={{ flex: 1, fontSize: 9, fontWeight: '800', color: redesign.color.faint, letterSpacing: 1, fontFamily: typography.fontFamily }}>{row.label}</Text>
-          <Text style={{ fontSize: 13.5, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>{row.value}</Text>
-        </Reveal>
-      ))}
     </View>
   )
 }
@@ -174,27 +114,6 @@ function MockTikTok({ active }: { active: boolean }) {
         </Text>
       </Reveal>
     </View>
-  )
-}
-
-// Haptics — expanding rings off a fingertip.
-function MockFeel({ active }: { active: boolean }) {
-  const p = useReveal(active)
-  const ring = useSharedValue(0)
-  useEffect(() => {
-    ring.value = withRepeat(withTiming(1, { duration: 1300, easing: Easing.out(Easing.quad) }), -1, false)
-    return () => { ring.value = 0 }
-  }, [ring])
-  const r1 = useAnimatedStyle(() => ({ transform: [{ scale: 1 + ring.value * 0.9 }], opacity: (1 - ring.value) * 0.5 }))
-  const r2 = useAnimatedStyle(() => ({ transform: [{ scale: 1 + ring.value * 1.6 }], opacity: (1 - ring.value) * 0.28 }))
-  return (
-    <Reveal p={p} index={0} style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={[{ position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: redesign.color.purple }, r1]} />
-      <Animated.View style={[{ position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: redesign.color.purple }, r2]} />
-      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', ...redesign.shadow.cta }}>
-        <MaterialCommunityIcons name="gesture-tap" size={28} color="#fff" />
-      </View>
-    </Reveal>
   )
 }
 
@@ -298,19 +217,9 @@ type WhatsNewSlide = { title: string; body: string; mock: (active: boolean) => R
 
 const SLIDES: WhatsNewSlide[] = [
   {
-    title: 'Hold to apply',
-    body: 'Applying is a hold, not a tap — charge the button and feel it rumble all the way to sent.',
-    mock: (active) => <MockHold active={active} />,
-  },
-  {
     title: 'Gold & Partner campaigns',
     body: 'The biggest collabs now stand out on sight — a gold frame for Gold campaigns, a live electric frame for official LikeLab partners.',
     mock: (active) => <MockTiers active={active} />,
-  },
-  {
-    title: 'A calmer campaign page',
-    body: 'What you get, what you make and the deadline — answered in five seconds. Accepted? A guided walkthrough shows you exactly how to nail it.',
-    mock: (active) => <MockGlance active={active} />,
   },
   {
     title: 'Post straight to TikTok',
@@ -342,11 +251,6 @@ const SLIDES: WhatsNewSlide[] = [
     body: 'Share your invite code — when 3 creators join, you earn the Connector badge.',
     mock: (active) => <MockInvite active={active} />,
   },
-  {
-    title: 'It feels alive',
-    body: 'New motion and haptics across the whole app — every tap, pull and hold now answers back.',
-    mock: (active) => <MockFeel active={active} />,
-  },
 ]
 
 function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -377,31 +281,8 @@ function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose: () => 
     transform: [{ scale: 0.94 + unfold.value * 0.06 }],
   }))
 
-  // Full-power haptic demo — the "It feels alive" slide doesn't tell, it shows:
-  // continuous system vibration + stacked Heavy/Rigid impacts for a second.
-  const blastTimerRef = useRef<{ iv: ReturnType<typeof setInterval>; to: ReturnType<typeof setTimeout> } | null>(null)
-  const stopBlast = () => {
-    if (!blastTimerRef.current) return
-    clearInterval(blastTimerRef.current.iv)
-    clearTimeout(blastTimerRef.current.to)
-    blastTimerRef.current = null
-    Vibration.cancel()
-  }
-  useEffect(() => () => stopBlast(), [])
-  const feelTheApp = () => {
-    stopBlast()
-    Vibration.vibrate([0, 1], true)
-    const iv = setInterval(() => {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid)
-    }, 32)
-    const to = setTimeout(() => stopBlast(), 900)
-    blastTimerRef.current = { iv, to }
-  }
-
   const goNext = () => {
-    if (SLIDES[index]?.title === 'It feels alive') feelTheApp()
-    else haptic.selection()
+    haptic.selection()
     if (last) {
       onClose()
       return
@@ -422,21 +303,21 @@ function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose: () => 
         <Animated.View
           style={[{ width: cardW, backgroundColor: redesign.color.card, borderRadius: 30, overflow: 'hidden', ...redesign.shadow.cta }, unfoldStyle]}
         >
-          {/* Gradient hero header — the attention-grabber (brand purple, not rainbow) */}
-          <LinearGradient colors={['#8B4DF7', '#6A2CD6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top > 24 ? 18 : 20, paddingHorizontal: 20, paddingBottom: 22 }}>
+          {/* Hero header — flat ink, brand purple kept sparse (just the sparkle accent) */}
+          <View style={{ backgroundColor: redesign.color.ink, paddingTop: insets.top > 24 ? 18 : 20, paddingHorizontal: 20, paddingBottom: 22 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingLeft: 9, paddingRight: 13, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.22)' }}>
-                <MaterialCommunityIcons name="star-four-points" size={13} color="#fff" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingLeft: 9, paddingRight: 13, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                <MaterialCommunityIcons name="star-four-points" size={13} color={redesign.color.gold} />
                 <Text style={{ fontFamily: typography.fontFamily, fontSize: 11.5, fontWeight: '900', color: '#fff', letterSpacing: 0.6 }}>WHAT&apos;S NEW</Text>
               </View>
-              <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+              <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}>
                 <MaterialCommunityIcons name="close" size={18} color="#fff" />
               </Pressable>
             </View>
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 29, fontWeight: '900', color: '#fff', letterSpacing: -1, lineHeight: 32, marginTop: 16 }}>
               {WHATS_NEW.headline}
             </Text>
-          </LinearGradient>
+          </View>
 
           {/* Body */}
           <View style={{ paddingTop: 20, paddingBottom: 18 + Math.max(0, insets.bottom - 8) }}>
@@ -468,16 +349,16 @@ function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose: () => 
               ))}
             </View>
 
-            {/* CTA */}
+            {/* CTA — same LiquidButton language as onboarding/tutorial */}
             <View style={{ paddingHorizontal: 20 }}>
-              <Pressable onPress={goNext} style={{ minHeight: 56, borderRadius: 18, paddingHorizontal: 18, backgroundColor: redesign.color.ink, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' }}>
-                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', letterSpacing: -0.2 }}>{last ? 'Got it' : 'Next'}</Text>
-                {last ? null : (
-                  <View style={{ position: 'absolute', right: 8, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
-                    <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
-                  </View>
-                )}
-              </Pressable>
+              <LiquidButton
+                label={last ? 'Got it' : 'Next'}
+                onPress={goNext}
+                minHeight={56}
+                borderRadius={18}
+                hapticFeedback={false}
+                trailingIcon={last ? undefined : <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />}
+              />
             </View>
           </View>
         </Animated.View>

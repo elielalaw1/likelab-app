@@ -42,8 +42,9 @@ async function describeFunctionError(fnError: unknown, fallback: string): Promis
 
 export default function VerifyOtpPage() {
   const { email } = useLocalSearchParams<{ email: string }>()
-  const pendingRef = useRef(consumePendingAuth())
-  const passwordRef = useRef(pendingRef.current?.password ?? null)
+  // Consumed once on mount; handleVerify awaits this same promise so it works
+  // whether it resolves before or after the user finishes typing the code.
+  const pendingPromiseRef = useRef(consumePendingAuth())
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''))
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
@@ -99,16 +100,16 @@ export default function VerifyOtpPage() {
         setError(data?.error ?? 'Invalid or expired code.')
         return
       }
-      if (passwordRef.current) {
+      const pending = await pendingPromiseRef.current
+      if (pending?.password) {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email ?? '',
-          password: passwordRef.current,
+          password: pending.password,
         })
         if (signInError) {
           router.replace('/login')
           return
         }
-        const pending = pendingRef.current
         const profileUpdate: Record<string, unknown> = {}
         if (pending?.phone) profileUpdate.phone = pending.phone
         if (pending?.gender) profileUpdate.gender = pending.gender
@@ -133,9 +134,10 @@ export default function VerifyOtpPage() {
         router.replace('/connect-tiktok')
         return
       }
-      // No pending password — the in-memory signup state was lost (screen
-      // remounted / cold start). We can't establish a session here, so send the
-      // user to log in rather than landing on an authed screen with no session.
+      // No pending password — already consumed (e.g. a prior verify attempt) or
+      // this screen was reached without going through signup. We can't establish
+      // a session here, so send the user to log in rather than landing on an
+      // authed screen with no session.
       router.replace('/login')
     } catch {
       setError('Something went wrong. Try again.')

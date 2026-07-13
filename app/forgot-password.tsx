@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
     try {
       setLoading(true)
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: 'https://likelab.io/reset-password',
+        redirectTo: 'https://likelab.io/reset-password?platform=app',
       })
 
       if (error) {

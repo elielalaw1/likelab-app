@@ -154,7 +154,7 @@ export default function SignupPage() {
       })
       // Stash the referral code (if any) for redemption once authenticated.
       setPendingReferralCode(inviteCode)
-      setPendingAuth({
+      await setPendingAuth({
         email: email.trim(),
         password,
         phone: phone.trim() || null,

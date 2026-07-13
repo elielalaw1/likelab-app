@@ -215,21 +215,24 @@ function VideoTile({
 }
 
 // The creator-facing journey, shown as a slim legend so the whole flow is legible
-// at a glance: upload → brand review → approved → post the link → live.
-type FlowStep = { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string }
+// at a glance: upload → brand review → approved → post the link → live. Each step's
+// color/bg is the SAME tint as that stage's real status pill elsewhere on this
+// screen (STAGE_UI) — so "Review" here is the same purple as an in-review video's
+// badge, not an arbitrary decoration.
+type FlowStep = { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; color: string; bg: string }
 const FLOW: FlowStep[] = [
-  { icon: 'tray-arrow-up', label: 'Upload' },
-  { icon: 'eye-check-outline', label: 'Review' },
-  { icon: 'check-decagram', label: 'Approved' },
-  { icon: 'link-variant', label: 'Post link' },
-  { icon: 'star-circle-outline', label: 'Live' },
+  { icon: 'tray-arrow-up', label: 'Upload', color: STAGE_UI.upload.color, bg: STAGE_UI.upload.bg },
+  { icon: 'eye-check-outline', label: 'Review', color: STAGE_UI.under_review.color, bg: STAGE_UI.under_review.bg },
+  { icon: 'check-decagram', label: 'Approved', color: STAGE_UI.submit_link.color, bg: STAGE_UI.submit_link.bg },
+  { icon: 'link-variant', label: 'Post link', color: STAGE_UI.submit_link.color, bg: STAGE_UI.submit_link.bg },
+  { icon: 'star-circle-outline', label: 'Live', color: STAGE_UI.live.color, bg: STAGE_UI.live.bg },
 ]
 // Standard (no-review) campaigns skip the pre-post review: post on TikTok, hand over the
 // link + raw file, and it's live.
 const DIRECT_FLOW: FlowStep[] = [
-  { icon: 'video-outline', label: 'Post it' },
-  { icon: 'send-outline', label: 'Link + raw' },
-  { icon: 'star-circle-outline', label: 'Live' },
+  { icon: 'video-outline', label: 'Post it', color: STAGE_UI.deliver.color, bg: STAGE_UI.deliver.bg },
+  { icon: 'send-outline', label: 'Link + raw', color: STAGE_UI.deliver.color, bg: STAGE_UI.deliver.bg },
+  { icon: 'star-circle-outline', label: 'Live', color: STAGE_UI.live.color, bg: STAGE_UI.live.bg },
 ]
 
 function FlowLegend({ requiresReview }: { requiresReview: boolean }) {
@@ -241,8 +244,8 @@ function FlowLegend({ requiresReview }: { requiresReview: boolean }) {
         {steps.map((s, i) => (
           <View key={s.label} style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
             <View style={{ alignItems: 'center', gap: 5, width: 52 }}>
-              <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: redesign.color.bg, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialCommunityIcons name={s.icon} size={15} color={redesign.color.purple} />
+              <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: s.bg, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name={s.icon} size={15} color={s.color} />
               </View>
               <Text style={{ fontSize: 9.5, fontWeight: '700', color: redesign.color.muted, fontFamily: typography.fontFamily, textAlign: 'center' }}>{s.label}</Text>
             </View>
