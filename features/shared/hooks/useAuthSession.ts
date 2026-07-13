@@ -117,18 +117,32 @@ function initializeAuthSessionStore() {
       // screen or carry into the next account.
       void Notifications.setBadgeCountAsync(0).catch(() => {})
       void clearCreatorRoleCache()
+      // Wipe the react-query cache so the next account can't read the previous
+      // creator's cached data (dashboard, my-videos, feedback-unread, creator-profile,
+      // …). refetchOnMount:false + placeholderData means it would otherwise persist
+      // across a logout→login within the same process. Only the two explicit Sign-out
+      // buttons cleared it before; every forced/non-button logout leaked it.
+      queryClient.clear()
       setAuthState({ session: null, loading: false })
       return
     }
 
     if (event === 'TOKEN_REFRESHED' && !currentSession) {
       await clearPersistedSupabaseSession()
+      queryClient.clear()
       setAuthState({ session: null, loading: false })
       return
     }
 
     // Don't re-check role on token refresh — role was verified at login and doesn't change.
     // Re-checking here caused random logouts when the DB query returned empty (RLS/network).
+    // Guard against a direct account swap where SIGNED_OUT never fired: if a DIFFERENT
+    // user signs in, wipe the prior user's cache first. Gated on a non-null previous id
+    // so the normal boot login (INITIAL_SESSION) never wipes the freshly-prefetched cache.
+    const nextUserId = currentSession?.user?.id ?? null
+    if (lastKnownUserId && nextUserId && nextUserId !== lastKnownUserId) {
+      queryClient.clear()
+    }
     setAuthState({ session: currentSession, loading: false })
   })
 }

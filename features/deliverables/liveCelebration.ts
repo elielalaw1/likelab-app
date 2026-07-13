@@ -64,10 +64,17 @@ export function getSeenLiveIds(): Set<string> | null {
   return _seen
 }
 
-// Replace the whole set — memory + storage. Called by the host after each reconcile.
+// UNION the reconcile's live ids into the baseline — memory + storage. Called by the
+// host after each reconcile. Union (not replace) is deliberate: an id can only be
+// celebrated once, so once seen it must stay seen. Replacing with the current snapshot
+// would (a) drop an id pre-pinned by markLiveCelebrated if a stale/late refetch snapshot
+// momentarily lacks it — re-firing the global "You're live" modal over the in-row
+// celebration — and (b) let a transient empty/partial getDeliverables response wipe the
+// baseline and mass-celebrate every live video on the next real snapshot. The set is
+// bounded by the creator's total deliverable count (a handful), so it stays small.
 export function commitCelebratedLiveIds(ids: string[]): void {
-  _seen = new Set(ids)
-  void setCelebratedLiveIds(ids)
+  _seen = new Set([...(_seen ?? []), ...ids])
+  void setCelebratedLiveIds(Array.from(_seen))
 }
 
 // Mark one id as already celebrated without disturbing the baseline. Used by the
