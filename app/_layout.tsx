@@ -24,8 +24,17 @@ import { ReferralLinkHandler } from '@/features/referral/ReferralLinkHandler'
 import { ToastContainer, toast } from '@/features/shared/ui/Toast'
 import { ErrorBoundary } from '@/features/shared/ui/ErrorBoundary'
 import { OfflineBanner } from '@/features/shared/ui/OfflineBanner'
+import { LogoRainEasterEgg } from '@/features/shared/ui/LogoRainEasterEgg'
 import { registerForPushNotificationsAsync, savePushToken } from '@/features/notifications/push'
 import { useAuthSession } from '@/features/shared/hooks/useAuthSession'
+import { installGlobalErrorHandler, readAndClearCrashLog } from '@/lib/crash-log'
+
+// Installed before anything else in this module runs, so an uncaught render/effect
+// error anywhere in the app (including outside ErrorBoundary) gets written to disk
+// before Expo's native error-recovery watchdog can abort the process — otherwise a
+// fatal JS error on TestFlight leaves nothing behind to debug without Xcode.
+installGlobalErrorHandler()
+
 SplashScreen.preventAutoHideAsync()
 
 const ALLOWED_NOTIFICATION_ROUTES = [
@@ -180,7 +189,7 @@ function PushNotificationSetup() {
       if (!alreadyShown) {
         await SecureStore.setItemAsync(NOTIF_EXPLAIN_KEY, '1').catch(() => {})
         Alert.alert(
-          'Stay in the loop 🔔',
+          'Stay in the loop',
           'We\'ll only notify you when a brand accepts you, assigns you a collab, or approves your content. No ads, no spam — ever.',
           [
             { text: 'Not now', style: 'cancel' },
@@ -214,7 +223,13 @@ function PushNotificationSetup() {
       // The approval tutorial already celebrates approval, so suppress the redundant
       // "You're approved" toast when the app is foregrounded.
       if (type === 'creator_approved') return
-      if (title) toast.info(`${title}${body ? `\n${body}` : ''}`)
+      // Coalescing key: a batch action (e.g. 10 deliverables assigned at once) fires
+      // one push per item in quick succession — grouping by type (+ campaign, when
+      // present) merges those into one "×10" toast instead of a stack the creator
+      // can't read in time.
+      const campaignId = (data as Record<string, unknown> | undefined)?.campaign_id
+      const coalesceKey = type ? `${type}:${typeof campaignId === 'string' ? campaignId : ''}` : undefined
+      if (title) toast.info(`${title}${body ? `\n${body}` : ''}`, coalesceKey)
     })
 
     // Background/closed: track open + navigate to route on tap
@@ -290,6 +305,15 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError, killswitch])
 
+  useEffect(() => {
+    // Surface a crash report left by the previous run once, so it's visible without
+    // needing Xcode/device logs — copy the text out and it can be pasted anywhere.
+    const report = readAndClearCrashLog()
+    if (report) {
+      Alert.alert('Previous crash report', report)
+    }
+  }, [])
+
   if ((!fontsLoaded && !fontError) || killswitch === null) {
     return null
   }
@@ -309,11 +333,11 @@ export default function RootLayout() {
       <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
           <BottomSheetModalProvider>
-            <PushNotificationSetup />
-            <TikTokAuthGuard />
-            <ReconnectAutoRoute />
-            <ReferralLinkHandler />
             <ErrorBoundary>
+              <PushNotificationSetup />
+              <TikTokAuthGuard />
+              <ReconnectAutoRoute />
+              <ReferralLinkHandler />
               <View style={{ flex: 1 }}>
                 <Stack screenOptions={{ headerShown: false }}>
                   {/* Post-auth root — never allow the iOS edge-swipe to pop the tab bar
@@ -334,6 +358,7 @@ export default function RootLayout() {
                 </Stack>
                 <ToastContainer />
                 <OfflineBanner />
+                <LogoRainEasterEgg />
               </View>
             </ErrorBoundary>
           </BottomSheetModalProvider>

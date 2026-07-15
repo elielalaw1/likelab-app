@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -15,6 +15,7 @@ import { CATEGORY_OPTIONS, GENDER_OPTIONS, SWEDISH_COUNTIES, SWEDISH_MUNICIPALIT
 import { radii, redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { haptic } from '@/features/shared/haptics'
+import { toast } from '@/features/shared/ui/Toast'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -108,15 +109,15 @@ export default function SignupPage() {
 
   const goNextFromStep1 = () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
-      Alert.alert('Missing fields', 'Fill in all required fields.')
+      toast.error('Fill in all required fields.')
       return
     }
     if (password.length < 8) {
-      Alert.alert('Invalid password', 'Password must be at least 8 characters.')
+      toast.error('Password must be at least 8 characters.')
       return
     }
     if (password !== confirmPassword) {
-      Alert.alert('Password mismatch', 'Passwords do not match.')
+      toast.error('Passwords do not match.')
       return
     }
     setStep(2)
@@ -124,7 +125,7 @@ export default function SignupPage() {
 
   const goNextFromStep2 = () => {
     if (!gender || !age || !primaryCategory) {
-      Alert.alert('Missing fields', 'Please fill in all fields.')
+      toast.error('Please fill in all fields.')
       return
     }
     setStep(3)
@@ -134,7 +135,7 @@ export default function SignupPage() {
     // City is required for every country — without it we can't ship products to
     // the creator (the whole point of the sendout phase / creator mapping).
     if (!country || !address.trim() || !postalCode.trim() || !city.trim()) {
-      Alert.alert('Missing fields', 'Please complete your shipping address — country, street, postal code and city.')
+      toast.error('Please complete your shipping address — country, street, postal code and city.')
       return
     }
     setStep(4)
@@ -147,6 +148,8 @@ export default function SignupPage() {
         email: email.trim(),
         password,
         displayName: displayName.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         tiktokHandle: '',
         instagramHandle: instagramHandle.trim() || null,
         followers: null,
@@ -169,7 +172,7 @@ export default function SignupPage() {
       })
       router.replace(`/verify-otp?email=${encodeURIComponent(email.trim())}` as never)
     } catch (error) {
-      Alert.alert('Signup failed', error instanceof Error ? error.message : 'Could not create account')
+      toast.error(error instanceof Error ? error.message : 'Could not create account')
     } finally {
       setCreateLoading(false)
     }

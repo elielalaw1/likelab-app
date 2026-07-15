@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, FlatList, Linking, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View, ViewToken } from 'react-native'
+import { FlatList, Linking, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View, ViewToken } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getMyVideos, MyVideo } from '@/features/deliverables/api'
 import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
+import { Bone } from '@/features/shared/ui/SkeletonCard'
 
 // Generated thumbnails are local file URIs that persist for the session — cache by video id
 // so re-renders (and signed-URL refetches) don't regenerate them.
@@ -177,8 +178,10 @@ export function MyVideosFeed({ pagePadding = 16, title = 'My videos' }: { pagePa
       <Text style={HEADER}>{title}</Text>
 
       {isLoading ? (
-        <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-          <ActivityIndicator color={redesign.color.purple} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: gutter }}>
+          {Array.from({ length: 9 }).map((_, i) => (
+            <Bone key={i} width={cellW} height={cellW * 1.5} borderRadius={12} />
+          ))}
         </View>
       ) : isError && videos.length === 0 ? (
         <View style={{ backgroundColor: redesign.color.card, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, paddingVertical: 26, paddingHorizontal: 22, alignItems: 'center', gap: 8, ...redesign.shadow.card }}>

@@ -9,6 +9,7 @@ import {
   TIKTOK_OAUTH_STATE_KEY,
   TIKTOK_REDIRECT_URI,
 } from '@/features/auth/tiktok'
+import { toast } from '@/features/shared/ui/Toast'
 
 export default function TikTokCallback() {
   const {
@@ -32,6 +33,11 @@ export default function TikTokCallback() {
 
     if (error) {
       console.warn('TikTok authorization failed', { error, errorDescription })
+      // TikTok itself reports "denied"/"access_denied" when the user cancels — that's
+      // not a failure worth alarming them about, just a silent bounce back.
+      if (error !== 'access_denied' && error !== 'user_cancelled') {
+        toast.error('Could not connect TikTok. Please try again.')
+      }
       router.replace('/connect-tiktok')
       return
     }
@@ -57,6 +63,7 @@ export default function TikTokCallback() {
           })
           // Clear any stale persisted state so a future legit flow starts clean.
           await SecureStore.deleteItemAsync(TIKTOK_OAUTH_STATE_KEY).catch(() => {})
+          toast.error('Could not connect TikTok. Please try again.')
           router.replace('/connect-tiktok')
           return
         }
@@ -69,6 +76,7 @@ export default function TikTokCallback() {
         router.replace('/(tabs)/profile')
       } catch (exchangeError) {
         console.warn('TikTok callback exchange failed', exchangeError)
+        toast.error('Could not connect TikTok. Please try again.')
         router.replace('/connect-tiktok')
       }
     }

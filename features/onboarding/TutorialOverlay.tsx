@@ -111,7 +111,7 @@ function MockSubmit({ arrow }: { arrow: object }) {
 function MockWelcome() {
   return (
     <View style={{ width: 120, height: 120, borderRadius: 40, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', ...redesign.shadow.cta }}>
-      <LinearGradient colors={['#8B4DF7', '#5B27C4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
+      <View style={{ position: 'absolute', inset: 0, backgroundColor: redesign.color.purple }} />
       <MaterialCommunityIcons name="check-decagram" size={58} color="#fff" />
     </View>
   )

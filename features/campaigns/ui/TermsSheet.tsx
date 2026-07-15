@@ -33,7 +33,7 @@ export function TermsSheet({ visible, onAccept, onClose }: Props) {
 
           <View style={{ alignItems: 'center', gap: 12 }}>
             <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(99,80,184,0.10)', alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="shield-check-outline" size={28} color={redesign.color.purple} />
+              <MaterialCommunityIcons name="text-box-check-outline" size={28} color={redesign.color.purple} />
             </View>
             <View style={{ alignItems: 'center', gap: 5 }}>
               <Text style={{ color: redesign.color.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.4, fontFamily: FONT, textAlign: 'center' }}>

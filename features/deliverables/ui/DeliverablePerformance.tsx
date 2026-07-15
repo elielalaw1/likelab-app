@@ -1,8 +1,9 @@
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useQuery } from '@tanstack/react-query'
 import { redesign, typography } from '@/features/core/theme'
 import { getDeliverableVideoStats } from '@/features/deliverables/tiktok-content'
+import { Bone } from '@/features/shared/ui/SkeletonCard'
 
 const FONT = typography.fontFamily
 
@@ -49,8 +50,27 @@ export function DeliverablePerformance({ deliverableId, url }: { deliverableId: 
         </View>
 
         {isLoading ? (
-          <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-            <ActivityIndicator color={redesign.color.purple} />
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flex: 1, backgroundColor: redesign.color.bg, borderRadius: 12, padding: 11, gap: 8 }}>
+                <Bone width={44} height={10} />
+                <Bone width={50} height={19} />
+              </View>
+              <View style={{ flex: 1, backgroundColor: redesign.color.bg, borderRadius: 12, padding: 11, gap: 8 }}>
+                <Bone width={44} height={10} />
+                <Bone width={50} height={19} />
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flex: 1, backgroundColor: redesign.color.bg, borderRadius: 12, padding: 11, gap: 8 }}>
+                <Bone width={58} height={10} />
+                <Bone width={40} height={19} />
+              </View>
+              <View style={{ flex: 1, backgroundColor: redesign.color.bg, borderRadius: 12, padding: 11, gap: 8 }}>
+                <Bone width={48} height={10} />
+                <Bone width={40} height={19} />
+              </View>
+            </View>
           </View>
         ) : data ? (
           <View style={{ gap: 8 }}>

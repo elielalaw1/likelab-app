@@ -144,7 +144,7 @@ export function CreatorPendingGate({ state }: Props) {
           <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: iconBg, alignItems: 'center', justifyContent: 'center' }}>
             <MaterialCommunityIcons name={rejected ? 'close-circle-outline' : 'progress-clock'} size={15} color={iconColor} />
           </View>
-          <View style={{ flex: rejected ? 1 : undefined, alignItems: rejected ? 'flex-start' : 'center' }}>
+          <View style={{ flex: 1, alignItems: rejected ? 'flex-start' : 'center' }}>
             <Text style={{ color: redesign.color.ink, fontWeight: '800', fontSize: 14, letterSpacing: -0.2, fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{title}</Text>
             <Text style={{ color: redesign.color.muted, fontSize: 12, fontWeight: '500', fontFamily: typography.fontFamily, textAlign: rejected ? 'left' : 'center' }}>{subtitle}</Text>
           </View>

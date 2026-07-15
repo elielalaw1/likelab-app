@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Linking, Modal, StyleSheet, Pressable, Text, TextInput, View } from 'react-native'
+import { Linking, Modal, StyleSheet, Pressable, Text, TextInput, View } from 'react-native'
 import Animated, { FadeIn } from 'react-native-reanimated'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -24,6 +24,7 @@ export function ProfilePendingGate({ userId }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [appealStep, setAppealStep] = useState<AppealStep>('idle')
   const [appealReason, setAppealReason] = useState('')
+  const [appealError, setAppealError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const reviewStatus = profile?.reviewStatus
@@ -39,9 +40,10 @@ export function ProfilePendingGate({ userId }: Props) {
 
   const submitAppeal = async () => {
     if (!appealReason.trim()) {
-      Alert.alert('Required', 'Please describe why we should reconsider.')
+      setAppealError('Please describe why we should reconsider.')
       return
     }
+    setAppealError(null)
     try {
       setSubmitting(true)
       // Select the written row back: an RLS-blocked UPDATE affects 0 rows and
@@ -57,7 +59,7 @@ export function ProfilePendingGate({ userId }: Props) {
     } catch (_) {
       // supabase-js returns { error } rather than throwing, so we surface it
       // here instead of silently pretending the appeal was submitted.
-      Alert.alert('Could not submit appeal', 'Something went wrong. Please try again.')
+      setAppealError('Something went wrong. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -75,9 +77,6 @@ export function ProfilePendingGate({ userId }: Props) {
             left: 16,
             right: 16,
             borderRadius: radii.card,
-            backgroundColor: palette.sectionBg,
-            borderWidth: 1,
-            borderColor: isRejected ? palette.dangerBg : palette.borderColor,
             shadowColor: '#000',
             shadowOpacity: 0.15,
             shadowRadius: 20,
@@ -85,74 +84,96 @@ export function ProfilePendingGate({ userId }: Props) {
             elevation: 4,
           }}
         >
-          <Pressable onPress={() => setExpanded((v) => !v)}>
-            <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{
-                width: 36, height: 36, borderRadius: 18,
-                backgroundColor: isRejected ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.12)',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-                <MaterialCommunityIcons
-                  name={isRejected ? 'close-circle-outline' : 'clock-outline'}
-                  size={20}
-                  color={isRejected ? colors.destructive : '#A16207'}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700' }}>
-                  {isRejected ? 'Application Not Approved' : 'Account Under Review'}
-                </Text>
-                <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12, marginTop: 1 }}>
-                  {isRejected ? 'Your application was not approved.' : 'We\'re reviewing your profile.'}
-                </Text>
-              </View>
-              <MaterialCommunityIcons name={expanded ? 'chevron-down' : 'chevron-up'} size={18} color={palette.textMuted} />
-            </View>
-          </Pressable>
-
-          {expanded && (
-            <Animated.View entering={FadeIn.duration(200)} style={{ borderTopWidth: 1, borderTopColor: palette.borderColor, padding: 14, gap: 12 }}>
-              {isPending && (
-                <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {STEPS.map((label, i) => (
-                      <View key={label} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
-                        <View style={{
-                          width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-                          backgroundColor: i < 2 ? colors.primary : palette.borderColor,
-                        }}>
-                          {i < 2
-                            ? <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                            : <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>{i + 1}</Text>
-                          }
-                        </View>
-                        <Text style={{ color: i < 2 ? palette.text : palette.textMuted, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '600', textAlign: 'center' }}>
-                          {label}
-                        </Text>
-                        {i < STEPS.length - 1 && (
-                          <View style={{ position: 'absolute', top: 14, left: '60%', right: '-40%', height: 2, backgroundColor: i < 1 ? colors.primary : palette.borderColor }} />
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                  <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12, lineHeight: 18 }}>
-                    Your profile is complete and under review. We'll notify you once approved.
+          {/* Rounded clip lives on this inner wrapper, not the shadow-carrying outer
+              view above — overflow:'hidden' on the same view as a shadow clips the
+              shadow itself, and without it here the Pressable's tap highlight/ripple
+              was bleeding past the card's rounded corners. */}
+          <View style={{
+            borderRadius: radii.card,
+            overflow: 'hidden',
+            backgroundColor: palette.sectionBg,
+            borderWidth: 1,
+            borderColor: isRejected ? palette.dangerBg : palette.borderColor,
+          }}>
+            <Pressable onPress={() => setExpanded((v) => !v)}>
+              <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{
+                  width: 36, height: 36, borderRadius: 18,
+                  backgroundColor: isRejected ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.12)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <MaterialCommunityIcons
+                    name={isRejected ? 'close-circle-outline' : 'clock-outline'}
+                    size={20}
+                    color={isRejected ? colors.destructive : '#A16207'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: palette.text, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '700' }}>
+                    {isRejected ? 'Application Not Approved' : 'Account Under Review'}
                   </Text>
-                </>
-              )}
+                  <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12, marginTop: 1 }}>
+                    {isRejected ? 'Your application was not approved.' : 'We\'re reviewing your profile.'}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons name={expanded ? 'chevron-down' : 'chevron-up'} size={18} color={palette.textMuted} />
+              </View>
+            </Pressable>
 
-              {isRejected && (
-                <LiquidButton
-                  label="Appeal & Book a Call"
-                  onPress={() => setAppealStep('reason')}
-                  minHeight={44}
-                  borderRadius={radii.button}
-                  tone="neutral"
-                  icon={<MaterialCommunityIcons name="phone-outline" size={17} color={palette.text} />}
-                />
-              )}
-            </Animated.View>
-          )}
+            {expanded && (
+              <Animated.View entering={FadeIn.duration(200)} style={{ borderTopWidth: 1, borderTopColor: palette.borderColor, padding: 14, gap: 12 }}>
+                {isPending && (
+                  <>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {STEPS.map((label, i) => (
+                        <View key={label} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                          <View style={{
+                            width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+                            backgroundColor: i < 2 ? colors.primary : palette.borderColor,
+                          }}>
+                            {i < 2
+                              ? <MaterialCommunityIcons name="check" size={16} color="#fff" />
+                              : <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '700' }}>{i + 1}</Text>
+                            }
+                          </View>
+                          <Text style={{ color: i < 2 ? palette.text : palette.textMuted, fontFamily: typography.fontFamily, fontSize: 10, fontWeight: '600', textAlign: 'center' }}>
+                            {label}
+                          </Text>
+                          {i < STEPS.length - 1 && (
+                            <View style={{ position: 'absolute', top: 14, left: '60%', right: '-40%', height: 2, backgroundColor: i < 1 ? colors.primary : palette.borderColor }} />
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={{ color: palette.textMuted, fontFamily: typography.fontFamily, fontSize: 12, lineHeight: 18 }}>
+                      Your profile is complete and under review — usually within 24 hours. We&apos;ll notify you once approved.
+                    </Text>
+                  </>
+                )}
+
+                {isRejected && (
+                  <View style={{ gap: 8 }}>
+                    <LiquidButton
+                      label="Appeal decision"
+                      onPress={() => setAppealStep('reason')}
+                      minHeight={44}
+                      borderRadius={radii.button}
+                      tone="neutral"
+                      icon={<MaterialCommunityIcons name="text-box-check-outline" size={17} color={palette.text} />}
+                    />
+                    <LiquidButton
+                      label="Book a call"
+                      onPress={() => Linking.openURL('https://likelab.io/book-call').catch(() => {})}
+                      minHeight={44}
+                      borderRadius={radii.button}
+                      tone="neutral"
+                      icon={<MaterialCommunityIcons name="phone-outline" size={17} color={palette.text} />}
+                    />
+                  </View>
+                )}
+              </Animated.View>
+            )}
+          </View>
         </Animated.View>
       </View>
 
@@ -168,14 +189,14 @@ export function ProfilePendingGate({ userId }: Props) {
                 </Text>
                 <TextInput
                   value={appealReason}
-                  onChangeText={setAppealReason}
+                  onChangeText={(value) => { setAppealReason(value); setAppealError(null) }}
                   multiline
                   numberOfLines={4}
                   placeholder="Describe your situation..."
                   placeholderTextColor={palette.textMuted}
                   style={{
                     borderWidth: 1,
-                    borderColor: palette.borderColor,
+                    borderColor: appealError ? palette.dangerBg : palette.borderColor,
                     borderRadius: radii.input,
                     padding: 12,
                     minHeight: 100,
@@ -185,10 +206,12 @@ export function ProfilePendingGate({ userId }: Props) {
                     textAlignVertical: 'top',
                   }}
                 />
+                {appealError ? (
+                  <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, color: palette.dangerText }}>
+                    {appealError}
+                  </Text>
+                ) : null}
                 <LiquidButton label={submitting ? 'Submitting…' : 'Submit Appeal'} onPress={submitAppeal} disabled={submitting} minHeight={46} borderRadius={radii.button} />
-                <Pressable onPress={() => Linking.openURL('https://likelab.io/book-call').catch(() => {})} style={{ alignItems: 'center', paddingVertical: 6 }}>
-                  <Text style={{ color: colors.primary, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600' }}>Book a call instead</Text>
-                </Pressable>
               </>
             )}
             {appealStep === 'confirm' && (
@@ -197,10 +220,10 @@ export function ProfilePendingGate({ userId }: Props) {
                   <MaterialCommunityIcons name="check-circle-outline" size={48} color="#10B981" />
                   <Text style={{ fontFamily: typography.fontFamily, fontSize: 16, fontWeight: '800', color: palette.text, textAlign: 'center' }}>Appeal Submitted</Text>
                   <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, color: palette.textMuted, textAlign: 'center', lineHeight: 18 }}>
-                    We'll review your appeal and get back to you as soon as possible.
+                    We&apos;ll review your appeal and get back to you as soon as possible.
                   </Text>
                 </View>
-                <LiquidButton label="Done" onPress={() => { setAppealStep('idle'); setAppealReason('') }} minHeight={46} borderRadius={radii.button} />
+                <LiquidButton label="Done" onPress={() => { setAppealStep('idle'); setAppealReason(''); setAppealError(null) }} minHeight={46} borderRadius={radii.button} />
               </>
             )}
           </Pressable>

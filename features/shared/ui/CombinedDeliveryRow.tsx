@@ -12,6 +12,7 @@ import { useSubmitLink, useUploadVideo } from '@/features/deliverables/hooks'
 import { markLiveCelebrated } from '@/features/deliverables/liveCelebration'
 import { isValidTikTokUrl } from '@/lib/validate-tiktok-url'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { toast } from '@/features/shared/ui/Toast'
 
 type Props = {
   deliverableId: string
@@ -74,7 +75,7 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
         )
         return
       }
-      Alert.alert('Could not open your library', pickError instanceof Error ? pickError.message : 'Please try again.')
+      toast.error(pickError instanceof Error ? pickError.message : 'Please try again.')
     }
   }
 
@@ -107,10 +108,7 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
     } catch (submitError) {
       haptic.warning()
       setPhase('idle')
-      Alert.alert(
-        'Delivery failed',
-        submitError instanceof Error ? submitError.message : 'Could not publish your delivery. Please try again.'
-      )
+      toast.error(submitError instanceof Error ? submitError.message : 'Could not publish your delivery. Please try again.')
     }
   }
 
@@ -148,7 +146,7 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
       : 'Going live'
     return (
       <View style={{ alignItems: 'center', gap: 12, paddingVertical: 18 }}>
-        <MaterialCommunityIcons name="rocket-launch" size={30} color={redesign.color.purple} />
+        <MaterialCommunityIcons name="cloud-upload-outline" size={30} color={redesign.color.purple} />
         <Text style={{ color: redesign.color.ink, fontSize: 15, fontWeight: '800', fontFamily: typography.fontFamily, letterSpacing: -0.2 }}>{label}</Text>
         <Text style={{ color: redesign.color.faint, fontSize: 12, fontWeight: '600', fontFamily: typography.fontFamily }}>Keep this open for a moment…</Text>
       </View>
@@ -228,7 +226,7 @@ export function CombinedDeliveryRow({ deliverableId, brandName, onDone }: Props)
           disabled={!canSubmit}
           minHeight={50}
           borderRadius={radii.button}
-          icon={<MaterialCommunityIcons name="rocket-launch-outline" size={18} color="#fff" />}
+          icon={<MaterialCommunityIcons name="cloud-upload-outline" size={18} color="#fff" />}
         />
       </Animated.View>
       <Text style={{ color: redesign.color.faint, fontSize: 11.5, fontWeight: '600', fontFamily: typography.fontFamily, textAlign: 'center' }}>

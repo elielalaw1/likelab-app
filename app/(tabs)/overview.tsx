@@ -1,4 +1,4 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { router } from 'expo-router'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -7,6 +7,8 @@ import { Screen } from '@/features/shared/ui/Screen'
 import { redesign, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
 import { useApplyToCampaign, useCampaigns } from '@/features/campaigns/hooks'
+import { isCampaignHiddenFromList } from '@/features/campaigns/phase'
+import { isCampaignClosed } from '@/features/core/format'
 import { useDeliverables } from '@/features/deliverables/hooks'
 import { useCreatorProfile, useReputation } from '@/features/profile/hooks'
 import { isProfileComplete } from '@/features/profile/api'
@@ -14,6 +16,7 @@ import { isAwaitingLink } from '@/features/deliverables/api'
 import { CampaignCard } from '@/features/shared/ui/CampaignCard'
 import { FeaturedCampaign } from '@/features/campaigns/ui/DiscoverSections'
 import { ActiveCampaignDeck } from '@/features/campaigns/ui/ActiveCampaignDeck'
+import { TermsSheet } from '@/features/campaigns/ui/TermsSheet'
 import { TierRow } from '@/features/profile/ui/TierBadge'
 import { SkeletonCampaignCard } from '@/features/shared/ui/SkeletonCard'
 import { ScreenHeader } from '@/features/shared/ui/ScreenHeader'
@@ -22,6 +25,7 @@ import { navigateOnce } from '@/lib/navigate-once'
 import { scrollEvents } from '@/features/navigation/scrollEvents'
 import { useQueryClient } from '@tanstack/react-query'
 import { haptic } from '@/features/shared/haptics'
+import { toast } from '@/features/shared/ui/Toast'
 
 
 export default function ProjectsPage() {
@@ -35,6 +39,18 @@ export default function ProjectsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [category, setCategory] = useState<string>('all')
   const scrollRef = useRef<ScrollView>(null)
+  // Quick-apply from the card used to skip the Terms gate entirely (only the
+  // campaign-detail apply flow showed it) — same action, inconsistent consent.
+  // Bridges CampaignCard's promise-based onApply to the same TermsSheet used on
+  // the detail screen: open it, then resolve/reject the pending apply based on
+  // accept/cancel.
+  const [termsCampaignId, setTermsCampaignId] = useState<string | null>(null)
+  const termsResolveRef = useRef<((accepted: boolean) => void) | null>(null)
+  const resolveTerms = (accepted: boolean) => {
+    termsResolveRef.current?.(accepted)
+    termsResolveRef.current = null
+    setTermsCampaignId(null)
+  }
 
   useEffect(() => {
     const unsub = scrollEvents.on('scrollToTop:overview', () => {
@@ -69,7 +85,9 @@ export default function ProjectsPage() {
         (c) =>
           c.creatorApplicationStatus !== 'accepted' &&
           c.creatorApplicationStatus !== 'rejected' &&
-          c.status === 'published'
+          c.status === 'published' &&
+          !isCampaignClosed(c.endDate) &&
+          !isCampaignHiddenFromList(c.phase, c.creatorApplicationStatus)
       ),
     [data]
   )
@@ -102,6 +120,7 @@ export default function ProjectsPage() {
   const isGrid = viewMode === 'grid'
 
   return (
+    <>
     <Screen onRefresh={onRefresh} scrollRef={scrollRef} bgColor={redesign.color.bg} headerOverlay>
 
       <ScreenHeader
@@ -196,16 +215,20 @@ export default function ProjectsPage() {
                       onPress={() => navigateOnce(campaignRouteParams(item) as never)}
                       onApply={async () => {
                         if (!isApproved) {
-                          Alert.alert('Awaiting approval', 'Your account is pending review. You\'ll be able to apply once approved.')
+                          toast.error('Your creator account must be approved before applying.')
                           return false
                         }
                         if (!profile || !isProfileComplete(profile)) {
-                          Alert.alert('Complete your profile', 'Finish your creator profile before applying.', [
-                            { text: 'Not now', style: 'cancel' },
-                            { text: 'Complete profile', onPress: () => router.push('/settings') },
-                          ])
+                          toast.error('Complete your profile before applying.')
                           return false
                         }
+                        // Same Terms gate as the campaign-detail apply flow — quick-apply
+                        // from this card used to skip it, applying with zero consent step.
+                        const accepted = await new Promise<boolean>((resolve) => {
+                          termsResolveRef.current = resolve
+                          setTermsCampaignId(item.id)
+                        })
+                        if (!accepted) return false
                         try {
                           await applyMutation.mutateAsync(item.id)
                           return true
@@ -251,5 +274,11 @@ export default function ProjectsPage() {
         </Animated.View>
       ) : null}
     </Screen>
+    <TermsSheet
+      visible={termsCampaignId !== null}
+      onAccept={() => resolveTerms(true)}
+      onClose={() => resolveTerms(false)}
+    />
+    </>
   )
 }

@@ -83,7 +83,7 @@ function MilestoneCard({ joinedCount }: { joinedCount: number }) {
       </View>
       <View style={{ height: 9, borderRadius: 999, backgroundColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
         <Animated.View style={[{ height: '100%', borderRadius: 999, overflow: 'hidden' }, barStyle]}>
-          <LinearGradient colors={redesign.gradient.accent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+          <View style={{ flex: 1, backgroundColor: redesign.color.purple }} />
         </Animated.View>
       </View>
     </Animated.View>

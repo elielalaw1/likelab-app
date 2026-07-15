@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { connectTikTokAccount } from '@/features/auth/tiktok'
 import { redesign, typography } from '@/features/core/theme'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from '@/features/shared/ui/Toast'
 
 export default function ConnectTikTokPage() {
   const [connecting, setConnecting] = useState(false)
@@ -26,10 +27,7 @@ export default function ConnectTikTokPage() {
       await queryClient.refetchQueries({ queryKey: ['creator-profile'] })
       setConnected(true)
     } catch (error) {
-      Alert.alert(
-        'Connection failed',
-        error instanceof Error ? error.message : 'Could not connect your TikTok account. Please try again.'
-      )
+      toast.error(error instanceof Error ? error.message : 'Could not connect your TikTok account. Please try again.')
     } finally {
       setConnecting(false)
     }

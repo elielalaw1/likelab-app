@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ImageBackground,
   KeyboardAvoidingView,
@@ -39,6 +38,7 @@ import { uploadAvatarFromLibrary } from '@/features/profile/api'
 import { dismissCompletionPrompt } from '@/features/onboarding/completionPromptControl'
 import type { CreatorProfile } from '@/features/core/types'
 import { haptic } from '@/features/shared/haptics'
+import { toast } from '@/features/shared/ui/Toast'
 
 export default function CompleteProfilePage() {
   const { width } = useWindowDimensions()
@@ -129,7 +129,7 @@ export default function CompleteProfilePage() {
       }
     } catch (e) {
       haptic.warning()
-      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not upload photo.')
+      toast.error(e instanceof Error ? e.message : 'Could not upload photo.')
     } finally {
       setAvatarBusy(false)
     }
@@ -160,7 +160,7 @@ export default function CompleteProfilePage() {
       (!missing.has('address') || !!address.trim()) &&
       (!missing.has('postal_code') || !!postalCode.trim())
     if (!ok) {
-      Alert.alert('Almost there', 'Please fill in all the fields to finish your profile.')
+      toast.error('Please fill in all the fields to finish your profile.')
       return
     }
 
@@ -185,7 +185,7 @@ export default function CompleteProfilePage() {
       setCelebrate(true)
     } catch (e) {
       haptic.warning()
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.')
+      toast.error(e instanceof Error ? e.message : 'Please try again.')
     }
   }
 

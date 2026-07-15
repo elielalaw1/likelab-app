@@ -263,7 +263,7 @@ function ApprovedHero({ brandName }: { brandName?: string | null }) {
   return (
     <Animated.View entering={FadeIn} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.successBg, borderRadius: 18, padding: 15 }}>
       <Animated.View entering={ZoomIn.springify().damping(11)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
-        <MaterialCommunityIcons name="trophy-variant" size={23} color={redesign.color.successText} />
+        <MaterialCommunityIcons name="check-decagram-outline" size={23} color={redesign.color.successText} />
       </Animated.View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontFamily: typography.fontFamily, fontSize: 16.5, fontWeight: '800', color: redesign.color.ink, letterSpacing: -0.3 }}>
@@ -290,7 +290,7 @@ function LiveHero({ brandName }: { brandName?: string | null }) {
   return (
     <Animated.View entering={FadeIn} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redesign.color.card, borderRadius: 18, padding: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, ...redesign.shadow.card }}>
       <Animated.View entering={ZoomIn.springify().damping(11)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(14,165,233,0.14)', alignItems: 'center', justifyContent: 'center' }}>
-        <MaterialCommunityIcons name="star-four-points" size={22} color="#0EA5E9" />
+        <MaterialCommunityIcons name="star-circle" size={22} color="#0EA5E9" />
       </Animated.View>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
@@ -495,11 +495,11 @@ export function CampaignVideoGrid({
                   {stage === 'deliver' ? (
                     <CombinedDeliveryRow deliverableId={selected.id} brandName={brandName} onDone={closeSheet} />
                   ) : stage === 'revision' ? (
-                    <VideoUploadRow deliverableId={selected.id} submitLabel="Re-upload video" brandName={brandName} onDone={closeSheet} />
+                    <VideoUploadRow deliverableId={selected.id} submitLabel="Re-upload video" brandName={brandName} onDone={closeSheet} campaignPhase={selected.campaignPhase} isRevision />
                   ) : stage === 'upload' ? (
-                    <VideoUploadRow deliverableId={selected.id} submitLabel="Upload video for review" brandName={brandName} onDone={closeSheet} />
+                    <VideoUploadRow deliverableId={selected.id} submitLabel="Upload video for review" brandName={brandName} onDone={closeSheet} campaignPhase={selected.campaignPhase} />
                   ) : stage === 'under_review' ? (
-                    <VideoReviewActions deliverableId={selected.id} brandName={brandName} />
+                    <VideoReviewActions deliverableId={selected.id} brandName={brandName} campaignPhase={selected.campaignPhase} />
                   ) : stage === 'submit_link' ? (
                     <>
                       <ApprovedHero brandName={brandName} />

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, TextInput, View } from 'react-native'
+import { Alert, Text, TextInput, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { radii, typography } from '@/features/core/theme'
 import { useTheme } from '@/features/core/useTheme'
@@ -23,7 +23,9 @@ export function LinkSubmitRow({ deliverableId, submitLabel = 'Submit link' }: Pr
 
   const handleSubmit = async () => {
     if (!isValidTikTokUrl(trimmed)) {
-      Alert.alert('Invalid TikTok link', 'Please paste the full link to your TikTok video — it should start with https:// and contain tiktok.com.')
+      // The TextInput's onSubmitEditing can call this directly even while the
+      // submit button is disabled — bail silently, the inline error text below
+      // (driven by showInvalid) already communicates the format problem.
       return
     }
     haptic.light()
@@ -40,6 +42,7 @@ export function LinkSubmitRow({ deliverableId, submitLabel = 'Submit link' }: Pr
   }
 
   const showValid = trimmed.length > 0 && isValidTikTokUrl(trimmed)
+  const showInvalid = trimmed.length > 0 && !isValidTikTokUrl(trimmed)
 
   return (
     <View style={{ gap: 8 }}>
@@ -71,6 +74,11 @@ export function LinkSubmitRow({ deliverableId, submitLabel = 'Submit link' }: Pr
         />
         {showValid ? <MaterialCommunityIcons name="check-circle" size={20} color="#0F9F6E" style={{ marginLeft: 6 }} /> : null}
       </View>
+      {showInvalid ? (
+        <Text style={{ color: palette.dangerText, fontSize: 12, fontFamily: typography.fontFamily, marginLeft: 4 }}>
+          Paste the full link to your TikTok video — it should start with https:// and contain tiktok.com.
+        </Text>
+      ) : null}
       <LiquidButton
         label={isPending ? 'Submitting…' : submitLabel}
         onPress={handleSubmit}

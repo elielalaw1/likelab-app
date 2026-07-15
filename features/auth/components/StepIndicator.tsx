@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
 import { authColors } from '@/features/auth/theme'
+import { redesign } from '@/features/core/theme'
 
 type Props = {
   currentStep: 1 | 2 | 3
@@ -32,11 +32,8 @@ export function StepIndicator({ currentStep }: Props) {
         }}
       >
         {active || done ? (
-          <LinearGradient
-            colors={['#8B5CF6', '#6D28D9', '#351BA9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ position: 'absolute', inset: 0 }}
+          <View
+            style={{ position: 'absolute', inset: 0, backgroundColor: redesign.color.purple }}
           />
         ) : null}
         {done ? (

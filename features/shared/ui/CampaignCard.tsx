@@ -1,7 +1,9 @@
 import { Image as ExpoImage } from 'expo-image'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, Vibration, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import type { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import { useAudioPlayer } from 'expo-audio'
 import { Campaign } from '@/features/core/types'
 import { useEffect, useRef, useState } from 'react'
 import { formatRewardType, getDaysLeft, isCampaignClosed } from '@/features/core/format'
@@ -12,8 +14,33 @@ import { useTheme } from '@/features/core/useTheme'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
 import { PressableScale } from '@/features/shared/ui/PressableScale'
 import { TierBorder, TierCoin, campaignVisualTier } from '@/features/shared/ui/TierBorder'
-import Animated, { FadeInDown, interpolate, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, cancelAnimation } from 'react-native-reanimated'
+import Animated, {
+  FadeInDown,
+  interpolate,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  withSpring,
+  withDelay,
+  Easing,
+  cancelAnimation,
+  runOnJS,
+} from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
+
+// Same hold-to-apply interaction as the campaign-detail page's main CTA
+// (HoldToApplyButton) — applying is a deliberate, weighty action, and this quick-apply
+// pill is the OTHER entry point to the exact same action, so it gets the same charge/
+// haptic treatment instead of a bare tap. Reimplemented inline (rather than reusing
+// HoldToApplyButton directly) because this pill already owns its own idle/pending/
+// applied/blocked visual states and shimmer — the hold gesture is layered on top of
+// that existing state machine rather than replacing it.
+const HOLD_MS = 1800
+const SALVO_INTERVAL_MS = 32
+const CONTINUOUS_PATTERN = [0, 1]
+const chime = require('@/assets/sounds/apply-chime.wav')
 
 type Props = {
   campaign: Campaign
@@ -69,6 +96,83 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
 
   const shimmer = useSharedValue(0)
   const [btnWidth, setBtnWidth] = useState(0)
+
+  // Hold-to-apply charge state, layered on top of the pill's existing idle/pending/
+  // applied/blocked visuals.
+  const chargeProgress = useSharedValue(0)
+  const pop = useSharedValue(1)
+  const chimePlayer = useAudioPlayer(chime)
+  const salvoCountRef = useRef(0)
+  const salvoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const holdCompletedRef = useRef(false)
+
+  const stopSalvos = () => {
+    Vibration.cancel()
+    if (salvoTimerRef.current) {
+      clearInterval(salvoTimerRef.current)
+      salvoTimerRef.current = null
+    }
+  }
+
+  const salvo = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid)
+    salvoCountRef.current++
+    if (salvoCountRef.current % 5 === 0) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+  }
+
+  useEffect(() => () => {
+    cancelAnimation(chargeProgress)
+    stopSalvos()
+  }, [chargeProgress])
+
+  const finishHold = () => {
+    if (holdCompletedRef.current) return
+    holdCompletedRef.current = true
+    stopSalvos()
+    Vibration.vibrate(400)
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    try {
+      chimePlayer.seekTo(0)
+      chimePlayer.play()
+    } catch {
+      // Audio is garnish — never let it break the apply flow.
+    }
+    pop.value = withSequence(
+      withTiming(0.93, { duration: 70, easing: Easing.out(Easing.quad) }),
+      withSpring(1.07, { damping: 9, stiffness: 320 }),
+      withSpring(1, { damping: 14, stiffness: 220 })
+    )
+    handleApply()
+    chargeProgress.value = withDelay(500, withTiming(0, { duration: 400, easing: Easing.out(Easing.quad) }))
+    setTimeout(() => { holdCompletedRef.current = false }, 1000)
+  }
+
+  const startHold = () => {
+    if (holdCompletedRef.current || applyState !== 'idle') return
+    stopSalvos()
+    Vibration.vibrate(CONTINUOUS_PATTERN, true)
+    salvo()
+    salvoTimerRef.current = setInterval(salvo, SALVO_INTERVAL_MS)
+    chargeProgress.value = withTiming(
+      1,
+      { duration: HOLD_MS * (1 - chargeProgress.value), easing: Easing.linear },
+      (finished) => {
+        if (finished) runOnJS(finishHold)()
+      }
+    )
+  }
+
+  const cancelHold = () => {
+    stopSalvos()
+    if (holdCompletedRef.current) return
+    cancelAnimation(chargeProgress)
+    chargeProgress.value = withTiming(0, { duration: 260, easing: Easing.out(Easing.quad) })
+  }
+
+  const chargeFillStyle = useAnimatedStyle(() => ({ width: btnWidth * chargeProgress.value }))
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }))
+
   useEffect(() => {
     // Only animate while the Apply pill is actually shown — the card otherwise
     // ran a perpetual UI-thread loop on every mounted row. Default reduceMotion
@@ -315,61 +419,80 @@ export function CampaignCard({ campaign, onPress, onApply, badge, compact, index
           ) : null}
         </View>
 
-        {/* Apply pill */}
+        {/* Apply pill — press and hold to charge, matching the campaign-detail CTA */}
         {showApply ? (
-          <Pressable
-            disabled={applyState !== 'idle'}
-            onPress={(e) => { e.stopPropagation?.(); handleApply() }}
-            onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
-            style={{
-              minHeight: 50,
-              borderRadius: redesign.radius.pill,
-              backgroundColor: applyState === 'applied' ? 'rgba(16,159,110,0.96)' : applyState === 'blocked' ? 'rgba(239,68,68,0.96)' : (applyState === 'idle' && applyGate) ? 'rgba(11,11,15,0.42)' : redesign.color.ink,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              overflow: 'hidden',
-              ...redesign.shadow.cta,
-            }}
-          >
-            {applyState === 'idle' && !applyGate ? (
-              <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, bottom: 0, width: 100, transform: [{ skewX: '-18deg' }] }, shimmerStyle]}>
-                <LinearGradient
-                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.20)', 'rgba(255,255,255,0)']}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={{ flex: 1 }}
-                />
-              </Animated.View>
-            ) : null}
-            {applyState === 'applied' ? (
-              <>
-                <MaterialCommunityIcons name="check-circle-outline" size={18} color="#fff" />
-                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applied</Text>
-              </>
-            ) : applyState === 'blocked' ? (
-              <>
-                <MaterialCommunityIcons name="clock-alert-outline" size={18} color="#fff" />
-                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Awaiting approval</Text>
-              </>
-            ) : applyState === 'pending' ? (
-              <>
-                <ActivityIndicator color="#fff" size="small" />
-                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applying…</Text>
-              </>
-            ) : applyGate ? (
-              <>
-                <MaterialCommunityIcons name="lock-outline" size={16} color="#fff" />
-                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>{applyGate}</Text>
-              </>
-            ) : (
-              <>
-                <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Apply now</Text>
-                <MaterialCommunityIcons name="arrow-right" size={18} color="#fff" />
-              </>
-            )}
-          </Pressable>
+          <Animated.View style={popStyle}>
+            <Pressable
+              disabled={applyState !== 'idle'}
+              onPressIn={(e) => { e.stopPropagation?.(); startHold() }}
+              onPressOut={(e) => { e.stopPropagation?.(); cancelHold() }}
+              onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
+              accessibilityRole="button"
+              accessibilityHint="Press and hold to send your application"
+              style={{
+                minHeight: 50,
+                borderRadius: redesign.radius.pill,
+                backgroundColor: applyState === 'applied' ? 'rgba(16,159,110,0.96)' : applyState === 'blocked' ? 'rgba(239,68,68,0.96)' : (applyState === 'idle' && applyGate) ? 'rgba(11,11,15,0.42)' : redesign.color.ink,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                overflow: 'hidden',
+                ...redesign.shadow.cta,
+              }}
+            >
+              {applyState === 'idle' && !applyGate ? (
+                <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, bottom: 0, width: 100, transform: [{ skewX: '-18deg' }] }, shimmerStyle]}>
+                  <LinearGradient
+                    colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.20)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={{ flex: 1 }}
+                  />
+                </Animated.View>
+              ) : null}
+              {/* Charge fill — same glossy charcoal-over-ink build as the detail page */}
+              {applyState === 'idle' ? (
+                <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, chargeFillStyle]}>
+                  {btnWidth > 0 ? (
+                    <LinearGradient
+                      colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.06)']}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={{ width: btnWidth, height: '100%' }}
+                    />
+                  ) : null}
+                  <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.85)' }} />
+                </Animated.View>
+              ) : null}
+              {applyState === 'applied' ? (
+                <>
+                  <MaterialCommunityIcons name="check-circle" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applied</Text>
+                </>
+              ) : applyState === 'blocked' ? (
+                <>
+                  <MaterialCommunityIcons name="clock-alert-outline" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Awaiting approval</Text>
+                </>
+              ) : applyState === 'pending' ? (
+                <>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Applying…</Text>
+                </>
+              ) : applyGate ? (
+                <>
+                  <MaterialCommunityIcons name="lock-outline" size={16} color="#fff" />
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '800' }}>{applyGate}</Text>
+                </>
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="gesture-tap-hold" size={17} color="#fff" />
+                  <Text style={{ color: '#fff', fontFamily: typography.fontFamily, fontSize: 15, fontWeight: '800' }}>Hold to apply</Text>
+                </>
+              )}
+            </Pressable>
+          </Animated.View>
         ) : null}
       </View>
     </View>

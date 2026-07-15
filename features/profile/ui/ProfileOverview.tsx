@@ -24,10 +24,11 @@ import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { ProfileCoachmarks, type CoachStep } from '@/features/onboarding/ProfileCoachmarks'
 import { AnimatedCounter } from '@/features/shared/ui/AnimatedCounter'
 import { haptic } from '@/features/shared/haptics'
+import { Bone } from '@/features/shared/ui/SkeletonCard'
 
 const FAINT_LABEL = {
   fontFamily: typography.fontFamily,
@@ -78,7 +79,7 @@ function NicheChip({ label, tint, text, dot }: { label: string; tint: string; te
 }
 
 export function ProfileOverview() {
-  const { colors, palette } = useTheme()
+  const { palette } = useTheme()
   const { data: profile, isLoading: profileLoading, error: profileError, refetch: refetchProfile } = useCreatorProfile()
   const { data: applicationsData } = useApplications()
   const { data: deliverables } = useDeliverables()
@@ -162,7 +163,27 @@ export function ProfileOverview() {
       overlay={<ProfileCoachmarks steps={coachSteps} scrollRef={scrollRef} contentY={contentY} />}
     >
 
-      {profileLoading ? <ActivityIndicator color={colors.primary} /> : null}
+      {profileLoading ? (
+        <View style={{ gap: 16, marginTop: 8 }}>
+          {/* Identity placeholder — avatar + name/handle lines */}
+          <View style={{ alignItems: 'center', paddingTop: 2, gap: 14 }}>
+            <Bone width={112} height={112} borderRadius={38} />
+            <Bone width={180} height={26} />
+            <Bone width={110} height={14} />
+          </View>
+          {/* Audience stat row placeholder */}
+          <View style={{ flexDirection: 'row', paddingVertical: 18, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, gap: 10 }}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+                <Bone width={44} height={22} />
+                <Bone width={54} height={10} />
+              </View>
+            ))}
+          </View>
+          {/* Tier badge placeholder */}
+          <Bone width="100%" height={64} borderRadius={16} />
+        </View>
+      ) : null}
       {profileError && !profile ? (
         <View style={{ backgroundColor: redesign.color.card, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: redesign.color.hairlineStrong, padding: 20, gap: 12, ...redesign.shadow.card }}>
           <Text style={{ color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 15.5, fontWeight: '800', letterSpacing: -0.3 }}>Couldn&apos;t load your profile</Text>

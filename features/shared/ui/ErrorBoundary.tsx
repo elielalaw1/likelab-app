@@ -4,6 +4,7 @@ import { router } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { redesign, typography } from '@/features/core/theme'
 import { queryClient } from '@/lib/query-client'
+import { logBoundaryError } from '@/lib/crash-log'
 
 type Props = { children: ReactNode }
 type State = { error: Error | null }
@@ -19,8 +20,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error) {
-    // Surface in dev; in production this is where a crash reporter (Sentry etc.) hooks in.
     if (__DEV__) console.error('[ErrorBoundary]', error)
+    logBoundaryError(error)
   }
 
   reset = () => {

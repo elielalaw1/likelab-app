@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AccessibilityInfo, Text, View } from 'react-native'
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated'
+import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native'
+import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { typography } from '@/features/core/theme'
+import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
-import { FLOATING_TAB_BAR_HEIGHT, getFloatingTabBarBottomOffset } from '@/features/navigation/floatingTabBar.constants'
 
 type ToastType = 'success' | 'error' | 'info'
-type ToastItem = { id: number; type: ToastType; message: string }
+type ToastItem = { id: number; type: ToastType; message: string; key?: string; count: number }
 
 let _setToasts: React.Dispatch<React.SetStateAction<ToastItem[]>> | null = null
 
@@ -16,60 +15,96 @@ let _setToasts: React.Dispatch<React.SetStateAction<ToastItem[]>> | null = null
 // millisecond, which makes dismiss() remove both and React warn on duplicate keys.
 let nextId = 0
 
-function emit(type: ToastType, message: string) {
+// Longer messages need more time to actually read, not a fixed 3.2s regardless of
+// length — this was the core complaint: a real message ("You have a new video
+// deliverable in...") was gone before it could be read.
+const MIN_DURATION_MS = 3600
+const MAX_DURATION_MS = 6500
+const MS_PER_CHAR = 55
+
+function durationFor(message: string) {
+  return Math.min(MAX_DURATION_MS, Math.max(MIN_DURATION_MS, message.length * MS_PER_CHAR))
+}
+
+function emit(type: ToastType, message: string, key?: string) {
   if (type === 'success') haptic.success()
   else if (type === 'error') haptic.error()
   else haptic.light()
   // Announce to screen readers — the toast is otherwise silent to VoiceOver/
   // TalkBack users (works on both iOS and Android, unlike accessibilityRole alone).
   AccessibilityInfo.announceForAccessibility(message)
-  _setToasts?.((prev) => [...prev.slice(-2), { id: ++nextId, type, message }])
+  _setToasts?.((prev) => {
+    // Coalesce a burst of the same kind of event (e.g. 10 "new deliverable assigned"
+    // pushes arriving back-to-back for a batch assignment) into ONE toast with a
+    // count, instead of queuing 10 near-identical toasts the creator can't keep up
+    // with reading. Only merges into the most recent still-pending entry.
+    const last = prev[prev.length - 1]
+    if (key && last?.key === key) {
+      return [...prev.slice(0, -1), { ...last, message, count: last.count + 1 }]
+    }
+    return [...prev, { id: ++nextId, type, message, key, count: 1 }]
+  })
 }
 
 export const toast = {
-  success: (message: string) => emit('success', message),
-  error: (message: string) => emit('error', message),
-  info: (message: string) => emit('info', message),
+  success: (message: string, key?: string) => emit('success', message, key),
+  error: (message: string, key?: string) => emit('error', message, key),
+  info: (message: string, key?: string) => emit('info', message, key),
 }
 
-const CONFIG: Record<ToastType, { bg: string; border: string; icon: string; iconColor: string; textColor: string }> = {
-  success: { bg: '#F0FDF4', border: 'rgba(134,239,172,0.6)', icon: 'check-circle', iconColor: '#16A34A', textColor: '#15803D' },
-  error: { bg: '#FFF1F2', border: 'rgba(252,165,165,0.6)', icon: 'alert-circle', iconColor: '#DC2626', textColor: '#B91C1C' },
-  info: { bg: '#F5F3FF', border: 'rgba(196,181,253,0.6)', icon: 'information', iconColor: '#7C3AED', textColor: '#6D28D9' },
+// Same "icon-in-a-tinted-chip + ink text on a white card" language used everywhere
+// else in the app (CreatorActionCard, ProfilePendingGate, etc.) — the color signals
+// through a small chip, not by painting the whole bubble and its text in a pastel/
+// saturated hue. That full-bleed-color-bubble look (esp. the old `info` variant:
+// lavender fill + solid purple text) was the app's clearest remaining "AI toast"
+// fingerprint.
+const CONFIG: Record<ToastType, { icon: string; iconColor: string; chipBg: string }> = {
+  success: { icon: 'check-circle', iconColor: redesign.color.successText, chipBg: redesign.color.successBg },
+  error: { icon: 'alert-circle', iconColor: '#DC2626', chipBg: 'rgba(220,38,38,0.10)' },
+  info: { icon: 'information-outline', iconColor: redesign.color.purple, chipBg: 'rgba(99,80,184,0.10)' },
 }
 
 function ToastRow({ item, onDone }: { item: ToastItem; onDone: (id: number) => void }) {
   const c = CONFIG[item.type]
   useEffect(() => {
-    const t = setTimeout(() => onDone(item.id), 3200)
+    // Re-armed whenever `item` changes identity (new message merged in via
+    // coalescing bumps `count`, which is part of the item) — a fresh read gets a
+    // fresh timer instead of the clock quietly running out mid-merge.
+    const t = setTimeout(() => onDone(item.id), durationFor(item.message))
     return () => clearTimeout(t)
-  }, [item.id, onDone])
+  }, [item, onDone])
 
   return (
     <Animated.View
       entering={FadeInDown.springify().damping(22).stiffness(200).mass(0.8)}
-      exiting={FadeOutDown.duration(200)}
+      exiting={FadeOutUp.duration(200)}
       accessibilityLiveRegion="polite"
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        backgroundColor: c.bg,
-        borderWidth: 1,
-        borderColor: c.border,
-        borderRadius: 18,
-        paddingHorizontal: 16,
-        paddingVertical: 13,
-        shadowColor: '#000',
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-      }}
     >
-      <MaterialCommunityIcons name={c.icon as never} size={20} color={c.iconColor} />
-      <Text style={{ flex: 1, color: c.textColor, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600', lineHeight: 19 }}>
-        {item.message}
-      </Text>
+      <Pressable
+        onPress={() => onDone(item.id)}
+        accessibilityRole="button"
+        accessibilityHint="Dismiss"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          backgroundColor: redesign.color.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: redesign.color.hairlineStrong,
+          borderRadius: 18,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          ...redesign.shadow.card,
+        }}
+      >
+        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: c.chipBg, alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name={c.icon as never} size={17} color={c.iconColor} />
+        </View>
+        <Text style={{ flex: 1, color: redesign.color.ink, fontFamily: typography.fontFamily, fontSize: 14, fontWeight: '600', lineHeight: 19 }}>
+          {item.message}
+          {item.count > 1 ? ` ×${item.count}` : ''}
+        </Text>
+      </Pressable>
     </Animated.View>
   )
 }
@@ -77,24 +112,26 @@ function ToastRow({ item, onDone }: { item: ToastItem; onDone: (id: number) => v
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const insets = useSafeAreaInsets()
-  const bottom = getFloatingTabBarBottomOffset(insets.bottom) + FLOATING_TAB_BAR_HEIGHT + 12
+  const top = insets.top + 8
 
   useEffect(() => {
     _setToasts = setToasts
     return () => { _setToasts = null }
   }, [])
 
-  // Stable so ToastRow's dismiss-timer effect isn't torn down and restarted every
-  // time the container re-renders (add/remove), which would extend toast lifetimes.
   const dismiss = useCallback((id: number) => setToasts((prev) => prev.filter((t) => t.id !== id)), [])
 
   if (!toasts.length) return null
 
+  // Only the OLDEST toast renders — the rest sit queued and silent. Showing up to
+  // three stacked toasts at once (the previous behavior) was the other half of the
+  // complaint: several real messages competing for attention and each individually
+  // too rushed to read. One at a time, fully read, then the next.
+  const current = toasts[0]
+
   return (
-    <View style={{ position: 'absolute', bottom, left: 16, right: 16, gap: 8 }} pointerEvents="none">
-      {toasts.map((t) => (
-        <ToastRow key={t.id} item={t} onDone={dismiss} />
-      ))}
+    <View style={{ position: 'absolute', top, left: 16, right: 16 }} pointerEvents="box-none">
+      <ToastRow key={current.id} item={current} onDone={dismiss} />
     </View>
   )
 }

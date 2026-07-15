@@ -57,6 +57,8 @@ export async function signupCreator(payload: {
   email: string
   password: string
   displayName: string
+  firstName: string
+  lastName: string
   tiktokHandle: string
   instagramHandle?: string | null
   followers?: string | null
@@ -71,6 +73,13 @@ export async function signupCreator(payload: {
       email: payload.email,
       password: payload.password,
       display_name: payload.displayName,
+      // Sent alongside display_name (not a replacement) so the profile's real
+      // first_name/last_name columns are populated at signup — without this, every
+      // new account (not just pre-split-name legacy ones) fails the profile-
+      // completion check that looks for those columns, and wrongly gets prompted
+      // to "add your first/last name" post-signup.
+      first_name: payload.firstName,
+      last_name: payload.lastName,
       tiktok_handle: stripAtPrefix(payload.tiktokHandle),
       instagram_handle: payload.instagramHandle ? stripAtPrefix(payload.instagramHandle) : null,
       followers: payload.followers ?? null,

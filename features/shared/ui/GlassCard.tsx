@@ -46,14 +46,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.88)',
   },
   shadow: {
-    shadowColor: '#3A1F7A',
+    shadowColor: '#0B0B0F',
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.22,
     shadowRadius: 32,
     elevation: 16,
   },
   shadowStrong: {
-    shadowColor: '#2E1568',
+    shadowColor: '#0B0B0F',
     shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.28,
     shadowRadius: 44,

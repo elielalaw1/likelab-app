@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import {
-  Alert,
   Image,
   ImageBackground,
   KeyboardAvoidingView,
@@ -18,6 +17,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
 import { designBackground, designLogo } from '@/design/assets'
 import { redesign, typography } from '@/features/core/theme'
+import { friendlyAuthError } from '@/features/auth/authErrors'
+import { toast } from '@/features/shared/ui/Toast'
 
 function parseHashParams(url: string): Record<string, string> {
   const hash = url.includes('#') ? url.split('#')[1] : ''
@@ -98,11 +99,11 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async () => {
     if (password.length < 8) {
-      Alert.alert('Too short', 'Password must be at least 8 characters.')
+      toast.error('Password must be at least 8 characters.')
       return
     }
     if (password !== confirmPassword) {
-      Alert.alert('No match', 'Passwords do not match.')
+      toast.error('Passwords do not match.')
       return
     }
 
@@ -110,13 +111,13 @@ export default function ResetPasswordPage() {
       setLoading(true)
       const { error } = await supabase.auth.updateUser({ password })
       if (error) {
-        Alert.alert('Error', error.message)
+        toast.error(friendlyAuthError(error, 'Could not update your password. Please try again.'))
         return
       }
       await supabase.auth.signOut({ scope: 'local' })
       router.replace('/login')
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Could not update your password. Check your connection and try again.')
+      toast.error(friendlyAuthError(error, 'Could not update your password. Check your connection and try again.'))
     } finally {
       setLoading(false)
     }

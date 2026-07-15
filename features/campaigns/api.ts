@@ -182,6 +182,7 @@ function mapCampaign(row: Row): Campaign {
     productUrl: textValue(row, ['product_url']),
     productValueSek: numberValue(row, ['product_value_sek']),
     productAmount: numberValue(row, ['product_amount']),
+    productArrivalDate: textValue(row, ['product_arrival_date']),
     targetRegions: toStringArray(row.target_regions),
     targetCategories: toStringArray(row.target_categories),
     ...parseVideoRequirements(textValue(row, ['video_requirements'])),

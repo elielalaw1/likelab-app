@@ -19,14 +19,24 @@ import Animated, {
 import { radii, redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
 import { MediaPermissionError, PickedVideo, pickVideoFromLibrary } from '@/lib/video-picker'
-import { useLatestSubmission, useSubmissionStatus, useUploadVideo } from '@/features/deliverables/hooks'
+import { SUBMISSION_TIMEOUT_MESSAGE, useLatestSubmission, useSubmissionStatus, useUploadVideo } from '@/features/deliverables/hooks'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { toast } from '@/features/shared/ui/Toast'
+import { UploadBlockedModal } from '@/features/deliverables/ui/UploadBlockedModal'
+import { parseStoredUploadError } from '@/features/deliverables/uploadErrors'
+import { PHASE_LABELS, VIDEO_REVISION_ALLOWED_PHASES, VIDEO_UPLOAD_ALLOWED_PHASES } from '@/features/campaigns/phase'
+import type { CampaignPhase } from '@/features/core/types'
 
 type Props = {
   deliverableId: string
   submitLabel?: string
   brandName?: string | null
   onDone?: () => void
+  campaignPhase?: CampaignPhase | null
+  /** Re-upload after the brand requested changes. Currently gated by the same
+   *  phase list as a first-time upload (see VIDEO_REVISION_ALLOWED_PHASES) — kept
+   *  as a separate flag in case the backend splits the two again later. */
+  isRevision?: boolean
 }
 
 // The video's poster is the hero object across every state — it appears on pick,
@@ -76,7 +86,7 @@ function HeroPoster({ thumb, scale = 1, dim = false, children }: { thumb: string
   )
 }
 
-export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', brandName, onDone }: Props) {
+export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', brandName, onDone, campaignPhase, isRevision }: Props) {
   const { width } = useWindowDimensions()
   const [submissionId, setSubmissionId] = useState<string | null>(null)
   const [picked, setPicked] = useState<PickedVideo | null>(null)
@@ -84,8 +94,17 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
   // Monotonic pick token: thumbnail generation is async and can resolve out of
   // order, so only the latest pick's poster is allowed to win.
   const pickSeqRef = useRef(0)
-  const { upload, stage, compressionProgress, error } = useUploadVideo()
+  const { upload, stage, compressionProgress, error, markFailed } = useUploadVideo()
   const { data: submission, isTimedOut } = useSubmissionStatus(submissionId ?? undefined)
+  const [phaseLockedOpen, setPhaseLockedOpen] = useState(false)
+
+  // Proactive phase gate — block the button before the creator wastes time
+  // picking/compressing a file the backend will reject anyway with a bare
+  // "phase_locked" error. null/undefined phase (data not loaded yet) fails open
+  // so a slow campaigns query never blocks a legitimate upload.
+  const allowedPhases = isRevision ? VIDEO_REVISION_ALLOWED_PHASES : VIDEO_UPLOAD_ALLOWED_PHASES
+  const phaseBlocksUpload = campaignPhase != null && !allowedPhases.includes(campaignPhase)
+  const currentPhaseLabel = campaignPhase ? PHASE_LABELS[campaignPhase] : undefined
 
   // Recover an in-flight upload after a remount (creator navigated away during
   // processing and came back): adopt the latest submission and resume polling
@@ -108,10 +127,26 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
     if (submission?.status === 'submitted') {
       haptic.success()
     } else if (submission?.status === 'failed') {
-      // Keep the raw server error in the dev logs; the creator sees a friendly message.
-      console.warn('[VideoUploadRow] server processing failed:', submission?.errorMessage)
+      // Surface the real backend reason (api.ts writes it to error_message when
+      // process-video-upload fails, as "[code] friendly text") instead of silently
+      // falling back to the generic "didn't go through" text — that fallback was
+      // hiding genuine server-side failures from the creator (and from support
+      // debugging them).
+      const { code, text } = parseStoredUploadError(submission?.errorMessage)
+      console.warn('[VideoUploadRow] server processing failed:', code, text)
+      // phase_locked means the campaign isn't in its filming window — that's not a
+      // generic failure the creator can retry their way out of, so it gets its own
+      // explainer modal instead of the usual inline error + "try again" button.
+      if (code === 'phase_locked') {
+        setPhaseLockedOpen(true)
+      }
+      markFailed(text || 'That upload didn’t go through. Try sending it again.')
     }
-  }, [submission?.status, submission?.errorMessage])
+  }, [submission?.status, submission?.errorMessage, markFailed])
+
+  useEffect(() => {
+    if (isTimedOut) markFailed(SUBMISSION_TIMEOUT_MESSAGE)
+  }, [isTimedOut, markFailed])
 
   const serverStatus = submission?.status
   const isDone = serverStatus === 'submitted'
@@ -141,7 +176,19 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
   }, [pulse])
   const glowStyle = useAnimatedStyle(() => ({ opacity: 0.35 + pulse.value * 0.45, transform: [{ scale: 1 + pulse.value * 0.06 }] }))
 
+  // "Got it" doesn't just dismiss the popup — there's nothing else to do on this
+  // row while the phase blocks upload, so it exits the sheet entirely too.
+  const dismissPhaseLocked = () => {
+    setPhaseLockedOpen(false)
+    onDone?.()
+  }
+
   const pickVideo = async () => {
+    if (phaseBlocksUpload) {
+      haptic.warning()
+      setPhaseLockedOpen(true)
+      return
+    }
     haptic.light()
     try {
       const result = await pickVideoFromLibrary()
@@ -169,7 +216,7 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
         )
         return
       }
-      Alert.alert('Could not open your library', pickError instanceof Error ? pickError.message : 'Please try again.')
+      toast.error(pickError instanceof Error ? pickError.message : 'Please try again.')
     }
   }
 
@@ -190,10 +237,7 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
       haptic.success()
     } catch (uploadError) {
       haptic.warning()
-      Alert.alert(
-        'Upload failed',
-        uploadError instanceof Error ? uploadError.message : 'Could not upload your video. Please try again.'
-      )
+      toast.error(uploadError instanceof Error ? uploadError.message : 'Could not upload your video. Please try again.')
     }
   }
 
@@ -251,7 +295,7 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
           <Animated.View style={[glowStyle, { position: 'absolute', inset: -8, borderRadius: 24, backgroundColor: 'rgba(99,80,184,0.22)' }]} />
           <HeroPoster thumb={thumb} dim>
             <View style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="rocket-launch" size={30} color="#fff" />
+              <MaterialCommunityIcons name="cloud-upload-outline" size={30} color="#fff" />
             </View>
             {/* progress cuff pinned to the bottom of the poster */}
             <View style={{ position: 'absolute', left: 8, right: 8, bottom: 8 }}>
@@ -309,12 +353,13 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
             onPress={submit}
             minHeight={50}
             borderRadius={radii.button}
-            icon={<MaterialCommunityIcons name="rocket-launch-outline" size={18} color="#fff" />}
+            icon={<MaterialCommunityIcons name="cloud-upload-outline" size={18} color="#fff" />}
           />
           <Pressable onPress={pickVideo} hitSlop={8} style={{ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 12 }}>
             <Text style={{ color: redesign.color.muted, fontSize: 13, fontWeight: '700', fontFamily: typography.fontFamily }}>Choose a different video</Text>
           </Pressable>
         </View>
+        <UploadBlockedModal visible={phaseLockedOpen} onClose={dismissPhaseLocked} currentPhaseLabel={currentPhaseLabel} />
       </View>
     )
   }
@@ -362,6 +407,7 @@ export function VideoUploadRow({ deliverableId, submitLabel = 'Upload video', br
           </View>
         )}
       </Pressable>
+      <UploadBlockedModal visible={phaseLockedOpen} onClose={() => setPhaseLockedOpen(false)} currentPhaseLabel={currentPhaseLabel} />
     </View>
   )
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  Alert,
   Image,
   ImageBackground,
   KeyboardAvoidingView,
@@ -17,6 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
 import { designBackground, designLogo } from '@/design/assets'
 import { redesign, typography } from '@/features/core/theme'
+import { friendlyAuthError } from '@/features/auth/authErrors'
+import { toast } from '@/features/shared/ui/Toast'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -25,7 +26,7 @@ export default function ForgotPasswordPage() {
 
   const handleSend = async () => {
     if (!email.trim()) {
-      Alert.alert('Enter email', 'Please enter your email address.')
+      toast.error('Please enter your email address.')
       return
     }
 
@@ -36,13 +37,13 @@ export default function ForgotPasswordPage() {
       })
 
       if (error) {
-        Alert.alert('Error', error.message)
+        toast.error(friendlyAuthError(error, 'Could not send the reset link. Please try again.'))
         return
       }
 
       setSent(true)
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Could not send the reset link. Check your connection and try again.')
+      toast.error(friendlyAuthError(error, 'Could not send the reset link. Check your connection and try again.'))
     } finally {
       setLoading(false)
     }

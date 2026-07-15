@@ -1,3 +1,5 @@
+import { redesign } from '@/features/core/theme'
+
 // Creator tier / status ladder — a motivational progression shown inside the app.
 // Tier is computed CLIENT-SIDE from data already on the device.
 //
@@ -55,8 +57,8 @@ export const TIERS: readonly Tier[] = [
   { id: 'seasoned',     level: 6,  label: 'Seasoned creator',      short: 'Seasoned', color: '#B0764A', ring: ['#E4B483', '#B0764A'],                     emblem: 'shield-star',      minCompleted: 9 },
   { id: 'pro',          level: 7,  label: 'Pro creator',           short: 'Pro',      color: '#8A9099', ring: ['#DBE0E8', '#9AA0AD'],                     emblem: 'medal',            minCompleted: 13 },
   { id: 'professional', level: 8,  label: 'Professional creator',  short: 'Pro+',     color: '#D9A21B', ring: ['#FFE39A', '#F2A93C'],                     emblem: 'trophy',           minCompleted: 18 },
-  { id: 'elite',        level: 9,  label: 'Elite creator',         short: 'Elite',    color: '#F25CC1', ring: ['#6350B8', '#F25CC1'],                     emblem: 'crown',            minCompleted: 25 },
-  { id: 'legend',       level: 10, label: 'Legend creator',        short: 'Legend',   color: '#6350B8', ring: ['#F5C73C', '#F25CC1', '#6350B8', '#1FC8E8'], emblem: 'diamond-stone',    minCompleted: 35 },
+  { id: 'elite',        level: 9,  label: 'Elite creator',         short: 'Elite',    color: redesign.color.purple, ring: [redesign.color.purple, redesign.color.purple], emblem: 'crown',            minCompleted: 25 },
+  { id: 'legend',       level: 10, label: 'Legend creator',        short: 'Legend',   color: redesign.color.gold,   ring: [redesign.color.gold, redesign.color.gold],     emblem: 'diamond-stone',    minCompleted: 35 },
 ] as const
 
 // XP required to reach each level (index 0 = L1 … index 9 = L10). Mirrors the

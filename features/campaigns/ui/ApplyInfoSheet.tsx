@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Alert, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import Animated, { ZoomIn } from 'react-native-reanimated'
@@ -8,6 +8,7 @@ import { useTheme } from '@/features/core/useTheme'
 import { haptic } from '@/features/shared/haptics'
 import { saveApplyFormResponse } from '@/features/campaigns/api'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
+import { toast } from '@/features/shared/ui/Toast'
 import type { CampaignApplyForm } from '@/features/core/types'
 
 const FONT = typography.fontFamily
@@ -72,7 +73,7 @@ export function ApplyInfoSheet({ visible, form, applicationId, brandName, onClos
       onClose()
     } catch (e) {
       haptic.warning()
-      Alert.alert('Could not save your details', e instanceof Error ? e.message : 'Please try again.')
+      toast.error(e instanceof Error ? e.message : 'Could not save your details. Please try again.')
     } finally {
       setSubmitting(false)
     }

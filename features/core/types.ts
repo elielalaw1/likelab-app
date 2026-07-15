@@ -77,6 +77,9 @@ export type Campaign = {
   productUrl?: string | null
   productValueSek?: number | null
   productAmount?: number | null
+  // Set by the brand when they ship the product during product_sendout — shown to
+  // the creator so they know roughly when to expect it (product_sendout/filming_period).
+  productArrivalDate?: string | null
   targetRegions?: string[] | null
   targetCategories?: string[] | null
   // Parsed from the video_requirements JSON ({ styles, direction }).

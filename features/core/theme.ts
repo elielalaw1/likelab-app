@@ -8,7 +8,6 @@ export const colors = {
   secondaryForeground: 'hsl(222.2 84% 4.9%)',
   muted: 'hsl(210 40% 96.1%)',
   mutedForeground: 'hsl(232 18% 32%)',
-  accent: 'hsl(263 85% 58%)',
   accentForeground: 'hsl(0 0% 100%)',
   destructive: 'hsl(0 84.2% 60.2%)',
   destructiveForeground: 'hsl(0 0% 100%)',
@@ -174,18 +173,6 @@ export const glass = {
   shadowOffsetYSm:  6,
 }
 
-export const screenGradients = {
-  discover:     { colors: ['#f0ecff', '#e8f4ff', '#f5f0ff'] as const, start: { x: 0.15, y: 0 } as const, end: { x: 0.85, y: 1 } as const },
-  profile:      { colors: ['#fff5f0', '#f0f5ff', '#f5f0ff'] as const, start: { x: 0.25, y: 0 } as const, end: { x: 0.75, y: 1 } as const },
-  deliverables: { colors: ['#f0f8ff', '#f5f0ff', '#e8f5f0'] as const, start: { x: 0.2, y: 0 } as const, end: { x: 0.8, y: 1 } as const },
-}
-
-export const gradients = {
-  fluid: ['rgba(53,27,169,0.72)', 'rgba(46,227,241,0.58)', 'rgba(233,85,215,0.46)', 'rgba(255,213,0,0.34)'],
-  button: ['#8B5CF6', '#6D28D9', '#351BA9'],
-  glow: ['rgba(46,227,241,0.24)', 'rgba(233,85,215,0.18)', 'rgba(255,255,255,0.9)'],
-}
-
 // ─── Redesign token layer (premium / Apple-Revolut-grade) ────────────────────
 // Additive layer for the app redesign. Extends — never overrides — the tokens
 // above. On conflict, prefer the existing token and treat these as design intent.
@@ -214,12 +201,10 @@ export const redesign = {
     payoutGreen: '#3BD68A',   // paid amount on dark
     gold: '#FFD66B',          // rank #1 / processing on dark
   },
-  // Signature gradients — holographic used as accent only (borders, logo), never full-screen.
+  // Signature gradient — holographic used as accent only (borders, logo), never full-screen.
   gradient: {
     holographic: ['#F5C73C', '#F25CC1', '#6350B8', '#1FC8E8'] as const,
     holographicLocations: [0, 0.38, 0.68, 1] as const,
-    accent: ['#6350B8', '#1FC8E8'] as const,       // progress bars
-    avatarRing: ['#6350B8', '#F25CC1', '#1FC8E8'] as const,
   },
   radius: {
     card: 26,
@@ -255,39 +240,11 @@ export const redesign = {
 }
 
 export const shadows = {
-  card: {
-    shadowColor: '#3A1F7A',
-    shadowOpacity: 0.22,
-    shadowRadius: 32,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 16,
-  },
   navbar: {
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-  },
-  hero: {
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
-  },
-  deliverable: {
-    shadowColor: '#3A1F7A',
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
-  },
-  floatingGate: {
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
   },
 }

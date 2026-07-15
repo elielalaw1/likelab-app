@@ -105,6 +105,7 @@ export function useSubmitLink(options?: { refreshList?: boolean }) {
 }
 
 export type VideoUploadStage = 'idle' | 'compressing' | 'uploading' | 'processing' | 'done' | 'error'
+export const SUBMISSION_TIMEOUT_MESSAGE = 'Processing is taking longer than expected. Please try uploading again.'
 
 export function useUploadVideo() {
   const queryClient = useQueryClient()

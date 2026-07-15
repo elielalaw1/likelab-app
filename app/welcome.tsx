@@ -119,7 +119,7 @@ function DiscoverMock({ float, bounce }: Drivers) {
       <ElectricBorder radius={24} color="#7C5CFF">
         <View style={{ borderRadius: 24, backgroundColor: redesign.color.card, borderWidth: 1, borderColor: redesign.color.hairlineStrong, overflow: 'hidden' }}>
           <View style={{ height: 80, padding: 10, justifyContent: 'space-between' }}>
-            <LinearGradient colors={redesign.gradient.avatarRing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0, opacity: 0.5 }} />
+            <View style={{ position: 'absolute', inset: 0, opacity: 0.5, backgroundColor: redesign.color.purple }} />
             <Animated.View key={`b${c}`} entering={FadeIn.duration(360)} style={{ backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <MaterialCommunityIcons name="check-decagram" size={11} color={redesign.color.purple} />
               <Text style={{ fontSize: 10, fontWeight: '800', color: redesign.color.ink, fontFamily: typography.fontFamily }}>{camp.brand}</Text>

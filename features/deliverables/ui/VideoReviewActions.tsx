@@ -10,6 +10,7 @@ import { redesign, typography } from '@/features/core/theme'
 import { haptic } from '@/features/shared/haptics'
 import { getDeliverableVideoSignedUrl, deleteDeliverableVideo } from '@/features/deliverables/api'
 import { VideoUploadRow } from '@/features/shared/ui/VideoUploadRow'
+import type { CampaignPhase } from '@/features/core/types'
 
 // Inner player — only mounted once a url exists, so the hook always gets a valid source.
 // Autoplays the moment it's ready.
@@ -177,7 +178,7 @@ function InReviewHero({ brandName }: { brandName?: string | null }) {
   )
 }
 
-export function VideoReviewActions({ deliverableId, brandName }: { deliverableId: string; brandName?: string | null }) {
+export function VideoReviewActions({ deliverableId, brandName, campaignPhase }: { deliverableId: string; brandName?: string | null; campaignPhase?: CampaignPhase | null }) {
   const queryClient = useQueryClient()
   const [replacing, setReplacing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -222,6 +223,8 @@ export function VideoReviewActions({ deliverableId, brandName }: { deliverableId
           deliverableId={deliverableId}
           submitLabel="Upload new video"
           onDone={() => { refresh(); setTimeout(() => setReplacing(false), 1200) }}
+          campaignPhase={campaignPhase}
+          isRevision
         />
         <Pressable onPress={() => setReplacing(false)} style={{ alignSelf: 'center', paddingVertical: 6 }}>
           <Text style={{ color: redesign.color.muted, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: '600' }}>Cancel</Text>

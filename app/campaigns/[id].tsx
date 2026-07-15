@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { Image as ExpoImage } from 'expo-image'
 import * as Clipboard from 'expo-clipboard'
@@ -27,6 +27,9 @@ import { useCreatorProfile } from '@/features/profile/hooks'
 import { CampaignVideoGrid } from '@/features/deliverables/ui/CampaignVideoGrid'
 import { resolveStage, STAGE_UI } from '@/features/deliverables/stage'
 import { useDeliverables } from '@/features/deliverables/hooks'
+import { getCreatorAction } from '@/features/campaigns/phase'
+import { CreatorActionCard } from '@/features/campaigns/ui/CreatorActionCard'
+import { PhaseStepper } from '@/features/campaigns/ui/PhaseStepper'
 import { EmptyState } from '@/features/shared/ui/EmptyState'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { BrandAvatar } from '@/features/shared/ui/BrandAvatar'
@@ -53,7 +56,7 @@ const APPLICATION_CLOSED_PHASES = new Set(['creator_selection', 'product_sendout
 
 
 export default function CampaignDetailPage() {
-  const { colors, palette } = useTheme()
+  const { palette } = useTheme()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ id: string; tab?: string }>()
   const campaignId = Array.isArray(params.id) ? params.id[0] : params.id
@@ -296,6 +299,19 @@ export default function CampaignDetailPage() {
     if ((campaignDeliverables || []).length) return campaignDeliverables || []
     return (allDeliverables || []).filter((item) => item.campaignId === campaignId)
   }, [allDeliverables, campaignDeliverables, campaignId])
+  // The one "what to do now" message for every pre-deliverable state (apply,
+  // await selection, not selected, awaiting product) — null once the creator has
+  // deliverables to work on, since the Videos tab's per-deliverable stage cards
+  // (resolveStage/STAGE_UI below) take over from there.
+  const creatorAction = campaign
+    ? getCreatorAction(campaign.phase, campaign.creatorApplicationStatus, visibleDeliverables.length > 0, campaign.productArrivalDate)
+    : null
+  const notSelected = creatorAction?.kind === 'not_selected'
+  // Nothing to see on the Videos tab once the campaign has moved on without this
+  // creator — bounce back to Brief if they were deep-linked/left there.
+  useEffect(() => {
+    if (notSelected && activeTab === 'videos') setActiveTab('brief')
+  }, [notSelected, activeTab])
   const daysLeft = getDaysLeft(campaign?.endDate)
   const closed = isCampaignClosed(campaign?.endDate)
   // Applications close on the deadline OR once the campaign leaves its live/application
@@ -665,10 +681,20 @@ export default function CampaignDetailPage() {
                 tabBubbleStyle,
               ]}
             />
-            {([
-              { key: 'brief', icon: 'file-document-outline', label: 'Brief' },
-              { key: 'videos', icon: 'video-outline', label: campaign.requiredVideos ? `Videos ${visibleDeliverables.length}/${campaign.requiredVideos}` : `Videos · ${visibleDeliverables.length}` },
-            ] as const).map((tab) => (
+            {(
+              [
+                { key: 'brief', icon: 'file-document-outline', label: 'Brief' },
+                notSelected
+                  ? null
+                  : {
+                      key: 'videos',
+                      icon: 'video-outline',
+                      label: campaign.requiredVideos ? `Videos ${visibleDeliverables.length}/${campaign.requiredVideos}` : `Videos · ${visibleDeliverables.length}`,
+                    },
+              ] as Array<{ key: 'brief' | 'videos'; icon: 'file-document-outline' | 'video-outline'; label: string } | null>
+            )
+              .filter((tab): tab is { key: 'brief' | 'videos'; icon: 'file-document-outline' | 'video-outline'; label: string } => tab !== null)
+              .map((tab) => (
               <Pressable
                 key={tab.key}
                 onPress={() => { haptic.selection(); setActiveTab(tab.key) }}
@@ -690,17 +716,31 @@ export default function CampaignDetailPage() {
             ))}
           </Animated.View>
 
+          {/* Phase context — the CAMPAIGN's lifecycle (application_period → filming_period
+              → ...), distinct from Videos' own FlowLegend (which tracks a single
+              deliverable's upload/review/live pipeline once one exists). Shown on both
+              tabs: it's most useful on Videos, since "why can't I upload yet" is
+              answered by the campaign not being in filming_period yet — exactly where a
+              creator would be looking when they hit that wall. */}
+          {(activeTab === 'brief' || activeTab === 'videos') && (
+            <Animated.View entering={FadeInDown.springify().damping(17).stiffness(150).mass(0.9).delay(180)} style={{ gap: 10 }}>
+              <PhaseStepper phase={campaign.phase} notSelected={notSelected} />
+              {creatorAction ? <CreatorActionCard action={creatorAction} /> : null}
+            </Animated.View>
+          )}
+
           {activeTab === 'brief' && (
             <Animated.View key="tab-brief" entering={FadeInDown.duration(300).delay(90)} style={{ gap: spacing.lg }}>
               {/* Five-second summary — the only thing a lazy creator must see */}
               {(() => {
                 const urgent = !closed && daysLeft != null && daysLeft <= 3
-                const accepted = currentApplicationStatus === 'accepted'
+                // Pre-application this glance IS the pitch (get / make / when) that
+                // sells the creator on applying. Once they've acted — applied,
+                // accepted, or even rejected — re-showing the pitch reads as if the
+                // app forgot they already decided; only the deadline still matters.
+                const decided = currentApplicationStatus !== null
                 const glanceRows: GlanceRow[] = []
-                // Pre-accept the glance is the decision (get / make / when); once
-                // accepted those are settled — only the deadline still matters here,
-                // the Videos tab owns the work progress.
-                if (!accepted) {
+                if (!decided) {
                   if (campaign.productAmount || formatRewardType(campaign)) {
                     glanceRows.push({
                       label: 'You get',
@@ -789,7 +829,16 @@ export default function CampaignDetailPage() {
 
           {activeTab === 'videos' ? (
             <Animated.View key="tab-videos" entering={FadeInDown.duration(300).delay(90)} onLayout={(e) => { videosY.current = e.nativeEvent.layout.y }}>
-              {loadingDeliverables || loadingAllDeliverables ? <ActivityIndicator color={colors.primary} /> : null}
+              {loadingDeliverables || loadingAllDeliverables ? (
+                <View style={{ gap: 16 }}>
+                  <Bone width="100%" height={120} borderRadius={24} />
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Bone key={i} width="47%" height={190} borderRadius={16} />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
 
               {visibleDeliverables.length > 0 ? (() => {
                 const total = visibleDeliverables.length

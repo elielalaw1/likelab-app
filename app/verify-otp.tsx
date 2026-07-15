@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -165,7 +164,7 @@ export default function VerifyOtpPage() {
       setDigits(Array(CODE_LENGTH).fill(''))
       inputRefs.current[0]?.focus()
       setResendCooldown(RESEND_COOLDOWN_SECONDS)
-      Alert.alert('Code sent', 'A new code has been sent to your email.')
+      toast.success('A new code has been sent to your email.')
     } catch {
       setError('Something went wrong. Try again.')
     } finally {

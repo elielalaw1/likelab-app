@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Alert,
   Image,
   ImageBackground,
   KeyboardAvoidingView,
@@ -24,6 +23,8 @@ import { redesign, typography } from '@/features/core/theme'
 import { LiquidButton } from '@/features/shared/ui/LiquidButton'
 import { designBackground, designWordmark } from '@/design/assets'
 import { haptic } from '@/features/shared/haptics'
+import { friendlyAuthError } from '@/features/auth/authErrors'
+import { toast } from '@/features/shared/ui/Toast'
 
 export default function LoginPage() {
   const { session, loading: sessionLoading } = useAuthSession()
@@ -51,7 +52,7 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (loginCooldown > 0) return
     if (!email.trim() || !password) {
-      Alert.alert('Missing fields', 'Enter your email and password.')
+      toast.error('Enter your email and password.')
       return
     }
     try {
@@ -67,21 +68,21 @@ export default function LoginPage() {
           const delay = Math.min(3 * Math.pow(2, failureCountRef.current - 3), 30)
           setLoginCooldown(Math.round(delay))
         }
-        Alert.alert('Sign in failed', error.message)
+        toast.error(friendlyAuthError(error))
         return
       }
       failureCountRef.current = 0
       if (data.user) {
         const isCreator = await assertCreatorRole(data.user.id)
         if (!isCreator) {
-          Alert.alert('Access denied', NON_CREATOR_MESSAGE)
+          toast.error(NON_CREATOR_MESSAGE)
           return
         }
         // Only now allow the <Redirect> to fire — role is confirmed creator.
         setRoleVerified(true)
       }
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Something went wrong.')
+      toast.error(friendlyAuthError(error))
     } finally {
       setLoading(false)
     }

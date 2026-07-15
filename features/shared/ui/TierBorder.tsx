@@ -1,19 +1,16 @@
-import { ReactNode, useEffect, useRef, useState } from 'react'
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ReactNode } from 'react'
+import { Image, StyleSheet, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
-import { typography } from '@/features/core/theme'
-import { haptic } from '@/features/shared/haptics'
 import { ElectricBorder } from '@/features/shared/ui/ElectricBorder'
 import { TiltShimmer } from '@/features/shared/ui/TiltShimmer'
 import type { Campaign } from '@/features/core/types'
 
 // Tier framing for campaign cards. Gold campaigns get a metallic gold ring; partner
 // campaigns get a live electric border (see ElectricBorder — a jittering noise-driven
-// line dancing around the frame). Both carry a tappable seal on the top-right corner
-// (crown / lightning) that explains the tier. Standard campaigns render their
-// children untouched — no wrapper, no animation cost.
+// line dancing around the frame). Both carry a seal on the top-right corner (crown /
+// LikeLab mark) signaling the tier. Standard campaigns render their children
+// untouched — no wrapper, no animation cost.
 
 const BORDER = 3.5
 
@@ -29,11 +26,6 @@ const PARTNER_COLOR = '#7C5CFF'
 // The real LikeLab mark — a partner campaign is OUR partnership, so the seal
 // carries the brand logo rather than a generic icon.
 const likelabLogo = require('@/assets/images/likelablogonew.png')
-
-const SEAL_COPY: Record<'gold' | 'partner', { title: string; body: string }> = {
-  gold: { title: 'Gold campaign', body: 'A premium collab — the brand reviews and approves your video before you post it.' },
-  partner: { title: 'Partner campaign', body: 'An official LikeLab partner brand — the highest tier of collab on the platform.' },
-}
 
 // The frame signals the campaign's PRESTIGE (its level: gold/partner), not its
 // review flow. In V2 a Gold-level campaign may run the direct 'standard' tier —
@@ -108,66 +100,14 @@ export function TierCoin({ tier, size = 30 }: { tier: 'gold' | 'partner'; size?:
   )
 }
 
-// Tappable emblem pinned on the frame's top-right corner. A tap pops a short
-// explanation bubble that dismisses itself. Lives on a non-clipping view so it
-// can straddle the frame edge.
+// Emblem pinned on the frame's top-right corner, signaling the tier. Lives on a
+// non-clipping view so it can straddle the frame edge. Purely decorative — no
+// tap-to-explain popup (it was unnecessary noise on gold/partner campaign cards).
 function TierSeal({ tier }: { tier: 'gold' | 'partner' }) {
-  const [open, setOpen] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
-
-  const show = () => {
-    haptic.light()
-    setOpen((prev) => {
-      const next = !prev
-      if (timerRef.current) clearTimeout(timerRef.current)
-      if (next) timerRef.current = setTimeout(() => setOpen(false), 3500)
-      return next
-    })
-  }
-
-  const gold = tier === 'gold'
-  const copy = SEAL_COPY[tier]
-
   return (
-    <>
-      <Pressable
-        onPress={show}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={copy.title}
-        style={{ position: 'absolute', top: -13, right: 14, zIndex: 20 }}
-      >
-        <TierCoin tier={tier} size={30} />
-      </Pressable>
-
-      {open ? (
-        <Animated.View
-          entering={FadeIn.duration(180)}
-          exiting={FadeOut.duration(160)}
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 24,
-            right: 10,
-            zIndex: 19,
-            maxWidth: 250,
-            borderRadius: 14,
-            paddingVertical: 10,
-            paddingHorizontal: 13,
-            backgroundColor: 'rgba(11,11,15,0.94)',
-            gap: 3,
-          }}
-        >
-          <Text style={{ color: gold ? '#F1D585' : '#9FDCFF', fontFamily: typography.fontFamily, fontSize: 11, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-            {copy.title}
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.86)', fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', lineHeight: 17 }}>
-            {copy.body}
-          </Text>
-        </Animated.View>
-      ) : null}
-    </>
+    <View style={{ position: 'absolute', top: -13, right: 14, zIndex: 20 }}>
+      <TierCoin tier={tier} size={30} />
+    </View>
   )
 }
 

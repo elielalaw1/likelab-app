@@ -28,7 +28,7 @@ type FilterKey = 'all' | 'accepted' | 'pending' | 'closed'
 type AppStatus = 'invited' | 'active' | 'pending' | 'rejected' | 'withdrawn' | 'declined'
 const STATUS_META: Record<AppStatus, { label: string; color: string; bg: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = {
   invited:   { label: 'Invited',        color: '#B45309', bg: '#FFF7E8',                 icon: 'email-heart-outline' },
-  active:    { label: 'Active',         color: '#0E9F6E', bg: 'rgba(16,185,129,0.12)',   icon: 'rocket-launch-outline' },
+  active:    { label: 'Active',         color: '#0E9F6E', bg: 'rgba(16,185,129,0.12)',   icon: 'movie-open-outline' },
   pending:   { label: 'Pending review', color: '#6350B8', bg: 'rgba(99,80,184,0.10)',   icon: 'clock-outline' },
   rejected:  { label: 'Not selected',   color: '#6B6B76', bg: 'rgba(11,11,15,0.05)',     icon: 'close-circle-outline' },
   withdrawn: { label: 'Withdrawn',      color: '#6B6B76', bg: 'rgba(11,11,15,0.05)',     icon: 'undo-variant' },

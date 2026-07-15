@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter, useSegments } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -14,6 +14,11 @@ import { useFloatingTabBarVisibility } from '@/features/navigation/FloatingTabBa
 import { TAB_HEADER_HEIGHT } from '@/features/navigation/floatingTabBar.constants'
 import { WhatsNewButton } from '@/features/whatsnew/WhatsNewModal'
 import { haptic } from '@/features/shared/haptics'
+import { logoRainEasterEgg } from '@/features/shared/easterEggs'
+
+// Spam-tap threshold for the logo easter egg — taps within this rolling window count.
+const LOGO_SPAM_COUNT = 6
+const LOGO_SPAM_WINDOW_MS = 1200
 
 const topLogo = require('@/assets/images/likelablogonew.png')
 
@@ -35,6 +40,17 @@ export function PersistentTabHeader() {
   useEffect(() => {
     t.value = withTiming(onProfile ? 1 : 0, { duration: 240 })
   }, [onProfile, t])
+
+  const logoTapTimestamps = useRef<number[]>([])
+  const registerLogoTap = useCallback(() => {
+    const now = Date.now()
+    const recent = [...logoTapTimestamps.current, now].filter((ts) => now - ts < LOGO_SPAM_WINDOW_MS)
+    logoTapTimestamps.current = recent
+    if (recent.length >= LOGO_SPAM_COUNT) {
+      logoTapTimestamps.current = []
+      logoRainEasterEgg.trigger()
+    }
+  }, [])
 
   const avatarStyle = useAnimatedStyle(() => ({ opacity: 1 - t.value }))
   const cogStyle = useAnimatedStyle(() => ({ opacity: t.value }))
@@ -65,6 +81,7 @@ export function PersistentTabHeader() {
               haptic.selection()
               router.navigate('/(tabs)/overview')
               scrollEvents.emit('scrollToTop:overview')
+              registerLogoTap()
             }}
             hitSlop={10}
           >

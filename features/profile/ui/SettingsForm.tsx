@@ -26,6 +26,7 @@ import { ProfileCompletionSection, getProfileCompletion } from '@/features/profi
 import { connectTikTokAccount, disconnectTikTokAccount } from '@/features/auth/tiktok'
 import { replayTutorial } from '@/features/onboarding/tutorialControl'
 import { haptic } from '@/features/shared/haptics'
+import { toast } from '@/features/shared/ui/Toast'
 
 type SectionId = 'avatar' | 'account' | 'social' | 'personal' | 'location' | 'categories' | 'shipping'
 const stripHandleInput = (value: string) => value.replace(/^@+/, '')
@@ -289,10 +290,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
         setShowToast('TikTok connected')
       }
     } catch (connectError) {
-      Alert.alert(
-        'Connection failed',
-        connectError instanceof Error ? connectError.message : 'Could not connect your TikTok account. Please try again.'
-      )
+      toast.error(connectError instanceof Error ? connectError.message : 'Could not connect your TikTok account. Please try again.')
     } finally {
       setConnectingTikTok(false)
     }
@@ -313,10 +311,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
               await disconnectTikTokAccount()
               await queryClient.refetchQueries({ queryKey: ['creator-profile'] })
             } catch (disconnectError) {
-              Alert.alert(
-                'Disconnect failed',
-                disconnectError instanceof Error ? disconnectError.message : 'Could not disconnect your TikTok account. Please try again.'
-              )
+              toast.error(disconnectError instanceof Error ? disconnectError.message : 'Could not disconnect your TikTok account. Please try again.')
             } finally {
               setDisconnectingTikTok(false)
             }
@@ -334,7 +329,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
 
   const handleDeleteAccount = async () => {
     if (!deletePassword.trim()) {
-      Alert.alert('Password required', 'Enter your current password to delete your account.')
+      toast.error('Enter your current password to delete your account.')
       return
     }
 
@@ -365,7 +360,7 @@ export function SettingsForm({ focusSection, onboarding }: Props) {
       Alert.alert('Account deleted', 'Your account has been deleted.')
       router.replace('/login')
     } catch (deleteError) {
-      Alert.alert('Delete failed', deleteError instanceof Error ? deleteError.message : 'Could not delete account')
+      toast.error(deleteError instanceof Error ? deleteError.message : 'Could not delete account')
     } finally {
       setDeleting(false)
     }

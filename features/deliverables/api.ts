@@ -4,6 +4,7 @@ import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase'
 import { Deliverable, DeliverableFeedback, DeliverableSubmission, mapFeedbackRow, mapSubmissionRow } from '@/features/core/types'
 import { getCurrentUserId, textValue } from '@/features/core/supabase-utils'
+import { mapUploadErrorCode } from '@/features/deliverables/uploadErrors'
 
 type Row = Record<string, unknown>
 
@@ -180,26 +181,34 @@ export async function uploadVideo(params: {
     console.warn('[uploadVideo] process-video-upload failed:', invokeError)
     // Pull the REAL reason out of the edge function response — invoke's generic
     // "non-2xx" message hides it, which made server-side failures undebuggable.
-    let detail = ''
+    // process-video-upload returns { error: <code>, message?: <friendly text>,
+    // current_phase?, allowed_phases? } — prefer its own friendly `message`, fall
+    // back to our own code→copy map, then to a generic line.
+    let code: string | null = null
+    let friendly = ''
     if (invokeError instanceof FunctionsHttpError) {
       try {
         const parsed = (await invokeError.context.json()) as { error?: string; message?: string } | null
-        detail = parsed?.error || parsed?.message || ''
+        code = parsed?.error || null
+        friendly = parsed?.message || mapUploadErrorCode(code, '')
       } catch {}
     } else if (invokeError instanceof Error) {
-      detail = invokeError.message
+      friendly = invokeError.message
     }
+    // Stored as "[code] text" so the code survives round-tripping through this
+    // single text column — VideoUploadRow strips the bracket before ever showing
+    // it, and uses the code to pick which explainer (e.g. phase-locked) to show.
+    const errorMessage = friendly
+      ? code
+        ? `[${code}] ${friendly}`
+        : friendly
+      : 'Could not start video processing. Please try uploading again.'
     // The processor never started — don't leave the row stuck on 'uploading'
     // forever (the client poller would spin every few seconds indefinitely).
     // Flip it to 'failed' so the UI can show an error and offer a retry.
     void supabase
       .from('deliverable_submissions')
-      .update({
-        status: 'failed',
-        error_message: detail
-          ? `Video processing failed: ${detail}`
-          : 'Could not start video processing. Please try uploading again.',
-      })
+      .update({ status: 'failed', error_message: errorMessage })
       .eq('id', data.id)
       .then(undefined, () => {})
   }

@@ -180,7 +180,7 @@ function TopPerformerCard({ item }: { item: CampaignInsight }) {
             style={{ position: 'absolute', top: -30, right: -30, width: 160, height: 160, borderRadius: 80 }}
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <MaterialCommunityIcons name="trophy" size={15} color={redesign.color.gold} />
+            <MaterialCommunityIcons name="podium-gold" size={15} color={redesign.color.gold} />
             <Text style={{ fontFamily: typography.fontFamily, fontSize: 9.5, fontWeight: '800', color: 'rgba(255,255,255,0.5)', letterSpacing: 1.2, textTransform: 'uppercase' }}>
               Your top performer
             </Text>

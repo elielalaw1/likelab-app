@@ -1,4 +1,4 @@
-import { colors, glass, gradients, palette, radii, shadows, typography } from '@/features/core/theme'
+import { colors, glass, palette, radii, shadows, typography } from '@/features/core/theme'
 
 export const authColors = {
   bg: palette.bg,
@@ -13,8 +13,6 @@ export const authColors = {
   buttonBg: 'rgba(255,255,255,0.82)',
   pillBg: 'rgba(255,255,255,0.9)',
   glassStrong: glass.strong,
-  fluidGradient: gradients.fluid,
-  buttonGradient: gradients.button,
   radii,
   shadows,
   typography,
